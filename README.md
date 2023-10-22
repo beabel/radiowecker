@@ -17,4 +17,12 @@ tft_display.ino ==> anpassen der Farbe ermöglicht
 
 tft_color_setting.h ==> NEU alle Einstellungen der Farben an 1 Stelle für die Hauptseite
 
+Hier einige Ansichten:
+
+![Main Screen](screenshot/result.jpg?raw=true "Result")
+
+![Color Setting](screenshot/settings_color.png?raw=true "Setting")
+
+![Konfig Website](screenshot/website.png?raw=true "Konfiguration")
+
 
