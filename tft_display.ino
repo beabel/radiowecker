@@ -1,6 +1,7 @@
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
 #include "fonts.h"
+#include "tft_color_setting.h"
 
 //pins for touchscreen
 #define TOUCH_CS 14
@@ -321,7 +322,7 @@ void updateTime(boolean redraw) {
     //if redraw is true or the date has changed, the date line will be redrawn
     if (redraw || (strcmp(tim,lastdate) != 0)) {
       strcpy(lastdate,tim);
-      textInBox(0,0,320,25,tim,ALIGNCENTER,true,0xC000,ILI9341_BLACK,1);
+      textInBox(0,0,320,25,tim,ALIGNCENTER,true,COLOR_DATE,COLOR_BG,1);
     }
     uint8_t z;
     strftime(tim, sizeof(tim), "%H:%M", &ti);
@@ -333,7 +334,7 @@ void updateTime(boolean redraw) {
       Serial.printf("Ziffer %i %c = %c\n",z,tim[i],lasttime[i]);
       if ((z<11) && (redraw || (tim[i] != lasttime[i]))) {
         //UHRZEIT auf Haupzseite anzeigen jetzt variabel in der Farbe
-        tft.drawBitmap(30+i*55,30,ziffern_rot[z],50,70,ILI9341_ORANGE,ILI9341_BLACK);        
+        tft.drawBitmap(30+i*55,30,ziffern_rot[z],50,70,COLOR_TIME,COLOR_BG);        
         //tft.drawRGBBitmap(30+i*55,30,ziffern_rot[z],50,70);
       }
     }
@@ -343,7 +344,7 @@ void updateTime(boolean redraw) {
 
 //clear the whole display
 void displayClear() {
-  tft.fillScreen(ILI9341_BLACK);
+  tft.fillScreen(COLOR_BG);
 }
 
 
@@ -357,7 +358,7 @@ void displayDateTime() {
 void showProgress(uint32_t prc) {
   char tmp[20];
   sprintf(tmp,"Progress %i%%",prc); 
-  textInBox(5, 50, 310, 30, tmp, ALIGNLEFT, true, ILI9341_GREEN, ILI9341_BLACK,1);
+  textInBox(5, 50, 310, 30, tmp, ALIGNLEFT, true, ILI9341_GREEN, COLOR_BG,1);
   if (prc == 0) {
     tft.drawRect(5,80,310,20,ILI9341_BLUE);
   } else {
@@ -470,7 +471,7 @@ void showStationList() {
 //display the complete config screen
 void showCommand() {
     setBGLight(100);
-    tft.fillScreen(ILI9341_BLACK);
+    tft.fillScreen(COLOR_BG);
     showGain();
     showBrigthness();
     showSnoozeTime();
@@ -482,23 +483,23 @@ void showCommand() {
 
 //show name of active station on TFT display
 void showStation() {
-  textInBox(5,122,310,35,stationlist[actStation].name,ALIGNCENTER,true,ILI9341_YELLOW, ILI9341_BLUE);
+  textInBox(5,122,310,35,stationlist[actStation].name,ALIGNCENTER,true,COLOR_STATION_NAME, COLOR_STATION_BOX_BG);
 }
 
 //show current meta data on TFT display
 void showTitle() {
-    displayMessage(8, 152, 304, 57, title, ALIGNCENTER, false, ILI9341_WHITE, ILI9341_BLUE,2);
+    displayMessage(8, 152, 304, 57, title, ALIGNCENTER, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG,2);
 }
 
 //display the radio area on the clock screen
 void showRadio() {
   if (radio) {
-    tft.fillRect(3,117,314,93,ILI9341_BLUE);
-    tft.drawRect(3,117,314,93,ILI9341_WHITE);
+    tft.fillRect(3,117,314,93,COLOR_STATION_BOX_BG);
+    tft.drawRect(3,117,314,93,COLOR_STATION_BOX_BORDER);
     showStation();
     showTitle();
   } else {
-    tft.fillRect(3,117,314,93,ILI9341_BLACK);
+    tft.fillRect(3,117,314,93,COLOR_BG);
   }
 }
 
@@ -511,7 +512,7 @@ void showNextAlarm(){
     h = alarmtime / 60;
     m = alarmtime % 60;
     sprintf(txt,"Wecker: %s um %i:%i",days[alarmday],h,m);
-    textInBox(0,220,320,20,txt,ALIGNCENTER,false,0xC000,ILI9341_BLACK,1);
+    textInBox(0,220,320,20,txt,ALIGNCENTER,false,COLOR_NEXT_ALARM,COLOR_BG,1);
   }
 }
 
@@ -529,7 +530,7 @@ void showDebugInfo(int16_t v1, int16_t v2, int16_t v3){
 void showClock() {
     start_conf = 0;
     setBGLight(bright);
-    tft.fillScreen(ILI9341_BLACK);
+    tft.fillScreen(COLOR_BG);
     updateTime(true);
     if (radio) showRadio();
     showNextAlarm();
