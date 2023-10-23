@@ -508,11 +508,16 @@ void showRadio() {
 void showNextAlarm(){
   char txt[100] = "";
   uint8_t h,m;
-  if (clockmode && (alarmday < 8)) {
-    h = alarmtime / 60;
-    m = alarmtime % 60;
-    sprintf(txt,"Wecker: %s um %i:%02i",days[alarmday],h,m);
-    textInBox(0,220,320,20,txt,ALIGNCENTER,false,COLOR_NEXT_ALARM,COLOR_BG,1);
+  if (clockmode) {
+    if (alarmday < 8){
+      h = alarmtime / 60;
+      m = alarmtime % 60;
+      sprintf(txt,"Wecker: %s um %i:%02i",days[alarmday],h,m);
+      textInBox(0,220,320,20,txt,ALIGNCENTER,false,COLOR_NEXT_ALARM,COLOR_BG,1);
+    }else{
+      sprintf(txt,"WECKER AUSGESCHALTEN !!!");
+      textInBox(0,220,320,20,txt,ALIGNCENTER,false,ILI9341_RED,COLOR_BG,1);
+    }
   }
 }
 
