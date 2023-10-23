@@ -511,7 +511,7 @@ void showNextAlarm(){
   if (clockmode && (alarmday < 8)) {
     h = alarmtime / 60;
     m = alarmtime % 60;
-    sprintf(txt,"Wecker: %s um %i:%02.0i",days[alarmday],h,m);
+    sprintf(txt,"Wecker: %s um %i:%02i",days[alarmday],h,m);
     textInBox(0,220,320,20,txt,ALIGNCENTER,false,COLOR_NEXT_ALARM,COLOR_BG,1);
   }
 }
