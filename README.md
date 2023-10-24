@@ -17,9 +17,14 @@ tft_display.ino ==> anpassen der Farbe ermöglicht
 
 tft_color_setting.h ==> NEU alle Einstellungen der Farben an 1 Stelle für die Hauptseite
 
+knoepfe_neu.h ==> NEU jetzt sind die Knöpfe monochrom, somit anpassbar (neuer include in radiowecker.ino)
+Später werden die Köpfe einzeln sein, um sie dynamisch anzupassen.
+
 Hier einige Ansichten:
 
 ![Main Screen](screenshot/result.jpg?raw=true "Result")
+
+![Knöpfe neu](screenshot/knoepfe_neu.jpg?raw=true "Knöpfe neu")
 
 ![Color Setting](screenshot/settings_color.png?raw=true "Setting")
 
