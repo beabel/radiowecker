@@ -476,7 +476,11 @@ void showCommand() {
     showBrigthness();
     showSnoozeTime();
     showStationList();
-    tft.drawRGBBitmap(0,176,knopfimg,320,64);
+    //tft.drawRGBBitmap(0,176,knopfimg,320,64);
+    //kunigunde Knoepfe jetzt als monochrome Bitmaps, somit anpassbar
+    //in naechster Version einzelne Knoepfe, um sie dynamisch farblich zu änden
+    //Achtung in radiowecker.ino die neue knoepfe_neu.h am Anfang statt der alten includen
+    tft.drawBitmap(0,176,knopfimg_neu,320,64,ILI9341_BLUE,ILI9341_LIGHTGREY);
     start_conf = millis();
 }
 
