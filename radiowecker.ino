@@ -1,7 +1,9 @@
 
 #include <WiFi.h> 
 #include <ArduinoOTA.h>
-#include "knoepfe.h" //Graphic data for buttons
+//#include "knoepfe.h" //Graphic data for buttons
+//kunigunde Knoepfe jetzt als monochrome Bitmaps, somit anpassbar
+#include "knoepfe_neu.h" //Graphic data for buttons
 #include "Adafruit_ILI9341.h" //Display driver
 #include <XPT2046_Touchscreen.h> //Touchscreen driver
 #include <TouchEvent.h> //Examines touchscreen events
