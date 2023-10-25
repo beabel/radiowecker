@@ -20,6 +20,13 @@ tft_color_setting.h ==> NEU alle Einstellungen der Farben an 1 Stelle für die H
 knoepfe_neu.h ==> NEU jetzt sind die Knöpfe monochrom, somit anpassbar (neuer include in radiowecker.ino)
 Später werden die Köpfe einzeln sein, um sie dynamisch anzupassen.
 
+Heute 25.10. habe ich die Hauptseite etwas umgestaltet, um mehr Informationen über den aktuellen Zustand zu haben.
+Siehe im Bild unten.
+geändert habe ich die Position des Datums um Platz zu bekommen für den Header Bereich.
+Im Header werden jetzt Die Wlan Signal-Stärke als Symbol (grün/gelb/rot) und als Wert ausgegeben.
+Direkt daneben ist ein kleines Bett Symbol, welches erscheint wenn der Einschlaf-Timer aktiv ist.
+und eine Glocke zeigt den aktuellen Wecker Modus an.
+
 Hier einige Ansichten:
 
 ![Main Screen](screenshot/result.jpg?raw=true "Result")
