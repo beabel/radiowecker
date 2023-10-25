@@ -1,9 +1,6 @@
-
 #include <WiFi.h> 
 #include <ArduinoOTA.h>
-//#include "knoepfe.h" //Graphic data for buttons
-//kunigunde Knoepfe jetzt als monochrome Bitmaps, somit anpassbar
-#include "knoepfe_neu.h" //Graphic data for buttons
+
 #include "Adafruit_ILI9341.h" //Display driver
 #include <XPT2046_Touchscreen.h> //Touchscreen driver
 #include <TouchEvent.h> //Examines touchscreen events
@@ -185,6 +182,8 @@ void setup() {
 
 
 void loop() {
+  long rssi = WiFi.RSSI();
+ 
   //Check over the air update
   ArduinoOTA.handle();
   //Check for http requests

@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="320"
+   height="240"
+   viewBox="0 0 84.666667 63.5"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   sodipodi:docname="Main_Screen_Raster.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="true"
+     inkscape:zoom="2.8970539"
+     inkscape:cx="148.42665"
+     inkscape:cy="112.7007"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g10">
+    <inkscape:grid
+       id="grid1"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="0.26458333"
+       spacingy="0.26458333"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="1"
+       dotted="false"
+       gridanglex="30"
+       gridanglez="30"
+       visible="true" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <rect
+       x="-54.538164"
+       y="70.761542"
+       width="28.994973"
+       height="20.365517"
+       id="rect8" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="MAIN_SCREEN">
+    <rect
+       style="fill:#000000;stroke-width:0.25759"
+       id="rect2"
+       width="84.666664"
+       height="6.6145835"
+       x="-2.1616803e-07"
+       y="23.812502"
+       inkscape:label="Date" />
+    <g
+       id="g4"
+       inkscape:label="Zeit"
+       transform="translate(0,-3.1750001)">
+      <rect
+         style="fill:#000000;stroke-width:0.499289"
+         id="rect3-47"
+         width="13.229167"
+         height="18.520834"
+         x="66.145836"
+         y="7.9375"
+         inkscape:label="mm" />
+      <rect
+         style="fill:#000000;stroke-width:0.499289"
+         id="rect3-9"
+         width="13.229167"
+         height="18.520834"
+         x="51.59375"
+         y="7.9375"
+         inkscape:label="m" />
+      <rect
+         style="fill:#000000;stroke-width:0.499289"
+         id="rect3-4"
+         width="13.229167"
+         height="18.520834"
+         x="37.041668"
+         y="7.9375"
+         inkscape:label=":" />
+      <rect
+         style="fill:#000000;stroke-width:0.499289"
+         id="rect3-0"
+         width="13.229167"
+         height="18.520834"
+         x="22.489584"
+         y="7.9375"
+         inkscape:label="hh" />
+      <rect
+         style="fill:#000000;stroke-width:0.499289"
+         id="rect3"
+         width="13.229167"
+         height="18.520834"
+         x="7.9375"
+         y="7.9375"
+         inkscape:label="h" />
+    </g>
+    <g
+       id="g7"
+       inkscape:label="Station">
+      <rect
+         style="fill:#ff0000;stroke-width:1.89023"
+         id="rect6"
+         width="83.07917"
+         height="24.606251"
+         x="0.79374999"
+         y="30.956249"
+         inkscape:label="showRadio" />
+      <rect
+         style="fill:#333333;stroke-width:1.52635"
+         id="rect5"
+         width="80.433334"
+         height="15.08125"
+         x="2.1166666"
+         y="40.216667"
+         inkscape:label="showTitle" />
+      <rect
+         style="fill:#000000;stroke-width:0.526201"
+         id="rect4"
+         width="82.020836"
+         height="7.9375"
+         x="1.3229166"
+         y="32.279167"
+         inkscape:label="showStation" />
+    </g>
+    <rect
+       style="fill:#ff00ff;stroke-width:0.812215"
+       id="rect7"
+       width="84.666664"
+       height="5.2916665"
+       x="0"
+       y="58.208332"
+       inkscape:label="showNextAlarm" />
+    <g
+       id="g10"
+       inkscape:label="Header">
+      <rect
+         style="fill:#ff00ff;stroke-width:0.27557"
+         id="rect9-3-3"
+         width="4.4979167"
+         height="4.4979167"
+         x="63.235416"
+         y="0"
+         inkscape:label="alarm_symbol" />
+      <rect
+         style="fill:#800080;stroke-width:0.27557"
+         id="rect9-3"
+         width="4.4979167"
+         height="4.4979167"
+         x="67.73333"
+         y="0"
+         inkscape:label="sleep_symbol" />
+      <rect
+         style="fill:#ff00ff;stroke-width:0.274042"
+         id="rect10"
+         width="7.9375"
+         height="4.4979167"
+         x="72.231247"
+         y="0"
+         inkscape:label="RSSI-Wert" />
+      <rect
+         style="fill:#800080;stroke-width:0.27557"
+         id="rect9"
+         width="4.4979167"
+         height="4.4979167"
+         x="80.168747"
+         y="0"
+         inkscape:label="wifi_symbol" />
+    </g>
+  </g>
+</svg>

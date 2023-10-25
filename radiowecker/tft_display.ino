@@ -2,6 +2,8 @@
 #include "Adafruit_ILI9341.h"
 #include "fonts.h"
 #include "tft_color_setting.h"
+#include "knoepfe.h" //Graphic data for buttons
+#include "symbole.h" //Graphic data for symbolic
 
 //pins for touchscreen
 #define TOUCH_CS 14
@@ -257,16 +259,16 @@ void textInBox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text,
   encodeUnicode(text, tmp);
   tft.getTextBounds("n",0,100,&xt,&yt,&wt,&ht);
   sp =wt;
-  Serial.printf("Space = %i\n",sp);
+  //Serial.printf("Space = %i\n",sp);
   tft.getTextBounds(tmp,0,100,&xt,&yt,&wt,&ht);
-  Serial.printf("Text %s Länge %i\n",text,wt);
+  //Serial.printf("Text %s Länge %i\n",text,wt);
   h0 = 100 - yt;
   x0 = x;
   y = y + h0 +1;
   if (wt<w) { //enough space in one line
     if (align == ALIGNCENTER) x0 += (w-wt)/2;
     if (align == ALIGNRIGHT) x0 += (w-wt);
-    Serial.printf("x= %i, y= %i, ht= %i, text = %s\n",x0,y,ht,tmp);
+    //Serial.printf("x= %i, y= %i, ht= %i, text = %s\n",x0,y,ht,tmp);
     tft.setCursor(x0, y);
     tft.print(tmp);
   } else { //if there is not enough space in one line we adjust the text by word wrap
@@ -312,40 +314,85 @@ void textInBox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text,
 //the clock display will be updated. To avoid flicker, only changed parts will be redrawn
 //is the parameter redraw true, the complete content will be redrawn
 void updateTime(boolean redraw) {
-  char tim[40];
-  //these variables are static which means they will be initialized on the first call and keep there values
-  static char lastdate[40] = "";
-  static char lasttime[10] = "";
-  
-  if (getLocalTime(&ti)) {
-    sprintf(tim,"%s %i. %s %i",days[ti.tm_wday],ti.tm_mday,months[ti.tm_mon],ti.tm_year + 1900);
-    //if redraw is true or the date has changed, the date line will be redrawn
-    if (redraw || (strcmp(tim,lastdate) != 0)) {
-      strcpy(lastdate,tim);
-      textInBox(0,0,320,25,tim,ALIGNCENTER,true,COLOR_DATE,COLOR_BG,1);
+    char tim[40];
+    // Diese Variablen sind static, was bedeutet, dass sie beim ersten Aufruf initialisiert werden und ihre Werte behalten.
+    static char lastdate[40] = "";
+    static char lasttime[10] = "";
+
+    if (getLocalTime(&ti)) {
+        sprintf(tim,"%s %i. %s %i",days[ti.tm_wday],ti.tm_mday,months[ti.tm_mon],ti.tm_year + 1900);
+        // Wenn redraw true ist oder das Datum sich geändert hat, wird die Datumszeile neu gezeichnet.
+        if (redraw || (strcmp(tim,lastdate) != 0)) {
+            strcpy(lastdate,tim);
+            textInBox(0,90,320,25,tim,ALIGNCENTER,true,COLOR_DATE,COLOR_BG,1);
+        }
+        uint8_t z;
+        strftime(tim, sizeof(tim), "%H:%M", &ti);
+        Serial.printf("Zeit = %s\n",tim);
+        // Wir durchlaufen den Zeit-String.
+        // Wenn redraw true ist oder sich eine Ziffer geändert hat, wird diese Ziffer neu gezeichnet.
+        for (uint8_t i = 0; i<5; i++) {
+            z = (i==2)?10:tim[i]-'0';
+            //Serial.printf("Ziffer %i %c = %c\n",z,tim[i],lasttime[i]);
+            if ((z<11) && (redraw || (tim[i] != lasttime[i]))){
+                // UHRZEIT auf der Hauptseite anzeigen, jetzt variabel in der Farbe.
+                tft.drawBitmap(30+i*55,18,ziffern[z],50,70,COLOR_TIME,COLOR_BG);
+            }
+        }
+        drawHeaderInfos();// Header Symbole und Text zeichnen
+        strcpy(lasttime,tim);
     }
-    uint8_t z;
-    strftime(tim, sizeof(tim), "%H:%M", &ti);
-    Serial.printf("Zeit = %s\n",tim);
-    //we iterate over the time string
-    //if redraw is true or a number has changed this single number will be redrawn
-    for (uint8_t i = 0; i<5; i++) {
-      z = (i==2)?10:tim[i]-'0';
-      Serial.printf("Ziffer %i %c = %c\n",z,tim[i],lasttime[i]);
-      if ((z<11) && (redraw || (tim[i] != lasttime[i]))) {
-        //UHRZEIT auf Haupzseite anzeigen jetzt variabel in der Farbe
-        tft.drawBitmap(30+i*55,30,ziffern_rot[z],50,70,COLOR_TIME,COLOR_BG);        
-        //tft.drawRGBBitmap(30+i*55,30,ziffern_rot[z],50,70);
-      }
-    }
-    strcpy(lasttime,tim);
-  }
 }
 
+void drawHeaderInfos(){
+  drawWifiInfo();// Wifi-Informationen zeichnen
+  drawSnoozeInfo();// Einschlaf symbol zeichnen
+  drawAlarmInfo();// Wecker symbol zeichnen  
+}
+
+void drawWifiInfo() {
+    int rssi = WiFi.RSSI(); // Hole den RSSI-Wert
+    char rssiChar[5]; // Char-Array für textInBox
+    snprintf(rssiChar, sizeof(rssiChar), "%d", rssi);
+    uint16_t color_wifi; // Farbvariable
+    if (rssi <= -70) {// Schwacher Empfang (z.B. Rot)
+        color_wifi = ILI9341_RED;
+    } else if (rssi <= -50) {// Mittlerer Empfang (Z.B. Gelb)
+        color_wifi = ILI9341_YELLOW;
+    } else {// Starker Empfang (Z.B. Grün)
+        color_wifi = ILI9341_GREEN;
+    }
+    tft.drawBitmap(303, 0, symbole[0], 17, 17, color_wifi, COLOR_BG);
+    textInBox(273, 0, 30, 17, rssiChar, ALIGNCENTER, false, COLOR_WIFI_RSSI, COLOR_BG);
+}
+
+void drawSnoozeInfo(){
+    uint16_t color_snooze; // Farbvariable
+    if (snoozeWait != 0) {//Einschlaf aktiv
+        color_snooze = COLOR_SLEEP_SYMBOL;
+    } else {
+        color_snooze = COLOR_BG;
+    }  
+    tft.drawBitmap(256, 0, symbole[1], 17, 17, color_snooze, COLOR_BG);
+}
+
+void drawAlarmInfo(){
+    uint16_t color_alarm; // Farbvariable
+    uint8_t symbol;
+    if (alarmday < 8){//Wecker aktiv
+      color_alarm = COLOR_ALARM_SYMBOL;
+      symbol = 2;
+    }else{//Wecker ausgeschalten
+      color_alarm = ILI9341_RED;
+      symbol = 3;
+    }
+    tft.drawBitmap(239, 0, symbole[symbol], 17, 17, color_alarm, COLOR_BG);  
+}
 //clear the whole display
 void displayClear() {
   tft.fillScreen(COLOR_BG);
 }
+
 
 
 //show date, time and loudness in the first line
@@ -476,10 +523,6 @@ void showCommand() {
     showBrigthness();
     showSnoozeTime();
     showStationList();
-    //tft.drawRGBBitmap(0,176,knopfimg,320,64);
-    //kunigunde Knoepfe jetzt als monochrome Bitmaps, somit anpassbar
-    //in naechster Version einzelne Knoepfe, um sie dynamisch farblich zu änden
-    //Achtung in radiowecker.ino die neue knoepfe_neu.h am Anfang statt der alten includen
     tft.drawBitmap(0,176,knopfimg_neu,320,64,ILI9341_BLUE,ILI9341_LIGHTGREY);
     start_conf = millis();
 }
@@ -487,7 +530,7 @@ void showCommand() {
 
 //show name of active station on TFT display
 void showStation() {
-  textInBox(5,122,310,35,stationlist[actStation].name,ALIGNCENTER,true,COLOR_STATION_NAME, COLOR_STATION_BOX_BG);
+  textInBox(5,122,310,30,stationlist[actStation].name,ALIGNCENTER,true,COLOR_STATION_NAME, COLOR_STATION_BOX_BG);
 }
 
 //show current meta data on TFT display
