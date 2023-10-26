@@ -155,7 +155,7 @@ void setAlarms() {
     alarm2 = stringToMinutes(server.arg("al8"));
     Serial.print(server.arg("al8"));
     Serial.printf(" = %i\n",alarm2);
-    pref.putUInt("alarm1",alarm1);
+    pref.putUInt("alarm2",alarm2);
   }
   alarmday1 = 0;
   alarmday2 = 0;
