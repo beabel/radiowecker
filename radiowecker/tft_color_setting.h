@@ -3,6 +3,10 @@
 #define COLOR_SLEEP_SYMBOL        ILI9341_ORANGE
 #define COLOR_ALARM_SYMBOL        ILI9341_ORANGE
 
+#define COLOR_SLIDER              ILI9341_ORANGE
+#define COLOR_SLIDER_BG           ILI9341_BLACK
+#define COLOR_SLIDER_BORDER       ILI9341_RED
+
 #define COLOR_BG                  ILI9341_BLACK
 #define COLOR_DATE                ILI9341_ORANGE
 #define COLOR_TIME                ILI9341_ORANGE

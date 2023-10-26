@@ -22,8 +22,10 @@
 #define LED_ON 0
 #define LS 23  // line spacing
 
+
 //day and month names in German
 const char* const PROGMEM days[] = {"Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"};
+const char* const PROGMEM days_short[] = {"So","Mo","Di","Mi","Do","Fr","Sa"};
 const char* PROGMEM months[] = {"Jan.","Feb.","März","April","Mai","Juni","Juli","Aug.","Sept.","Okt.","Nov.","Dez."};
 
 //instance of display driver
@@ -32,15 +34,71 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 //instance to start callbacks on touch events
 TouchEvent tevent(touch);
+//Prototype created (i have now optional Arguments) the function down like before
+void showSlider(uint16_t y, float value, uint16_t vmax, uint16_t bgColor = ILI9341_LIGHTGREY, uint16_t lineColor = ILI9341_BLACK);
+//###################################
+#define BEEPER 21
+#include "pitches.h"
+// Notenfrequenzen
+int melody[] = {
+  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4,
+  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_E4, NOTE_D4,
+  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_G4, NOTE_F4, NOTE_E4, NOTE_D4, NOTE_A3,
+  0, NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, NOTE_A4, NOTE_G4, NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4,
+  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_E4, NOTE_D4
+};
 
+// Dauern der Noten (in Millisekunden)
+int noteDurations[] = {
+  4, 8, 8, 4, 4, 4, 4, 4,
+  4, 8, 8, 4, 4, 4, 4, 4,
+  4, 8, 8, 4, 4, 4, 4, 4,
+  4, 8, 8, 8, 8, 8, 8, 4, 4, 8, 8, 4, 4, 4, 4, 4,
+  4, 8, 8, 4, 4, 4, 4, 4
+};
+//damit kann eine ganze Melody erzeugt werden
+void playMelody(int notes[], int durations[], int melodyLength) {
+  for (int i = 0; i < melodyLength; i++) {
+    int noteDuration = 1000 / durations[i];
+    tone(BEEPER, notes[i], noteDuration);
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    noTone(BEEPER);
+  }
+}
+// AUFRUF: playMelody(melody, noteDurations, sizeof(melody) / sizeof(melody[0]));
+
+//eine Art Wecker Piepen kann damit erstellt werden
+void BeepPattern(int totalRepeats, int beepCount, int beepDuration, int pauseDuration) {
+  for (int r = 0; r < totalRepeats; r++) {
+    for (int i = 0; i < beepCount; i++) {
+      tone(BEEPER, 1000, beepDuration); // 1000 Hz Ton für die Dauer abspielen
+      delay(beepDuration);             // Warten, während der Ton abgespielt wird
+      noTone(BEEPER);                  // Ton ausschalten
+      delay(pauseDuration);            // Pausendauer zwischen den Tönen
+    }
+  }
+}
+// AUFRUF: BeepPattern(3, 4, 100, 100);
+
+//einzelner Button Klick Ton
+void ButtonTone(){
+  tone(BEEPER,4000,100);
+}
+//##################################
 //register a callback for any touch event.
 //we get position and type of the event
 void onTouchClick(TS_Point p) {
   if (!clockmode) start_conf = millis(); //if we are in config mode reset start_conf on any event
   Serial.printf("Touch on %i, %i\n",p.x,p.y);
   if (clockmode) { //if we are in the clock mode, we switch into the config mode. Independent where the event occured.
-    clockmode = false;
-    showCommand(); 
+    if (p.y < 210) {// only on the top area we switch to config
+      clockmode = false;
+      showCommand(); 
+    }else{// we adjust the Gain
+      setGainMainValue(p.x);      
+    }
+
   } else {
     //we are in the config mode
     if (p.y > 180) { //if the y value > 180, we are in the button area
@@ -69,7 +127,12 @@ void onTouchClick(TS_Point p) {
 void setGainValue(uint16_t value) {
   char txt[10];
   //calculate gain from x-Position 0 to 100%
-  float v = (value - 15) * 0.345;
+  int y_start = 11;//11 = start line y
+  int line_lenght = 298;//298 = lenght line 
+
+  float startslider = value - y_start;//substract the unused area before line start
+  float endslider = line_lenght - y_start;//substract the unused area before line start
+  float v = startslider / endslider * 100;// now we have percent
   if (v > 100) v = 100;
   if (v < 0) v = 0;
   curGain = v;
@@ -79,6 +142,26 @@ void setGainValue(uint16_t value) {
   setGain(curGain);
   sprintf(txt,"%i %%",curGain);
   displayMessage(231,8,80,20,txt,ALIGNRIGHT,false,ILI9341_BLACK,ILI9341_LIGHTGREY,1);
+}
+
+//set the gain for x-position where the slider was clicked
+void setGainMainValue(uint16_t value) {
+  char txt[10];
+  //calculate gain from x-Position 0 to 100%
+  int y_start = 11;//11 = start line y
+  int line_lenght = 298;//298 = lenght line 
+
+  float startslider = value - y_start;//substract the unused area before line start
+  float endslider = line_lenght - y_start;//substract the unused area before line start
+  float v = startslider / endslider * 100;// now we have percent
+  if (v > 100) v = 100;
+  if (v < 0) v = 0;  
+  curGain = v;
+  //save gain and adjust slider and set gain to the new value
+  pref.putUShort("gain",curGain);
+  showSlider(218,curGain,100,COLOR_SLIDER_BG,COLOR_SLIDER);
+  setGain(curGain);
+  sprintf(txt,"%i %%",curGain);
 }
 
 //set the brightness for x-position where the slider was clicked
@@ -347,7 +430,7 @@ void updateTime(boolean redraw) {
 void drawHeaderInfos(){
   drawWifiInfo();// Wifi-Informationen zeichnen
   drawSnoozeInfo();// Einschlaf symbol zeichnen
-  drawAlarmInfo();// Wecker symbol zeichnen  
+  showNextAlarm();// Wecker symbol+text zeichnen 
 }
 
 void drawWifiInfo() {
@@ -376,18 +459,6 @@ void drawSnoozeInfo(){
     tft.drawBitmap(256, 0, symbole[1], 17, 17, color_snooze, COLOR_BG);
 }
 
-void drawAlarmInfo(){
-    uint16_t color_alarm; // Farbvariable
-    uint8_t symbol;
-    if (alarmday < 8){//Wecker aktiv
-      color_alarm = COLOR_ALARM_SYMBOL;
-      symbol = 2;
-    }else{//Wecker ausgeschalten
-      color_alarm = ILI9341_RED;
-      symbol = 3;
-    }
-    tft.drawBitmap(239, 0, symbole[symbol], 17, 17, color_alarm, COLOR_BG);  
-}
 //clear the whole display
 void displayClear() {
   tft.fillScreen(COLOR_BG);
@@ -445,12 +516,12 @@ void encodeUnicode(const char* src, char* dst){
 }
 
 //show a slider. y defines the top line value is the place to display the rectangle
-void showSlider(uint16_t y,float value, uint16_t vmax) {
-  tft.fillRect(11,y,298,14,ILI9341_LIGHTGREY);
-  tft.drawLine(15,y+6,305,y+6,ILI9341_BLACK);
-  tft.drawLine(15,y+7,305,y+7,ILI9341_BLACK);
-  uint16_t pos = value*290/vmax;
-  tft.fillRect(12+pos,y,8,14,ILI9341_BLACK);
+void showSlider(uint16_t y, float value, uint16_t vmax, uint16_t bgColor, uint16_t lineColor) {
+    tft.fillRect(11, y, 298, 14, bgColor);
+    tft.drawLine(15, y + 6, 305, y + 6, lineColor);
+    tft.drawLine(15, y + 7, 305, y + 7, lineColor);
+    uint16_t pos = value * 290 / vmax;
+    tft.fillRect(12 + pos, y, 8, 14, lineColor);
 }
 
 //display the area to show the gain on config screen
@@ -466,6 +537,13 @@ void showGain() {
   encodeUnicode("Lautstärke",txt);
   tft.print(txt);
   showSlider(27,curGain,100);
+}
+
+//display the area to show the gain on main screen
+void showGainMain() {
+  tft.fillRect(0,210,320,30,COLOR_SLIDER_BG);//Box
+  tft.drawRect(0,210,320,30,COLOR_SLIDER_BORDER);// Rahmen
+  showSlider(218,curGain,100,COLOR_SLIDER_BG,COLOR_SLIDER);
 }
 
 //display the area to show the brightness on config screen
@@ -551,20 +629,25 @@ void showRadio() {
 }
 
 //if an alarm is active, the next alarm date and time will be displayed
-//on the bottom line of clock screen
 void showNextAlarm(){
-  char txt[100] = "";
+  uint16_t color_alarm; // Farbvariable
+  uint8_t symbol;  
+  char txt[50] = "";
   uint8_t h,m;
   if (clockmode) {
-    if (alarmday < 8){
+    if (alarmday < 8){// Wecker aktiv
+      color_alarm = COLOR_ALARM_SYMBOL;
+      symbol = 2;//bell_17      
       h = alarmtime / 60;
       m = alarmtime % 60;
-      sprintf(txt,"Wecker: %s um %i:%02i",days[alarmday],h,m);
-      textInBox(0,220,320,20,txt,ALIGNCENTER,false,COLOR_NEXT_ALARM,COLOR_BG,1);
-    }else{
-      sprintf(txt,"WECKER AUSGESCHALTEN !!!");
-      textInBox(0,220,320,20,txt,ALIGNCENTER,false,ILI9341_RED,COLOR_BG,1);
+      sprintf(txt,"%s %02i:%02i",days_short[alarmday],h,m);
+    }else{// Wecker ausgeschalten
+      color_alarm = ILI9341_RED;
+      symbol = 3;//bell-slash_17      
+      sprintf(txt,"AUS");
     }
+    tft.drawBitmap(0, 0, symbole[symbol], 17, 17, color_alarm, COLOR_BG);// Symbol      
+    textInBox(17,0,80,17,txt,ALIGNCENTER,false,color_alarm,COLOR_BG,1);// Text     
   }
 }
 
@@ -585,7 +668,8 @@ void showClock() {
     tft.fillScreen(COLOR_BG);
     updateTime(true);
     if (radio) showRadio();
-    showNextAlarm();
+    //showNextAlarm moved to updateTime (only every minute) needed
+    showGainMain();
 }
 
 
