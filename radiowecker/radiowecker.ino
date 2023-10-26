@@ -256,6 +256,9 @@ void loop() {
     if ((alarmday < 8) && getLocalTime(&ti)) {
       //if alarm day and time is reached turn radio on and get values for next expected alarm
       if ((alarmday == weekday) && ((minutes == alarmtime) || (minutes == (alarmtime+1)))) {
+        // Test Beeper#####################     
+        BeepPattern(3, 4, 100, 100);
+        // Test Beeper#####################        
         toggleRadio(false);
         showRadio();
         findNextAlarm();

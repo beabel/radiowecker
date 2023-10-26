@@ -26,13 +26,13 @@
      showgrid="true"
      inkscape:zoom="2.8970539"
      inkscape:cx="148.42665"
-     inkscape:cy="112.7007"
+     inkscape:cy="140.31496"
      inkscape:window-width="1920"
      inkscape:window-height="1009"
      inkscape:window-x="1912"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g10">
+     inkscape:current-layer="layer2">
     <inkscape:grid
        id="grid1"
        units="px"
@@ -68,6 +68,58 @@
      id="layer2"
      inkscape:label="MAIN_SCREEN">
     <rect
+       style="fill:#ff00ff;stroke-width:0.994757"
+       id="rect7"
+       width="84.666664"
+       height="7.9375"
+       x="0"
+       y="55.562496"
+       inkscape:label="showGain_TEST" />
+    <rect
+       style="fill:#800080;stroke-width:0.6484"
+       id="rect9-8"
+       width="21.166666"
+       height="5.2916665"
+       x="62.970833"
+       y="56.885414"
+       inkscape:label="Lautstärke_%" />
+    <rect
+       style="fill:#333333;stroke-width:0.186018"
+       id="rect2-7"
+       width="78.845833"
+       height="3.7041667"
+       x="2.9104166"
+       y="57.679161"
+       inkscape:label="Lautstärke_Slider" />
+    <g
+       id="g7"
+       inkscape:label="Station">
+      <rect
+         style="fill:#ff0000;stroke-width:1.89023"
+         id="rect6"
+         width="83.07917"
+         height="24.606251"
+         x="0.79374999"
+         y="30.956249"
+         inkscape:label="showRadio" />
+      <rect
+         style="fill:#333333;stroke-width:1.52635"
+         id="rect5"
+         width="80.433334"
+         height="15.08125"
+         x="2.1166666"
+         y="40.216667"
+         inkscape:label="showTitle" />
+      <rect
+         style="fill:#000000;stroke-width:0.526201"
+         id="rect4"
+         width="82.020836"
+         height="7.9375"
+         x="1.3229166"
+         y="32.279167"
+         inkscape:label="showStation" />
+    </g>
+    <rect
        style="fill:#000000;stroke-width:0.25759"
        id="rect2"
        width="84.666664"
@@ -78,7 +130,7 @@
     <g
        id="g4"
        inkscape:label="Zeit"
-       transform="translate(0,-3.1750001)">
+       transform="translate(0,-3.175)">
       <rect
          style="fill:#000000;stroke-width:0.499289"
          id="rect3-47"
@@ -121,50 +173,22 @@
          inkscape:label="h" />
     </g>
     <g
-       id="g7"
-       inkscape:label="Station">
-      <rect
-         style="fill:#ff0000;stroke-width:1.89023"
-         id="rect6"
-         width="83.07917"
-         height="24.606251"
-         x="0.79374999"
-         y="30.956249"
-         inkscape:label="showRadio" />
-      <rect
-         style="fill:#333333;stroke-width:1.52635"
-         id="rect5"
-         width="80.433334"
-         height="15.08125"
-         x="2.1166666"
-         y="40.216667"
-         inkscape:label="showTitle" />
-      <rect
-         style="fill:#000000;stroke-width:0.526201"
-         id="rect4"
-         width="82.020836"
-         height="7.9375"
-         x="1.3229166"
-         y="32.279167"
-         inkscape:label="showStation" />
-    </g>
-    <rect
-       style="fill:#ff00ff;stroke-width:0.812215"
-       id="rect7"
-       width="84.666664"
-       height="5.2916665"
-       x="0"
-       y="58.208332"
-       inkscape:label="showNextAlarm" />
-    <g
        id="g10"
        inkscape:label="Header">
+      <rect
+         style="fill:#800080;stroke-width:0.597795"
+         id="rect9-3-9"
+         width="21.166666"
+         height="4.4979167"
+         x="4.4979167"
+         y="-1.3877788e-17"
+         inkscape:label="wecker_text" />
       <rect
          style="fill:#ff00ff;stroke-width:0.27557"
          id="rect9-3-3"
          width="4.4979167"
          height="4.4979167"
-         x="63.235416"
+         x="-7.1054274e-15"
          y="0"
          inkscape:label="alarm_symbol" />
       <rect
