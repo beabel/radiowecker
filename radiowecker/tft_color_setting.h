@@ -19,5 +19,11 @@
 #define COLOR_STATION_NAME        ILI9341_YELLOW
 #define COLOR_STATION_TITLE       ILI9341_WHITE
 // Colors for the Settings Page
+#define COLOR_SETTING_BG          ILI9341_LIGHTGREY
+#define COLOR_SETTING_BORDER      ILI9341_BLUE
+#define COLOR_SETTING_UP_DOWN     ILI9341_BLUE
+
+#define COLOR_KNOEPFE             ILI9341_BLUE
+#define COLOR_KNOEPFE_BG          ILI9341_LIGHTGREY
 // to be done
 // maybe later all the color settings from the Webpage adjustable
