@@ -91,24 +91,48 @@ void ButtonTone(){
 void onTouchClick(TS_Point p) {
   if (!clockmode) start_conf = millis(); //if we are in config mode reset start_conf on any event
   Serial.printf("Touch on %i, %i\n",p.x,p.y);
-  if (clockmode) { //if we are in the clock mode, we switch into the config mode. Independent where the event occured.
-    if (p.y < 210) {// only on the top area we switch to config
+  if (clockmode) { //if we are in the clock mode, we switch into the radiopage or adjust Gain
+    if (p.y < 210) {// only on the top area we switch to radiopage
       clockmode = false;
-      showCommand(); 
+      configpage = false;
+      radiopage = true;
+      showRadioPage(); 
     }else{// we adjust the Gain
       setGainMainValue(p.x);      
     }
-
-  } else {
-    //we are in the config mode
+  } else if (radiopage) {//################################################ RADIO PAGE
+    //we are in the radio mode
     if (p.y > 180) { //if the y value > 180, we are in the button area
-      //we nned the p.x position to find which button was clicked
+      //we need the p.x position to find which button was clicked
       if (p.x < 64) toggleRadio(radio);
       if ((p.x>64) && (p.x<128)) startSnooze();
       if ((p.x>128) && (p.x<192)) toggleAlarm();
       if ((p.x>192) && (p.x<256)) changeStation();
-      if (p.x > 256) {
+      if (p.x > 256) {//rechter Button zu configpage
+        clockmode = false;
+        configpage = true;
+        radiopage = false;
+        showCommand(); 
+      }
+    }
+    //from 0 to 44 we have the slider for gain
+    if ((p.y > 0) && (p.y<44)) setGainValue(p.x);
+    //from 44 to 132 we have now space for Favorite Sender Buttons
+    /////////////////////////////////////////
+    //from 132 to 175 we have the station list
+    if ((p.y > 132) && (p.y<175)) selectStation(p.x);
+  } else if (configpage) {//################################################ CONFIG PAGE
+    //we are in the config mode
+    if (p.y > 180) { //if the y value > 180, we are in the button area
+      //we need the p.x position to find which button was clicked
+      if (p.x < 64) toggleRadio(radio);
+      if ((p.x>64) && (p.x<128)) startSnooze();
+      if ((p.x>128) && (p.x<192)) toggleAlarm();
+      if ((p.x>192) && (p.x<256)) changeStation();
+      if (p.x > 256) {//rechter Button zurück auf Main
         clockmode = true;
+        configpage = false;
+        radiopage = false;
         showClock();
       }
     }
@@ -246,6 +270,8 @@ void toggleRadio(boolean off) {
   if (off) {
     //if off stop the stream
     stopPlaying();
+    //reset Sleeptime
+    snoozeWait = 0;
     radio = false;
     //setGain(0);
   } else {
@@ -527,10 +553,10 @@ void showSlider(uint16_t y, float value, uint16_t vmax, uint16_t bgColor, uint16
 //display the area to show the gain on config screen
 void showGain() {
   char txt[20];
-  tft.fillRect(0,0,320,44,ILI9341_LIGHTGREY);
-  tft.drawRect(0,0,320,44,ILI9341_BLUE);
+  tft.fillRect(0,0,320,44,COLOR_SETTING_BG);
+  tft.drawRect(0,0,320,44,COLOR_SETTING_BORDER);
   sprintf(txt,"%i %%",curGain);
-  textInBox(231,8,80,20,txt,ALIGNRIGHT,false,ILI9341_BLACK,ILI9341_LIGHTGREY,1);
+  textInBox(231,8,80,20,txt,ALIGNRIGHT,false,ILI9341_BLACK,COLOR_SETTING_BG,1);
   tft.setCursor(5,23);
   tft.setFont(FNT9);
   tft.setTextColor(ILI9341_BLACK);
@@ -549,10 +575,10 @@ void showGainMain() {
 //display the area to show the brightness on config screen
 void showBrigthness() {
   char txt[20];
-  tft.fillRect(0,44,320,44,ILI9341_LIGHTGREY);
-  tft.drawRect(0,44,320,44,ILI9341_BLUE);
+  tft.fillRect(0,44,320,44,COLOR_SETTING_BG);
+  tft.drawRect(0,44,320,44,COLOR_SETTING_BORDER);
   sprintf(txt,"%i %%",bright);
-  textInBox(231,52,80,20,txt,ALIGNRIGHT,false,ILI9341_BLACK,ILI9341_LIGHTGREY,1);
+  textInBox(231,52,80,20,txt,ALIGNRIGHT,false,ILI9341_BLACK,COLOR_SETTING_BG,1);
   tft.setCursor(5,67);
   tft.setFont(FNT9);
   tft.setTextColor(ILI9341_BLACK);
@@ -564,10 +590,10 @@ void showBrigthness() {
 //display the area to show the snooze time on config screen
 void showSnoozeTime() {
   char txt[20];
-  tft.fillRect(0,88,320,44,ILI9341_LIGHTGREY);
-  tft.drawRect(0,88,320,44,ILI9341_BLUE);
+  tft.fillRect(0,88,320,44,COLOR_SETTING_BG);
+  tft.drawRect(0,88,320,44,COLOR_SETTING_BORDER);
   sprintf(txt,"%i min",snoozeTime);
-  textInBox(231,96,80,20,txt,ALIGNRIGHT,false,ILI9341_BLACK,ILI9341_LIGHTGREY,1);
+  textInBox(231,96,80,20,txt,ALIGNRIGHT,false,ILI9341_BLACK,COLOR_SETTING_BG,1);
   tft.setCursor(5,111);
   tft.setFont(FNT9);
   tft.setTextColor(ILI9341_BLACK);
@@ -580,15 +606,15 @@ void showSnoozeTime() {
 void updateStation() {
   char txt[40];
   encodeUnicode(stationlist[curStation].name,txt);
-  textInBox(40,145,240,20,txt,ALIGNCENTER,false,ILI9341_BLACK,ILI9341_LIGHTGREY,1);
+  textInBox(40,145,240,20,txt,ALIGNCENTER,false,ILI9341_BLACK,COLOR_SETTING_BG,1);
 }
 
 //display the area to show the stations on config screen
 void showStationList() {
-  tft.fillRect(0,132,320,44,ILI9341_LIGHTGREY);
-  tft.drawRect(0,132,320,44,ILI9341_BLUE);
-  tft.fillTriangle(5,138,20,169,35,138,ILI9341_BLUE);
-  tft.fillTriangle(279,169,294,138,309,169,ILI9341_BLUE);
+  tft.fillRect(0,132,320,44,COLOR_SETTING_BG);
+  tft.drawRect(0,132,320,44,COLOR_SETTING_BORDER);
+  tft.drawBitmap(0,132,symbole[4],50,44,COLOR_SETTING_UP_DOWN);
+  tft.drawBitmap(270,132,symbole[5],50,44,COLOR_SETTING_UP_DOWN);  
   curStation = actStation;
   updateStation();
 }
@@ -601,10 +627,79 @@ void showCommand() {
     showBrigthness();
     showSnoozeTime();
     showStationList();
-    tft.drawBitmap(0,176,knopfimg_neu,320,64,ILI9341_BLUE,ILI9341_LIGHTGREY);
+    uint16_t color_temp; // Farbvariable
+    //Power
+    if (radio) {//Radio läuft
+        color_temp = ILI9341_GREEN;
+    } else {
+        color_temp = COLOR_KNOEPFE;
+    }      
+    tft.drawBitmap(0,176,knopf_sym[0],64,64,color_temp,COLOR_KNOEPFE_BG);
+    //Sleep
+    if (snoozeWait != 0) {//Einschlaf aktiv
+        color_temp = ILI9341_ORANGE;
+    } else {
+        color_temp = COLOR_KNOEPFE;
+    }  
+    tft.drawBitmap(64,176,knopf_sym[1],64,64,color_temp,COLOR_KNOEPFE_BG);
+    //Alarm
+    uint8_t symbol;  
+    if (alarmday < 8){// Wecker aktiv
+      color_temp = COLOR_KNOEPFE;
+      symbol = 2;
+    }else{// Wecker ausgeschalten
+      color_temp = ILI9341_RED;
+      symbol = 3;
+    }      
+    tft.drawBitmap(128,176,knopf_sym[symbol],64,64,color_temp,COLOR_KNOEPFE_BG);
+    //Radio
+    tft.drawBitmap(192,176,knopf_sym[4],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
+    //Jump to Main (CLOCK SCREEN)
+    tft.drawBitmap(256,176,knopf_sym[5],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
+
     start_conf = millis();
 }
 
+//display the complete radio screen
+void showRadioPage() {
+    setBGLight(100);
+    tft.fillScreen(COLOR_KNOEPFE_BG);
+    showGain();
+    //showBrigthness();
+    //showSnoozeTime();
+    showStationList();
+    uint16_t color_temp; // Farbvariable
+    //Power
+    if (radio) {//Radio läuft
+        color_temp = ILI9341_GREEN;
+    } else {
+        color_temp = COLOR_KNOEPFE;
+    }      
+    tft.drawBitmap(0,176,knopf_sym[0],64,64,color_temp,COLOR_KNOEPFE_BG);
+    //Sleep
+    if (snoozeWait != 0) {//Einschlaf aktiv
+        color_temp = ILI9341_ORANGE;
+    } else {
+        color_temp = COLOR_KNOEPFE;
+    }  
+    tft.drawBitmap(64,176,knopf_sym[1],64,64,color_temp,COLOR_KNOEPFE_BG);
+    //Alarm
+    uint8_t symbol;  
+    if (alarmday < 8){// Wecker aktiv
+      color_temp = COLOR_KNOEPFE;
+      symbol = 2;
+    }else{// Wecker ausgeschalten
+      color_temp = ILI9341_RED;
+      symbol = 3;
+    }      
+    tft.drawBitmap(128,176,knopf_sym[symbol],64,64,color_temp,COLOR_KNOEPFE_BG);
+    //Radio
+    tft.drawBitmap(192,176,knopf_sym[4],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
+    //jump to setting
+    tft.drawBitmap(256,176,knopf_sym[6],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
+
+    start_conf = millis();
+}
 
 //show name of active station on TFT display
 void showStation() {

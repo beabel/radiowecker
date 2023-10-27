@@ -42,7 +42,9 @@ Hier einige Ansichten:
 
 ![Main Screen](screenshot/result.jpg?raw=true "Result")
 
-![Knöpfe neu](screenshot/knoepfe_neu.jpg?raw=true "Knöpfe neu")
+![Radio Screen](screenshot/radio.jpg?raw=true "Seite Radio")
+
+![Setting Screen](screenshot/setting.jpg?raw=true "Seite Settings")
 
 ![Color Setting](screenshot/settings_color.png?raw=true "Setting")
 
