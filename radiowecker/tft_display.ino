@@ -49,7 +49,7 @@ void onTouchClick(TS_Point p) {
       radiopage = true;
       showRadioPage(); 
     }else{// we adjust the Gain
-      setGainMainValue(p.x);      
+      setGainValue(p.x, "MainPage");      
     }
   } else if (radiopage) {//################################################ RADIO PAGE
     //we are in the radio mode
@@ -67,7 +67,7 @@ void onTouchClick(TS_Point p) {
       }
     }
     //from 0 to 44 we have the slider for gain
-    if ((p.y > 0) && (p.y<44)) setGainValue(p.x);
+    if ((p.y > 0) && (p.y<44)) setGainValue(p.x, "SettingPage");
     //from 44 to 132 we have now space for Favorite Sender Buttons
     /////////////////////////////////////////
     //from 132 to 175 we have the station list
@@ -88,7 +88,7 @@ void onTouchClick(TS_Point p) {
       }
     }
     //from 0 to 44 we have the slider for gain
-    if ((p.y > 0) && (p.y<44)) setGainValue(p.x);
+    if ((p.y > 0) && (p.y<44)) setGainValue(p.x, "SettingPage");
     //from 44 to 88 we have the slider for brightness
     if ((p.y > 44) && (p.y<88)) setBrightness(p.x);
     //from 88 to 132 we have the slider for snooze time
@@ -98,45 +98,30 @@ void onTouchClick(TS_Point p) {
   }
 }
 
-//set the gain for x-position where the slider was clicked
-void setGainValue(uint16_t value) {
-  char txt[10];
-  //calculate gain from x-Position 0 to 100%
-  int y_start = 11;//11 = start line y
-  int line_lenght = 298;//298 = lenght line 
+// Set the gain for the x-position where the slider was clicked
+void setGainValue(uint16_t value, const char* sliderPage) {
+        char txt[10];
+        // calculate gain from x-Position 0 to 100%
+        int y_start = 11;  // 11 = Startlinie y
+        int line_length = 298;  // 298 = Länge der Linie
 
-  float startslider = value - y_start;//substract the unused area before line start
-  float endslider = line_lenght - y_start;//substract the unused area before line start
-  float v = startslider / endslider * 100;// now we have percent
-  if (v > 100) v = 100;
-  if (v < 0) v = 0;
-  curGain = v;
-  //save gain and adjust slider and set gain to the new value
-  pref.putUShort("gain",curGain);
-  showSlider(27,curGain,100);
-  setGain(curGain);
-  sprintf(txt,"%i %%",curGain);
-  displayMessage(231,8,80,20,txt,ALIGNRIGHT,false,ILI9341_BLACK,ILI9341_LIGHTGREY,1);
-}
+        float start_slider = value - y_start;  // Bereich vor dem Linienstart abziehen
+        float end_slider = line_length - y_start;  // Bereich vor dem Linienstart abziehen
+        float v = start_slider / end_slider * 100;  // Jetzt haben wir Prozent
+        if (v > 100) v = 100;
+        if (v < 0) v = 0;
+        curGain = v;
+        // Gain speichern und Schieberegler anpassen, Gain auf neuen Wert setzen
+        pref.putUShort("gain", curGain);
 
-//set the gain for x-position where the slider was clicked
-void setGainMainValue(uint16_t value) {
-  char txt[10];
-  //calculate gain from x-Position 0 to 100%
-  int y_start = 11;//11 = start line y
-  int line_lenght = 298;//298 = lenght line 
-
-  float startslider = value - y_start;//substract the unused area before line start
-  float endslider = line_lenght - y_start;//substract the unused area before line start
-  float v = startslider / endslider * 100;// now we have percent
-  if (v > 100) v = 100;
-  if (v < 0) v = 0;  
-  curGain = v;
-  //save gain and adjust slider and set gain to the new value
-  pref.putUShort("gain",curGain);
-  showSlider(218,curGain,100,COLOR_SLIDER_BG,COLOR_SLIDER);
-  setGain(curGain);
-  sprintf(txt,"%i %%",curGain);
+        if (sliderPage == "MainPage") {
+            showSlider(218, curGain, 100, COLOR_SLIDER_BG, COLOR_SLIDER);
+        } else {// Standard Setting Page
+            showSlider(27, curGain, 100);
+            sprintf(txt, "%i %%", curGain);// Here we need also the Text on right Side
+            displayMessage(231, 8, 80, 20, txt, ALIGNRIGHT, false, ILI9341_BLACK, ILI9341_LIGHTGREY, 1);
+        }
+        setGain(curGain);
 }
 
 //set the brightness for x-position where the slider was clicked
