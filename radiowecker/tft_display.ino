@@ -67,9 +67,26 @@ void onTouchClick(TS_Point p) {
       }
     }
     //from 0 to 44 we have the slider for gain
-    if ((p.y > 0) && (p.y<44)) setGainValue(p.x, "SettingPage");
-    //from 44 to 132 we have now space for Favorite Sender Buttons
-    /////////////////////////////////////////
+    if ((p.y > 0) && (p.y<44)) setGainValue(p.x, "RadioPage");
+    //from 44 to 132 we have now space for Favorite Sender Buttons/////////////////////////////////////////
+    if ((p.y > 44) && (p.y<132)){
+      if(p.y<88){
+        if (p.x < 64){curStation = 0;} 
+        if ((p.x>64) && (p.x<128)){curStation = 1;} 
+        if ((p.x>128) && (p.x<192)){curStation = 2;} 
+        if ((p.x>192) && (p.x<256)){curStation = 3;} 
+        if (p.x > 256){curStation = 4;}
+      }else{
+        if (p.x < 64){curStation = 5;} 
+        if ((p.x>64) && (p.x<128)){curStation = 6;} 
+        if ((p.x>128) && (p.x<192)){curStation = 7;} 
+        if ((p.x>192) && (p.x<256)){curStation = 8;} 
+        if (p.x > 256){curStation = 9;}        
+      }
+      changeStation();
+      showClock();       
+    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
     //from 132 to 175 we have the station list
     if ((p.y > 132) && (p.y<175)) selectStation(p.x);
   } else if (configpage) {//################################################ CONFIG PAGE
@@ -601,8 +618,7 @@ void showRadioPage() {
     setBGLight(100);
     tft.fillScreen(COLOR_KNOEPFE_BG);
     showGain();
-    //showBrigthness();
-    //showSnoozeTime();
+    FavoriteButtons();
     showStationList();
     uint16_t color_temp; // Farbvariable
     //Power
@@ -707,4 +723,24 @@ void showClock() {
 //a cover function for text in the box to be used from other sub parts
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align, boolean big, uint16_t fc, uint16_t bg, uint8_t lines) {
   textInBox(x,y,w,h,text,align,big,fc,bg,lines);
+}
+
+// Create Favorite Buttons on Radio Page between y44 - y132 and switch directly
+void FavoriteButtons(){
+  int y = 44;
+  bool useGrey = true;
+  bool active = false;
+  int loopCount = 0;
+
+  for (int i = 0; i < STATIONS && loopCount < 10; i++) {
+    if (stationlist[i].enabled) {
+      bool active = (actStation == i); // Aktiv für die aktuelle Station
+      displayMessage((loopCount % 5) * 64, y, 64, 44, stationlist[i].name, ALIGNCENTER, false, active ? ILI9341_GREEN : ILI9341_BLACK, useGrey ? ILI9341_DARKGREY : ILI9341_LIGHTGREY, 2);
+      useGrey = !useGrey;
+      loopCount++;
+      if (loopCount % 5 == 0) {
+        y = 88;
+      }
+    }
+  }
 }
