@@ -4,7 +4,7 @@
 #include "tft_color_setting.h"
 #include "knoepfe.h" //Graphic data for buttons
 #include "symbole.h" //Graphic data for symbolic
-
+#include "num_64_44.h" //Graphic data for Fav Buttons
 //pins for touchscreen
 #define TOUCH_CS 14
 #define TOUCH_IRQ 27
@@ -36,56 +36,7 @@ XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 TouchEvent tevent(touch);
 //Prototype created (i have now optional Arguments) the function down like before
 void showSlider(uint16_t y, float value, uint16_t vmax, uint16_t bgColor = ILI9341_LIGHTGREY, uint16_t lineColor = ILI9341_BLACK);
-//###################################
-#define BEEPER 21
-#include "pitches.h"
-// Notenfrequenzen
-int melody[] = {
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4,
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_E4, NOTE_D4,
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_G4, NOTE_F4, NOTE_E4, NOTE_D4, NOTE_A3,
-  0, NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, NOTE_A4, NOTE_G4, NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4,
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_E4, NOTE_D4
-};
 
-// Dauern der Noten (in Millisekunden)
-int noteDurations[] = {
-  4, 8, 8, 4, 4, 4, 4, 4,
-  4, 8, 8, 4, 4, 4, 4, 4,
-  4, 8, 8, 4, 4, 4, 4, 4,
-  4, 8, 8, 8, 8, 8, 8, 4, 4, 8, 8, 4, 4, 4, 4, 4,
-  4, 8, 8, 4, 4, 4, 4, 4
-};
-//damit kann eine ganze Melody erzeugt werden
-void playMelody(int notes[], int durations[], int melodyLength) {
-  for (int i = 0; i < melodyLength; i++) {
-    int noteDuration = 1000 / durations[i];
-    tone(BEEPER, notes[i], noteDuration);
-    int pauseBetweenNotes = noteDuration * 1.30;
-    delay(pauseBetweenNotes);
-    noTone(BEEPER);
-  }
-}
-// AUFRUF: playMelody(melody, noteDurations, sizeof(melody) / sizeof(melody[0]));
-
-//eine Art Wecker Piepen kann damit erstellt werden
-void BeepPattern(int totalRepeats, int beepCount, int beepDuration, int pauseDuration) {
-  for (int r = 0; r < totalRepeats; r++) {
-    for (int i = 0; i < beepCount; i++) {
-      tone(BEEPER, 1000, beepDuration); // 1000 Hz Ton für die Dauer abspielen
-      delay(beepDuration);             // Warten, während der Ton abgespielt wird
-      noTone(BEEPER);                  // Ton ausschalten
-      delay(pauseDuration);            // Pausendauer zwischen den Tönen
-    }
-  }
-}
-// AUFRUF: BeepPattern(3, 4, 100, 100);
-
-//einzelner Button Klick Ton
-void ButtonTone(){
-  tone(BEEPER,4000,100);
-}
-//##################################
 //register a callback for any touch event.
 //we get position and type of the event
 void onTouchClick(TS_Point p) {
@@ -98,7 +49,7 @@ void onTouchClick(TS_Point p) {
       radiopage = true;
       showRadioPage(); 
     }else{// we adjust the Gain
-      setGainMainValue(p.x);      
+      setGainValue(p.x, "MainPage");      
     }
   } else if (radiopage) {//################################################ RADIO PAGE
     //we are in the radio mode
@@ -116,9 +67,26 @@ void onTouchClick(TS_Point p) {
       }
     }
     //from 0 to 44 we have the slider for gain
-    if ((p.y > 0) && (p.y<44)) setGainValue(p.x);
-    //from 44 to 132 we have now space for Favorite Sender Buttons
-    /////////////////////////////////////////
+    if ((p.y > 0) && (p.y<44)) setGainValue(p.x, "RadioPage");
+    //from 44 to 132 we have now space for Favorite Sender Buttons/////////////////////////////////////////
+    if ((p.y > 44) && (p.y<132)){
+      if(p.y<88){
+        if (p.x < 64){curStation = 0;} 
+        if ((p.x>64) && (p.x<128)){curStation = 1;} 
+        if ((p.x>128) && (p.x<192)){curStation = 2;} 
+        if ((p.x>192) && (p.x<256)){curStation = 3;} 
+        if (p.x > 256){curStation = 4;}
+      }else{
+        if (p.x < 64){curStation = 5;} 
+        if ((p.x>64) && (p.x<128)){curStation = 6;} 
+        if ((p.x>128) && (p.x<192)){curStation = 7;} 
+        if ((p.x>192) && (p.x<256)){curStation = 8;} 
+        if (p.x > 256){curStation = 9;}        
+      }
+      changeStation();
+      showClock();       
+    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
     //from 132 to 175 we have the station list
     if ((p.y > 132) && (p.y<175)) selectStation(p.x);
   } else if (configpage) {//################################################ CONFIG PAGE
@@ -137,7 +105,7 @@ void onTouchClick(TS_Point p) {
       }
     }
     //from 0 to 44 we have the slider for gain
-    if ((p.y > 0) && (p.y<44)) setGainValue(p.x);
+    if ((p.y > 0) && (p.y<44)) setGainValue(p.x, "SettingPage");
     //from 44 to 88 we have the slider for brightness
     if ((p.y > 44) && (p.y<88)) setBrightness(p.x);
     //from 88 to 132 we have the slider for snooze time
@@ -147,45 +115,30 @@ void onTouchClick(TS_Point p) {
   }
 }
 
-//set the gain for x-position where the slider was clicked
-void setGainValue(uint16_t value) {
-  char txt[10];
-  //calculate gain from x-Position 0 to 100%
-  int y_start = 11;//11 = start line y
-  int line_lenght = 298;//298 = lenght line 
+// Set the gain for the x-position where the slider was clicked
+void setGainValue(uint16_t value, const char* sliderPage) {
+        char txt[10];
+        // calculate gain from x-Position 0 to 100%
+        int y_start = 11;  // 11 = Startlinie y
+        int line_length = 298;  // 298 = Länge der Linie
 
-  float startslider = value - y_start;//substract the unused area before line start
-  float endslider = line_lenght - y_start;//substract the unused area before line start
-  float v = startslider / endslider * 100;// now we have percent
-  if (v > 100) v = 100;
-  if (v < 0) v = 0;
-  curGain = v;
-  //save gain and adjust slider and set gain to the new value
-  pref.putUShort("gain",curGain);
-  showSlider(27,curGain,100);
-  setGain(curGain);
-  sprintf(txt,"%i %%",curGain);
-  displayMessage(231,8,80,20,txt,ALIGNRIGHT,false,ILI9341_BLACK,ILI9341_LIGHTGREY,1);
-}
+        float start_slider = value - y_start;  // Bereich vor dem Linienstart abziehen
+        float end_slider = line_length - y_start;  // Bereich vor dem Linienstart abziehen
+        float v = start_slider / end_slider * 100;  // Jetzt haben wir Prozent
+        if (v > 100) v = 100;
+        if (v < 0) v = 0;
+        curGain = v;
+        // Gain speichern und Schieberegler anpassen, Gain auf neuen Wert setzen
+        pref.putUShort("gain", curGain);
 
-//set the gain for x-position where the slider was clicked
-void setGainMainValue(uint16_t value) {
-  char txt[10];
-  //calculate gain from x-Position 0 to 100%
-  int y_start = 11;//11 = start line y
-  int line_lenght = 298;//298 = lenght line 
-
-  float startslider = value - y_start;//substract the unused area before line start
-  float endslider = line_lenght - y_start;//substract the unused area before line start
-  float v = startslider / endslider * 100;// now we have percent
-  if (v > 100) v = 100;
-  if (v < 0) v = 0;  
-  curGain = v;
-  //save gain and adjust slider and set gain to the new value
-  pref.putUShort("gain",curGain);
-  showSlider(218,curGain,100,COLOR_SLIDER_BG,COLOR_SLIDER);
-  setGain(curGain);
-  sprintf(txt,"%i %%",curGain);
+        if (sliderPage == "MainPage") {
+            showSlider(218, curGain, 100, COLOR_SLIDER_BG, COLOR_SLIDER);
+        } else {// Standard Setting Page
+            showSlider(27, curGain, 100);
+            sprintf(txt, "%i %%", curGain);// Here we need also the Text on right Side
+            displayMessage(231, 8, 80, 20, txt, ALIGNRIGHT, false, ILI9341_BLACK, ILI9341_LIGHTGREY, 1);
+        }
+        setGain(curGain);
 }
 
 //set the brightness for x-position where the slider was clicked
@@ -665,8 +618,7 @@ void showRadioPage() {
     setBGLight(100);
     tft.fillScreen(COLOR_KNOEPFE_BG);
     showGain();
-    //showBrigthness();
-    //showSnoozeTime();
+    FavoriteButtons();
     showStationList();
     uint16_t color_temp; // Farbvariable
     //Power
@@ -771,4 +723,22 @@ void showClock() {
 //a cover function for text in the box to be used from other sub parts
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align, boolean big, uint16_t fc, uint16_t bg, uint8_t lines) {
   textInBox(x,y,w,h,text,align,big,fc,bg,lines);
+}
+
+// Create Favorite Buttons on Radio Page between y44 - y132 and switch directly
+void FavoriteButtons(){
+  int y = 44;
+  bool active = false;
+  int loopCount = 0;
+
+  for (int i = 0; i < STATIONS && loopCount < 10; i++) {
+    if (stationlist[i].enabled) {
+      bool active = (actStation == i); // Aktiv für die aktuelle Station
+      tft.drawBitmap((loopCount % 5) * 64, y, num_64_44[i], 64, 44, active ? COLOR_FAV_BUTTONS_AKTIV : COLOR_FAV_BUTTONS, COLOR_FAV_BUTTONS_BG);
+      loopCount++;
+      if (loopCount % 5 == 0) {
+        y = 88;
+      }
+    }
+  }
 }

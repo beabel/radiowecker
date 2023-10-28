@@ -25,5 +25,9 @@
 
 #define COLOR_KNOEPFE             ILI9341_BLUE
 #define COLOR_KNOEPFE_BG          ILI9341_LIGHTGREY
+
+#define COLOR_FAV_BUTTONS         ILI9341_BLUE
+#define COLOR_FAV_BUTTONS_BG      ILI9341_LIGHTGREY
+#define COLOR_FAV_BUTTONS_AKTIV   ILI9341_ORANGE
 // to be done
 // maybe later all the color settings from the Webpage adjustable
