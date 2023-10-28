@@ -4,7 +4,7 @@
 #include "tft_color_setting.h"
 #include "knoepfe.h" //Graphic data for buttons
 #include "symbole.h" //Graphic data for symbolic
-
+#include "num_64_44.h" //Graphic data for Fav Buttons
 //pins for touchscreen
 #define TOUCH_CS 14
 #define TOUCH_IRQ 27
@@ -728,15 +728,13 @@ void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* 
 // Create Favorite Buttons on Radio Page between y44 - y132 and switch directly
 void FavoriteButtons(){
   int y = 44;
-  bool useGrey = true;
   bool active = false;
   int loopCount = 0;
 
   for (int i = 0; i < STATIONS && loopCount < 10; i++) {
     if (stationlist[i].enabled) {
       bool active = (actStation == i); // Aktiv für die aktuelle Station
-      displayMessage((loopCount % 5) * 64, y, 64, 44, stationlist[i].name, ALIGNCENTER, false, active ? ILI9341_GREEN : ILI9341_BLACK, useGrey ? ILI9341_DARKGREY : ILI9341_LIGHTGREY, 2);
-      useGrey = !useGrey;
+      tft.drawBitmap((loopCount % 5) * 64, y, num_64_44[i], 64, 44, active ? COLOR_FAV_BUTTONS_AKTIV : COLOR_FAV_BUTTONS, COLOR_FAV_BUTTONS_BG);
       loopCount++;
       if (loopCount % 5 == 0) {
         y = 88;
