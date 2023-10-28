@@ -16,6 +16,8 @@
 
 //pin to be used for light sensor
 #define LDR 36
+// pin for Beeper
+#define BEEPER 21
 
 //instance of prefernces
 Preferences pref;
@@ -256,7 +258,7 @@ void loop() {
       //if alarm day and time is reached turn radio on and get values for next expected alarm
       if ((alarmday == weekday) && ((minutes == alarmtime) || (minutes == (alarmtime+1)))) {
         // Test Beeper#####################     
-        BeepPattern(3, 4, 100, 100);
+
         // Test Beeper#####################        
         toggleRadio(false);
         showRadio();

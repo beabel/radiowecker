@@ -36,56 +36,7 @@ XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 TouchEvent tevent(touch);
 //Prototype created (i have now optional Arguments) the function down like before
 void showSlider(uint16_t y, float value, uint16_t vmax, uint16_t bgColor = ILI9341_LIGHTGREY, uint16_t lineColor = ILI9341_BLACK);
-//###################################
-#define BEEPER 21
-#include "pitches.h"
-// Notenfrequenzen
-int melody[] = {
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4,
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_E4, NOTE_D4,
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_G4, NOTE_F4, NOTE_E4, NOTE_D4, NOTE_A3,
-  0, NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, NOTE_A4, NOTE_G4, NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4,
-  NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_E4, NOTE_D4
-};
 
-// Dauern der Noten (in Millisekunden)
-int noteDurations[] = {
-  4, 8, 8, 4, 4, 4, 4, 4,
-  4, 8, 8, 4, 4, 4, 4, 4,
-  4, 8, 8, 4, 4, 4, 4, 4,
-  4, 8, 8, 8, 8, 8, 8, 4, 4, 8, 8, 4, 4, 4, 4, 4,
-  4, 8, 8, 4, 4, 4, 4, 4
-};
-//damit kann eine ganze Melody erzeugt werden
-void playMelody(int notes[], int durations[], int melodyLength) {
-  for (int i = 0; i < melodyLength; i++) {
-    int noteDuration = 1000 / durations[i];
-    tone(BEEPER, notes[i], noteDuration);
-    int pauseBetweenNotes = noteDuration * 1.30;
-    delay(pauseBetweenNotes);
-    noTone(BEEPER);
-  }
-}
-// AUFRUF: playMelody(melody, noteDurations, sizeof(melody) / sizeof(melody[0]));
-
-//eine Art Wecker Piepen kann damit erstellt werden
-void BeepPattern(int totalRepeats, int beepCount, int beepDuration, int pauseDuration) {
-  for (int r = 0; r < totalRepeats; r++) {
-    for (int i = 0; i < beepCount; i++) {
-      tone(BEEPER, 1000, beepDuration); // 1000 Hz Ton für die Dauer abspielen
-      delay(beepDuration);             // Warten, während der Ton abgespielt wird
-      noTone(BEEPER);                  // Ton ausschalten
-      delay(pauseDuration);            // Pausendauer zwischen den Tönen
-    }
-  }
-}
-// AUFRUF: BeepPattern(3, 4, 100, 100);
-
-//einzelner Button Klick Ton
-void ButtonTone(){
-  tone(BEEPER,4000,100);
-}
-//##################################
 //register a callback for any touch event.
 //we get position and type of the event
 void onTouchClick(TS_Point p) {

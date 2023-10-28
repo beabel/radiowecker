@@ -44,7 +44,7 @@ Hier einige Ansichten:
 
 ![Radio Screen](screenshot/radio.jpg?raw=true "Seite Radio")
 
-![Setting Screen](screenshot/setting.jpg?raw=true "Seite Settings")
+![Setting Screen](screenshot/settings.jpg?raw=true "Seite Settings")
 
 ![Color Setting](screenshot/settings_color.png?raw=true "Setting")
 
