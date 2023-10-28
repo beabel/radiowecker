@@ -18,7 +18,7 @@ anpassen der Farbe ermöglicht
 NEU alle Einstellungen der Farben an 1 Stelle für die Hauptseite
 
 NEU jetzt sind die Knöpfe monochrom, somit anpassbar
-Später werden die Köpfe einzeln sein, um sie dynamisch anzupassen.
+NEU Die Köpfe sind jetzt einzeln, um sie dynamisch anzupassen.
 
 Hauptseite etwas umgestaltet, um mehr Informationen über den aktuellen Zustand zu haben.
 Siehe im Bild unten.
@@ -35,6 +35,9 @@ Im Header werden links angezeigt:
     Wecker Zeit / AUS
 
 Im unteren Bereich ist jetzt auf der Hauptseite direkt der Lautstärke regler zu finden.
+
+Die Setting Seite habe ich eins nach hinten geschoben, um auf der Radio Seite Platz zu bekommen.
+Den jetzt gewonnenen Platz nutze ich jetzt für Favoriten Tasten.
 
 Außerdem wurde bereits alles vorbereitet um den Piezo zu nutzen.
 
