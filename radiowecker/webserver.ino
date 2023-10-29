@@ -20,6 +20,11 @@ void setup_webserver() {
   server.on("/cmd/setstation",setStationData);
   server.on("/cmd/teststation",testStation);
   server.on("/cmd/endtest",endTest);
+  // Player Tab ######################
+  server.on("/cmd/startPlay",startPlay);
+  server.on("/cmd/stopPlay",stopPlay); 
+  server.on("/cmd/GainSlider",GainSlider); 
+  server.on("/cmd/getCurrentGain",getCurrentGain);      
   //start webserver
   server.begin();
 }
@@ -267,4 +272,35 @@ void restoreStations() {
 //AJAX command /cmd/restart
 void restart(){
   ESP.restart();
+}
+// Player Tab ######################
+//AJAX command /cmd/startPlay
+void startPlay(){
+  toggleRadio(false);
+  //respond with OK
+  server.send(200,"text/plain","OK");  
+}
+//AJAX command /cmd/startPlay
+void stopPlay(){
+  toggleRadio(true);
+  //respond with OK
+  server.send(200,"text/plain","OK");  
+}
+//AJAX command /cmd/GainSlider
+void GainSlider() {
+  if (server.hasArg("GainValue")) {
+    float floatWert = atof(server.arg("GainValue").c_str());
+    setGainValue(floatWert, "WEBSITE");
+    server.send(200, "text/plain", "OK");
+
+    Serial.print("GainValue: ");
+    Serial.println(floatWert);
+  } else {
+    server.send(400, "text/plain", "ERROR");
+  }
+}
+//AJAX command /cmd/getCurrentGain
+void getCurrentGain() {
+  String response = String(curGain);
+  server.send(200, "text/plain", response);
 }
