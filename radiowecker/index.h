@@ -7,9 +7,15 @@ const char MAIN_page[] PROGMEM = R"=====(
 <head>
 <meta http-equiv='content-type' content='text/html; charset=UTF-8'>
 <meta name='viewport' content='width=320' />
-<link href = "https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel = "stylesheet">
-<script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.min.css">
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
 <script>
+$(document).ready(function() {
+    $("#tabs").tabs();
+});
+
 $(function() {
     $(document).ready(getAll);
     $("#btn_save").click(saveSSID);
@@ -198,25 +204,11 @@ label {
   float: left;  
 }
 button {
-    width:45%;
     margin: 5px;
     height: 2.0em;    
 }
 input {
   width:100%;
-}
-/* einzelnen Abschnitte moderner */
-fieldset {
-  background-color: white;
-  border: 2px solid orange;
-  margin: 0 auto;
-  margin-top: 20px;
-}
-legend {
-  color: white;
-  background-color: orange;
-  width: 100%;
-  text-align: center;
 }
 
 /* checkboxen Wochentage als "Button" */
@@ -230,7 +222,7 @@ legend {
   line-height: 2.0em;
   width: 2.0em; 
   height: 2.0em;
-  margin: 2px;
+  margin: 1px;
 }
 .categorie label span {
   text-align: center;
@@ -251,134 +243,136 @@ legend {
 </head>
 <body>
 <h1>Web Radiowecker</h1>
-<fieldset>
-  <legend>WLAN / WIFI: </legend>
-  <label>SSID:
-    <input id="ssid_input" />
-  </label>
-  <br />
-  <label>PKEY:
-    <input id="pkey_input" type="password"/>
-  </label>
-  <br />
-  <label>NTP:
-    <input id="ntp_input" />
-  </label>
-  <br />
-  <div align="center">
-    <button id="btn_save" type="button">Speichern</button>
-    <button id="btn_reset" type="button">Neustart</button>
-    <br />
-    <button id="btn_restore" type="button">Senderliste Reset</button>
-  </div>
-</fieldset>
 
-<fieldset>
-  <legend>Wecker: </legend>
-    <label>Weckzeit 1:
-        <input id="al0" type="time" />
-    </label>
-    <br />
-    <div class="categorie days" align="center">
-      <label>
-          <input type="checkbox" id="al2"/>
-          <span>Mo</span>
+<div id="tabs">
+    <ul>
+        <li><a href="#wecker"><span class="ui-icon ui-icon-clock">Wecker</span></a></li>
+        <li><a href="#radio"><span class="ui-icon ui-icon-volume-on">Radio</span></a></li>   
+        <li><a href="#wlan"><span class="ui-icon ui-icon-signal-diag">WLAN</span></a></li>
+    </ul>
+    <div id="wecker">
+      <label>Weckzeit 1:
+          <input id="al0" type="time" />
       </label>
-      <label>
-          <input type="checkbox" id="al3"/>
-          <span>Di</span>
+      <br />
+      <div class="categorie days" align="center">
+        <label>
+            <input type="checkbox" id="al2"/>
+            <span>Mo</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al3"/>
+            <span>Di</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al4"/>
+            <span>Mi</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al5"/>
+            <span>Do</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al6"/>
+            <span>Fr</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al7"/>
+            <span>Sa</span>
+        </label>
+        <label>
+            <input id="al1" type="checkbox"/>
+            <span>So</span>
+        </label>
+      </div>
+      <br />
+      <label>Weckzeit 2:
+          <input id="al8" type="time"/>
       </label>
-      <label>
-          <input type="checkbox" id="al4"/>
-          <span>Mi</span>
-      </label>
-      <label>
-          <input type="checkbox" id="al5"/>
-          <span>Do</span>
-      </label>
-      <label>
-          <input type="checkbox" id="al6"/>
-          <span>Fr</span>
-      </label>
-      <label>
-          <input type="checkbox" id="al7"/>
-          <span>Sa</span>
-      </label>
-      <label>
-          <input id="al1" type="checkbox"/>
-          <span>So</span>
-      </label>
+      <br />
+      <div class="categorie days"  align="center">
+        <label>
+            <input type="checkbox" id="al10"/>
+            <span>Mo</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al11"/>
+            <span>Di</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al12"/>
+            <span>Mi</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al13"/>
+            <span>Do</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al14"/>
+            <span>Fr</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al15"/>
+            <span>Sa</span>
+        </label>
+        <label>
+            <input type="checkbox" id="al9"/>
+            <span>So</span>
+        </label>
+      </div>
+      <br />
+      <div align="center">
+        <button id="btn_savealarm" type="button">Speichern</button>
+        <button id="btn_cancelalarm" type="button">Rückgängig</button>
+      </div>      
     </div>
-    <br />
-    <label>Weckzeit 2:
-        <input id="al8" type="time"/>
-    </label>
-    <br />
-    <div class="categorie days"  align="center">
-      <label>
-          <input type="checkbox" id="al10"/>
-          <span>Mo</span>
+    <div id="radio">
+      <label>Liste:
+        <select id="stationlist"></select>
       </label>
-      <label>
-          <input type="checkbox" id="al11"/>
-          <span>Di</span>
+      <br />
+      <label>Name:
+          <input id="name_input"/>
       </label>
-      <label>
-          <input type="checkbox" id="al12"/>
-          <span>Mi</span>
+      <br />
+      <label>URL:
+          <input id="url_input"/>
       </label>
-      <label>
-          <input type="checkbox" id="al13"/>
-          <span>Do</span>
+      <br />
+      <label>Verwenden:
+          <input id="enable_input" type="checkbox">
       </label>
-      <label>
-          <input type="checkbox" id="al14"/>
-          <span>Fr</span>
+      <br />
+      <label>Position:
+          <input id="pos_input" type="number" step="1" min="1" max="99" size="2"/>
       </label>
-      <label>
-          <input type="checkbox" id="al15"/>
-          <span>Sa</span>
+      <br />
+      <div align="center">
+        <button id="btn_test" type="button">Testen</button>
+        <button id="btn_updt" type="button">Ändern</button>
+      </div>
+    </div>         
+    <div id="wlan">
+      <label>SSID:
+        <input id="ssid_input" />
       </label>
-      <label>
-          <input type="checkbox" id="al9"/>
-          <span>So</span>
+      <br />
+      <label>PKEY:
+        <input id="pkey_input" type="password"/>
       </label>
+      <br />
+      <label>NTP:
+        <input id="ntp_input" />
+      </label>
+      <br />
+      <div align="center">
+        <button id="btn_save" type="button">Speichern</button>
+        <button id="btn_reset" type="button">Neustart</button>
+        <br />
+        <button id="btn_restore" type="button">Senderliste Reset</button>
+      </div>
     </div>
-    <br />
-    <div align="center">
-      <button id="btn_savealarm" type="button">Speichern</button>
-      <button id="btn_cancelalarm" type="button">Rückgängig</button>
-    </div>      
-</fieldset>
-
-<fieldset>
-  <legend>Radio Stationen: </legend>
-  <label>Liste:
-    <select id="stationlist"></select>
-  </label>
-  <br />
-  <label>Name:
-      <input id="name_input"/>
-  </label>
-  <br />
-  <label>URL:
-      <input id="url_input"/>
-  </label>
-  <br />
-  <label>Verwenden:
-      <input id="enable_input" type="checkbox">
-  </label>
-  <br />
-  <label>Position:
-      <input id="pos_input" type="number" step="1" min="1" max="99" size="2"/>
-  </label>
-  <br />
-  <div align="center">
-    <button id="btn_test" type="button">Testen</button>
-    <button id="btn_updt" type="button">Ändern</button>
-  </div>
-</fieldset>
-
+</div>
 </body>
 </html>
 )=====";

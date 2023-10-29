@@ -51,6 +51,10 @@ Hier einige Ansichten:
 
 ![Color Setting](screenshot/settings_color.png?raw=true "Setting")
 
-![Konfig Website](screenshot/website.png?raw=true "Konfiguration")
+![Konfig Website](screenshot/website.png?raw=true "Wecker")
+
+![Konfig Website](screenshot/website_1.png?raw=true "Radio")
+
+![Konfig Website](screenshot/website_2.png?raw=true "Wlan")
 
 
