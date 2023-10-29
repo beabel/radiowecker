@@ -10,22 +10,33 @@ const char MAIN_page[] PROGMEM = R"=====(
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.min.css">
 <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-
+<link rel="stylesheet" href="//use.fontawesome.com/releases/v5.0.7/css/all.css">
 <script>
 $(document).ready(function() {
-    $("#tabs").tabs();
-});
-
-$(function() {
-    $(document).ready(getAll);
-    $("#btn_save").click(saveSSID);
-    $("#btn_reset").click(restartHost);
-    $("#btn_test").click(testStation);
-    $("#btn_updt").click(updateStation);
-    $("#btn_restore").click(restoreStations);
-    $("#btn_savealarm").click(setAlarms);
-    $("#btn_cancelalarm").click(getAlarms);
-    $("#stationlist").change(getStation);
+  $("#tabs").tabs();
+  //Standard Stuff
+  getAll();
+  $("#btn_save").click(saveSSID);
+  $("#btn_reset").click(restartHost);
+  $("#btn_test").click(testStation);
+  $("#btn_updt").click(updateStation);
+  $("#btn_restore").click(restoreStations);
+  $("#btn_savealarm").click(setAlarms);
+  $("#btn_cancelalarm").click(getAlarms);
+  $("#stationlist").change(getStation);
+  // Player Tab ######################
+  $("#btn_play").click(startPlay);
+  $("#btn_stop").click(stopPlay);
+  GainSlider();
+  $("#tabs").tabs({
+    activate: function(event, ui) {
+      // Überprüfen, ob das aktivierte Tab die ID "#player" hat
+      if (ui.newTab.find("a").attr("href") === "#player") {
+        // Wenn ja, AJAX-Anfrage auslösen
+        updateGainSlider();
+      }
+    }
+  });       
 });
 
 function getAll() {
@@ -191,6 +202,68 @@ function restartHost() {
         data:{},
     });
 }
+// Player Tab ######################
+function startPlay() {
+    $.ajax({
+        type:"POST",
+        url:"/cmd/startPlay",
+        data:{},
+    });
+}
+function stopPlay() {
+    $.ajax({
+        type:"POST",
+        url:"/cmd/stopPlay",
+        data:{},
+    });
+}
+function GainSlider() {
+  $("#GainSlider").slider({
+    min: 0,
+    max: 100,    
+    stop: function(event, ui) {
+      var sliderValue = ui.value;
+      console.log("Slider-Wert:", sliderValue);
+      // Daten senden
+      $.ajax({
+          type:"GET",
+          url:"/cmd/GainSlider",
+          data:{"GainValue":sliderValue},
+          success: function(data){
+
+          },
+          error: function() {
+              alert("ERROR");
+          }
+      });
+    }   
+  });
+  $.ajax({
+    type: "GET",
+    url: "/cmd/getCurrentGain",
+    success: function (data) {
+      // Hier den zurückgegebenen Wert als Startwert für den Slider verwenden
+      var currentGain = parseInt(data);
+      $("#GainSlider").slider("value", currentGain);
+    },
+    error: function () {
+      alert("Fehler beim Abrufen des Gain-Werts");
+    },
+  });  
+}
+function updateGainSlider() {
+  $.ajax({
+    type: "GET",
+    url: "/cmd/getCurrentGain",
+    success: function (data) {
+      var currentGain = parseInt(data);
+      $("#GainSlider").slider("value", currentGain);
+    },
+    error: function () {
+      alert("Fehler beim Abrufen des Gain-Werts");
+    },
+  });
+}
 </script>
 <style>
 body {
@@ -246,10 +319,19 @@ input {
 
 <div id="tabs">
     <ul>
-        <li><a href="#wecker"><span class="ui-icon ui-icon-clock">Wecker</span></a></li>
-        <li><a href="#radio"><span class="ui-icon ui-icon-volume-on">Radio</span></a></li>   
-        <li><a href="#wlan"><span class="ui-icon ui-icon-signal-diag">WLAN</span></a></li>
+        <li><a href="#player"><i class="fa fa-music"></i></a></li>    
+        <li><a href="#wecker"><i class="fa fa-clock"></i></a></li>
+        <li><a href="#radio"><i class="fas fa-list-ol"></i></a></li>   
+        <li><a href="#wlan"><i class="fa fa-wifi"></i></a></li>
     </ul>
+    <div id="player">
+      <div align="center">
+        <button id="btn_play" type="button"><i class="fas fa-play"></i></button>
+        <button id="btn_stop" type="button"><i class="fas fa-stop"></i></button>
+        <br />
+        <i class="fas fa-volume-up"></i><div id="GainSlider"></div>
+      </div>
+    </div>    
     <div id="wecker">
       <label>Weckzeit 1:
           <input id="al0" type="time" />

@@ -118,20 +118,25 @@ void onTouchClick(TS_Point p) {
 // Set the gain for the x-position where the slider was clicked
 void setGainValue(uint16_t value, const char* sliderPage) {
         char txt[10];
-        // calculate gain from x-Position 0 to 100%
-        int y_start = 11;  // 11 = Startlinie y
-        int line_length = 298;  // 298 = Länge der Linie
+        float v;
+        if(sliderPage != "WEBSITE"){
+          // calculate gain from x-Position 0 to 100%
+          int y_start = 11;  // 11 = Startlinie y
+          int line_length = 298;  // 298 = Länge der Linie
 
-        float start_slider = value - y_start;  // Bereich vor dem Linienstart abziehen
-        float end_slider = line_length - y_start;  // Bereich vor dem Linienstart abziehen
-        float v = start_slider / end_slider * 100;  // Jetzt haben wir Prozent
-        if (v > 100) v = 100;
-        if (v < 0) v = 0;
+          float start_slider = value - y_start;  // Bereich vor dem Linienstart abziehen
+          float end_slider = line_length - y_start;  // Bereich vor dem Linienstart abziehen
+          v = start_slider / end_slider * 100;  // Jetzt haben wir Prozent
+          if (v > 100) v = 100;
+          if (v < 0) v = 0;          
+        }else{
+          v = value;  
+        }
         curGain = v;
         // Gain speichern und Schieberegler anpassen, Gain auf neuen Wert setzen
         pref.putUShort("gain", curGain);
 
-        if (sliderPage == "MainPage") {
+        if (sliderPage == "MainPage" || (clockmode & sliderPage == "WEBSITE")) {
             showSlider(218, curGain, 100, COLOR_SLIDER_BG, COLOR_SLIDER);
         } else {// Standard Setting Page
             showSlider(27, curGain, 100);
