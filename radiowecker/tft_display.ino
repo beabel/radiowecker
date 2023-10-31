@@ -18,7 +18,6 @@
 #define TFT_DC   4   
 #define TFT_RST  22
 #define TFT_LED  15
-#define TOUCH_CS 14
 #define LED_ON 0
 #define LS 23  // line spacing
 
