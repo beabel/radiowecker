@@ -8,7 +8,9 @@ Original Beitrag:
 https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen?comment=134773833995#comments
 
 Die Anpassungen:
-NEU: Jetzt Remote steuerung des Radios von der Webseite möglich. (siehe Screenshots)
+NEU: Jetzt komplette Remote Steuerung von der Webseite möglich. (siehe Screenshots)
+
+NEU: komplette Remote Live Ansicht auf der Webseite. (siehe Screenshot)
 
 modernere Ansicht der Konfiguration und bessere Tages Eingabe der Wochentage beim Wecker
 
@@ -54,8 +56,8 @@ Hier einige Ansichten:
 
 ![Konfig Website](screenshot/website.png?raw=true "Musik")
 
-![Konfig Website](screenshot/website_1.png?raw=true "Wecker")
+![Konfig Website](screenshot/website_2.png?raw=true "Wecker")
 
-![Konfig Website](screenshot/website_2.png?raw=true "Radio")
+![Konfig Website](screenshot/website_3.png?raw=true "Radio")
 
-![Konfig Website](screenshot/website_3.png?raw=true "Wlan")
+![Konfig Website](screenshot/website_4.png?raw=true "Wlan")

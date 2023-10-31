@@ -1,6 +1,7 @@
 #include <WebServer.h>
 //home page and templatefor options
 #include "index.h"
+#include "ArduinoJson.h"
 
 WebServer server(80);
 
@@ -24,7 +25,9 @@ void setup_webserver() {
   server.on("/cmd/startPlay",startPlay);
   server.on("/cmd/stopPlay",stopPlay); 
   server.on("/cmd/GainSlider",GainSlider); 
-  server.on("/cmd/getCurrentGain",getCurrentGain);      
+  server.on("/cmd/btnAlarm",btnAlarm); 
+  server.on("/cmd/startSleep",startSleep);
+  server.on("/cmd/getCurrentStatus",getCurrentStatus); 
   //start webserver
   server.begin();
 }
@@ -299,8 +302,66 @@ void GainSlider() {
     server.send(400, "text/plain", "ERROR");
   }
 }
-//AJAX command /cmd/getCurrentGain
-void getCurrentGain() {
-  String response = String(curGain);
-  server.send(200, "text/plain", response);
+//AJAX command /cmd/btnAlarm
+void btnAlarm(){
+  toggleAlarm();
+  //respond with OK
+  server.send(200,"text/plain","OK");  
+}
+//AJAX command /cmd/startSleep
+void startSleep(){
+  startSnooze();
+  //respond with OK
+  server.send(200,"text/plain","OK");  
+}
+//AJAX command /cmd/getCurrentStatus
+void getCurrentStatus() {
+  uint8_t h,m;
+  char txt[50] = "";
+  // Erstellen eines JSON-Objekt
+  StaticJsonDocument<300> jsonDoc;
+  // Lautstärke
+  jsonDoc["gain"] = curGain;
+  // Alarm On / OFF
+  if (alarmday < 8){// Wecker aktiv   
+    h = alarmtime / 60;
+    m = alarmtime % 60;
+    sprintf(txt,"%s %02i:%02i",days_short[alarmday],h,m);
+    jsonDoc["alarm"] = "1";
+  }else{// Wecker ausgeschalten     
+    sprintf(txt,"AUS");
+    jsonDoc["alarm"] = "0";
+    
+  }
+  jsonDoc["alarmtime"] = txt;
+  // Radio
+  if (radio) {
+    jsonDoc["radioStation"] = stationlist[actStation].name;
+    jsonDoc["radioTitle"] = title;
+  } else {
+    jsonDoc["radioStation"] = "";
+    jsonDoc["radioTitle"] = "";
+  }
+  // Uhrzeit
+  char tim[40];
+  if (getLocalTime(&ti)) {
+    sprintf(tim,"%s %i. %s %i",days[ti.tm_wday],ti.tm_mday,months[ti.tm_mon],ti.tm_year + 1900);
+    jsonDoc["Date"] = tim;
+    strftime(tim, sizeof(tim), "%H:%M", &ti);
+    jsonDoc["Time"] = tim;
+
+  }
+  // WLAN
+  jsonDoc["Rssi"] = WiFi.RSSI();
+  // Sleeptimer
+  if (snoozeWait != 0) {//Einschlaf aktiv
+    jsonDoc["Sleep"] = 1;
+  } else {
+    jsonDoc["Sleep"] = 0;
+  } 
+  // Erstellen eines String, der das JSON-Objekt enthält
+  String response;
+  serializeJson(jsonDoc, response);
+  // Senden der JSON-Antwort
+  server.send(200, "application/json", response);
 }

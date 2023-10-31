@@ -25,18 +25,36 @@ $(document).ready(function() {
   $("#btn_cancelalarm").click(getAlarms);
   $("#stationlist").change(getStation);
   // Player Tab ######################
-  $("#btn_play").click(startPlay);
-  $("#btn_stop").click(stopPlay);
-  GainSlider();
+  $("#btn_play").click(startPlay);// senden Play zum ESP
+  $("#btn_stop").click(stopPlay);// senden Stop zum ESP
+  $("#btn_alarm").click(btnAlarm);// toggle Alarm zum ESP
+  $("#btn_sleep").click(startSleep);// toggle Sleep zum ESP 
+  GainSlider();// senden des Sliders zum ESP
+
+  // Zeugs um die aktuellen Daten des ESP regelmäßig zu erhalten um halbwegs sinvolle Anzeigen zu sehen
   $("#tabs").tabs({
     activate: function(event, ui) {
       // Überprüfen, ob das aktivierte Tab die ID "#player" hat
       if (ui.newTab.find("a").attr("href") === "#player") {
-        // Wenn ja, AJAX-Anfrage auslösen
-        updateGainSlider();
+        // starten Intervall, um die Daten alle x Sekunden abzurufen
+        var intervalId = setInterval(updateCurrentStatus, 5000); // alle 5 Sekunden
+        ui.newPanel.data("intervalId", intervalId); // Speichern der Intervall-ID im Tab-Panel-Daten
+      } else {
+        // Wenn ein anderes Tab aktiv ist, beenden des Intervall
+        var intervalId = ui.oldPanel.data("intervalId");
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
       }
     }
-  });       
+  });
+
+  if ($("#tabs").tabs("option", "active") === 0) { // 0 entspricht dem Index von "#player"
+    updateCurrentStatus();
+    var intervalId = setInterval(updateCurrentStatus, 3000); // Starten des Intervall
+    $("#player").data("intervalId", intervalId);
+  }
+         
 });
 
 function getAll() {
@@ -238,31 +256,106 @@ function GainSlider() {
       });
     }   
   });
-  $.ajax({
-    type: "GET",
-    url: "/cmd/getCurrentGain",
-    success: function (data) {
-      // Hier den zurückgegebenen Wert als Startwert für den Slider verwenden
-      var currentGain = parseInt(data);
-      $("#GainSlider").slider("value", currentGain);
-    },
-    error: function () {
-      alert("Fehler beim Abrufen des Gain-Werts");
-    },
-  });  
+  updateCurrentStatus();
 }
-function updateGainSlider() {
+function btnAlarm() {
+    $.ajax({
+        type:"POST",
+        url:"/cmd/btnAlarm",
+        data:{},
+    });
+}
+function startSleep() {
+    $.ajax({
+        type:"POST",
+        url:"/cmd/startSleep",
+        data:{},
+    });
+}
+function updateCurrentStatus() {
   $.ajax({
     type: "GET",
-    url: "/cmd/getCurrentGain",
+    url: "/cmd/getCurrentStatus",
     success: function (data) {
-      var currentGain = parseInt(data);
-      $("#GainSlider").slider("value", currentGain);
+      // Lautstärke
+      updateCurrentStatusVolume(data.gain);
+      // Alarm 
+      updateCurrentStatusAlarm(data.alarm, data.alarmtime);
+      // Radio
+      updateCurrentStatusRadio(data.radioStation, data.radioTitle);
+      // Zeit + Datum
+      updateCurrentStatusDateTime(data.Date, data.Time);
+      // WLAN
+      updateCurrentStatusWlan(data.Rssi);
+      // Sleep Timer
+      updateCurrentStatusSleep(data.Sleep);
+      //console.log(data);
     },
     error: function () {
-      alert("Fehler beim Abrufen des Gain-Werts");
+      alert(data);
     },
   });
+}
+function updateCurrentStatusVolume(gain) {
+  var currentGain = parseInt(gain);
+  $("#GainSlider").slider("value", currentGain);
+}
+function updateCurrentStatusAlarm(alarm, alarmtime) {
+  var alarmIcon, alarmColor, btn_alarmIcon;
+  if (parseInt(alarm) === 0) {
+    alarmIcon = '<i class="fas fa-bell-slash"></i>';
+    alarmColor = 'red';
+    btn_alarmIcon = '<i class="far fa-bell"></i>';
+  } else if (parseInt(alarm) === 1) {
+    alarmIcon = '<i class="far fa-bell"></i>';
+    alarmColor = 'orange';
+    btn_alarmIcon = '<i class="fas fa-bell-slash"></i>';
+  }
+  $("#alarmIcon").html(alarmIcon);
+  $("#alarmIcon").css('color', alarmColor);
+  $("#alarmTime").text(alarmtime);
+  $("#alarmTime").css('color', alarmColor);
+  $("#btn_alarm").html(btn_alarmIcon);
+}
+function updateCurrentStatusRadio(station, title) {
+  if (station) {
+    $("#radioStation").text(station);
+  } else {
+    $("#radioStation").html("<br />");
+  }
+  if (title) {
+    $("#radioTitle").text(title);
+  } else {
+    $("#radioTitle").html("<br /><br />");
+  }
+}
+function updateCurrentStatusDateTime(date, time) {
+  $("#Date").text(date);
+  $("#Time").text(time);
+}
+function updateCurrentStatusWlan(Rssi) {
+  var wlanColor;
+  if (parseInt(Rssi) <= -70) {
+    wlanColor = 'red';
+  } else if (parseInt(Rssi) <= -50) {
+    wlanColor = 'yellow';
+  } else {
+    wlanColor = 'green';
+  }
+  $("#WlanRSSI").text(Rssi);
+  $("#WlanSym").css('color', wlanColor);
+}
+function updateCurrentStatusSleep(sleep) {
+  var sleepIcon, btn_sleephidden;
+  if (parseInt(sleep) === 0) {
+    sleepIcon = '';
+    btn_sleephidden = '';
+  } else {
+    sleepIcon = '<i class="fas fa-bed"></i>';
+    btn_sleephidden = 'hidden';
+  }
+  $("#sleepIcon").html(sleepIcon);
+  $("#btn_sleep").css('visibility', btn_sleephidden);
 }
 </script>
 <style>
@@ -326,11 +419,58 @@ input {
     </ul>
     <div id="player">
       <div align="center">
+        <button id="btn_alarm" type="button"></button>
         <button id="btn_play" type="button"><i class="fas fa-play"></i></button>
         <button id="btn_stop" type="button"><i class="fas fa-stop"></i></button>
+        <button id="btn_sleep" type="button"><i class="fas fa-bed"></i></button>
         <br />
-        <i class="fas fa-volume-up"></i><div id="GainSlider"></div>
+        
       </div>
+      <table width="100%" style="background-color: black;">
+        <tr>
+          <td>
+            <!-- Symbol Alarm ON/OFF -->
+            <span id="alarmIcon"></span>
+            <!-- AlarmText -->
+            <span id="alarmTime"></span>
+          </td>
+          <td align="right" style="color: orange;">
+            <!-- Sleep ON/OFF -->
+            <span id="sleepIcon" style="color: orange;"></span>          
+            <!-- WlanRssi -->
+            <span id="WlanRSSI"></span>          
+            <!-- WLAN Symbol -->
+            <i class="fas fa-wifi" id="WlanSym"></i>          
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" align="center" style="color: orange; font-size: 80px; font-weight: bold;">
+            <!-- Uhrzeit -->
+            <span id="Time"></span>          
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" align="center" style="color: orange; font-weight: bold;">
+            <!-- Datum -->
+            <span id="Date"></span>            
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" align="center" style="color: yellow; font-weight: bold;">
+            <!-- Radio Name -->
+            <span id="radioStation"></span>         
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" align="center" style="color: white;">
+            <!-- Radio Title -->
+            <span id="radioTitle"></span>          
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" align="center"><div id="GainSlider"></div></td>
+        </tr>
+      </table>      
     </div>    
     <div id="wecker">
       <label>Weckzeit 1:
