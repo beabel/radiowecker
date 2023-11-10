@@ -1,4 +1,16 @@
 
+
+
+<div align="center">
+
+|[:skull:ISSUE](https://github.com/beabel/radiowecker/issues?q=is%3Aissue)|[:speech_balloon: Forum /Discussion](https://github.com/beabel/radiowecker/discussions?discussions_q=)|[:grey_question:WiKi](https://github.com/beabel/radiowecker/wiki)|
+|--|--|--|
+|![GitHub issues](https://img.shields.io/github/issues/beabel/radiowecker)![GitHub closed issues](https://img.shields.io/github/issues-closed/beabel/radiowecker)|![GitHub Discussions](https://img.shields.io/github/discussions/beabel/radiowecker)![GitHub User's stars](https://img.shields.io/github/stars/beabel)|![GitHub release (with filter)](https://img.shields.io/github/v/release/beabel/radiowecker)
+
+
+</div>
+
+
 |This project is based on the blog article "[Internet clock radio with touchscreen](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen)" by Gerald Lechner / Az-Delivery. | Dieses Projekt basiert auf dem Blogartikel "[Internet Radiowecker mit Touchscreen](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen)" von Gerald Lechner / Az-Delivery.  |
 |--|--|
 
