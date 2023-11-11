@@ -1,6 +1,56 @@
-# Radiowecker
 
-Dieses Projekt basiert auf dem Blogartikel "[Internet Radiowecker mit Touchscreen](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen)" von Gerald Lechner / Az-Delivery. 
+
+
+<div align="center">
+
+|[:skull:ISSUE](https://github.com/beabel/radiowecker/issues?q=is%3Aissue)|[:speech_balloon: Forum /Discussion](https://github.com/beabel/radiowecker/discussions?discussions_q=)|[:grey_question:WiKi](https://github.com/beabel/radiowecker/wiki)|
+|--|--|--|
+|![GitHub issues](https://img.shields.io/github/issues/beabel/radiowecker)![GitHub closed issues](https://img.shields.io/github/issues-closed/beabel/radiowecker)|![GitHub Discussions](https://img.shields.io/github/discussions/beabel/radiowecker)![GitHub User's stars](https://img.shields.io/github/stars/beabel)|![GitHub release (with filter)](https://img.shields.io/github/v/release/beabel/radiowecker)
+
+
+</div>
+
+
+|This project is based on the blog article "[Internet clock radio with touchscreen](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen)" by Gerald Lechner / Az-Delivery. | Dieses Projekt basiert auf dem Blogartikel "[Internet Radiowecker mit Touchscreen](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen)" von Gerald Lechner / Az-Delivery.  |
+|--|--|
+
+
+**Parts required: / Benötigte Teile:** 
+
+||Pro|Cheap|Minimal|
+|--|--|--|--|
+|[1 x AZ-Touch MOD mit 2,8" Touchscreen](https://amzn.to/3srKxjE)|:white_check_mark:|:ballot_box_with_check:[1xTFT](https://amzn.to/3MEtdyy)|:x:|
+|[1 x ESP-32 Dev Kit C V4](https://amzn.to/40ApxUA)|:white_check_mark:|:white_check_mark:|:white_check_mark:|
+|[2 x I2S 3W MAX98357A](https://amzn.to/3QSHtGF)|:white_check_mark:|:white_check_mark:|:white_check_mark:(1x)|
+|[1 x Lautsprecher Set](https://amzn.to/3SSyQNR)|:white_check_mark:|:white_check_mark:|:white_check_mark:|
+|[1 x Widerstand 470 kOhm](https://amzn.to/3Sw17cL)|:white_check_mark:|:white_check_mark:|:white_check_mark:(1x470kOhm)|
+|[DC Einbaubuchse](https://amzn.to/47it0ZY)|:white_check_mark:|:x:|:x:|
+|[1 x LDR](https://amzn.to/3FQYCKq)|:white_check_mark:|:x:|:x:|
+||~95,-|~54,-|~37,-|
+
+[German Version below / Deutsche Version unten:point_down:](#german-version)
+----
+# Clock radio
+
+I have extended and adapted this project.
+
+The main changes include:
+
+1. customizable colors.
+2. more information on the main page.
+3. splitting the radio and settings pages to make space for favorites buttons.
+4. a completely redesigned web configuration page with full remote view and control of the radio.
+
+At the time of publishing this blog article, a complete set was available for purchase from AZ-Delivery. Currently this is not offered, but all required parts can be ordered individually.
+
+
+**[Additional information::point_down:](#informationen)**
+
+## [Screenshots:point_down:](#screenshots)
+
+## German Version
+
+# Radiowecker
 
 Ich habe dieses Projekt erweitert und angepasst.
 
@@ -13,30 +63,20 @@ Die wesentlichen Änderungen umfassen:
 
 Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges Set bei AZ-Delivery zu kaufen. Aktuell wird dies nicht angeboten, aber alle benötigten Teile können einzeln bestellt werden.
 
-**Benötigte Teile:**
+# Informationen
 
-- [1 x AZ-Touch MOD mit 2,8" Touchscreen](https://www.amazon.de/AZDelivery-Wandgeh%25C3%25A4useset-Touchscreen-SPI-Touch-Controller-kompatibel/dp/B08LL6YKWS?ref_=ast_sto_dp&amp;th=1&_encoding=UTF8&tag=kunigunde-21&linkCode=ur2&linkId=f9715e9370dae9b8dfaa2f869e476cf6&camp=1638&creative=6742)
-- [1 x ESP-32 Dev Kit C V4](https://www.amazon.de/AZDelivery-NodeMCU-Development-Nachfolgermodell-ESP8266/dp/B0BF5NRF8H?ref_=ast_sto_dp&amp;th=1&_encoding=UTF8&tag=kunigunde-21&linkCode=ur2&linkId=298a863084ebff496a7d676f496cc987&camp=1638&creative=6742)
-- [2 x I2S 3W MAX98357A](https://www.amazon.de/AZDelivery-filterloses-Breakout-Modul-Decoder-Modul-Anwendungsbereich/dp/B09PL8XKPX?ref_=ast_sto_dp&amp;th=1&_encoding=UTF8&tag=kunigunde-21&linkCode=ur2&linkId=91b4a0e36db75088f843bea7ea1f7185&camp=1638&creative=6742)
-- [1 x Lautsprecher Set](https://www.amazon.de/AZDelivery-tragbarer-Mini-Lautsprecher-Schnittstelle-elektronische/dp/B09PL6XFHB?ref_=ast_sto_dp&amp;th=1&_encoding=UTF8&tag=kunigunde-21&linkCode=ur2&linkId=add11a2c40e472311164a4afb2cbf93d&camp=1638&creative=6742)
-- [1 x Widerstand 470 kOhm](https://www.amazon.de/dp/B07Q87JZ9G/ref=redir_mobile_desktop?_encoding=UTF8&amp;aaxitk=c9f745e69ea368a67c85ee24786eb4d0&amp;content-id=amzn1.sym.6f8b36f0-c2c9-44f2-97a8-5b151d2fc9c7%253Aamzn1.sym.6f8b36f0-c2c9-44f2-97a8-5b151d2fc9c7&amp;hsa_cr_id=4093011600002&amp;pd_rd_plhdr=t&amp;pd_rd_r=7fc9fc2d-6c55-4301-bda6-db2fc18511b1&amp;pd_rd_w=eVOTt&amp;pd_rd_wg=kTV0v&amp;qid=1698844633&amp;ref_=sbx_be_s_sparkle_mcd_asin_0_title&amp;sr=1-1-e0fa1fdd-d857-4087-adda-5bd576b25987&amp;th=1&_encoding=UTF8&tag=kunigunde-21&linkCode=ur2&linkId=7faa54f01d926614c4082c8bdde594dc&camp=1638&creative=6742)
-- [DC Einbaubuchse](https://www.amazon.de/RUNCCI-YUN-Socket%25EF%25BC%2588Mit-DC-Hohlstecker-L%25C3%25B6tanschluss-%25C3%259Cberwachungskameras/dp/B0836C9PWR/ref=sr_1_3?__mk_de_DE=%25C3%2585M%25C3%2585%25C5%25BD%25C3%2595%25C3%2591&amp;crid=24MZIOM3BT8A4&amp;keywords=RUNCCI-YUN+5%252C5+mm+x+2%252C1+mm+DC+Socket%25EF%25BC%2588Mit+Kabel%25EF%25BC%2589+6X+DC-Hohlstecker+mit+L%25C3%25B6tanschluss%252C+5%252C5+mm&amp;qid=1698846578&amp;s=ce-de&amp;sprefix=runcci-yun+5+5+mm+x+2+1+mm+dc+socket+mit+kabel+6x+dc-hohlstecker+mit+l%25C3%25B6tanschluss+5+5+mm%252Celectronics%252C78&amp;sr=1-3&_encoding=UTF8&tag=kunigunde-21&linkCode=ur2&linkId=fc9b9732beaa2cc27185a6b539f25b46&camp=1638&creative=6742)
-- [1 x LDR](https://www.amazon.de/AZDelivery-Lichtsensor-Fotowiderstand-Helligkeitssensor-kompatibel/dp/B07ZYXHF3C?ref_=ast_sto_dp&amp;th=1&_encoding=UTF8&tag=kunigunde-21&linkCode=ur2&linkId=16353e2b25a923beb8d6dfce46538414&camp=1638&creative=6742)
-
-**Zusätzliche Informationen:**
-
-- Boardverwalter URL: [https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json](https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json)
+**Boardverwalter URL:**
+[https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json](https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json)
 - ESP32 von Espressif Systems
 
-**Benötigte Bibliotheken:**
-
-- [Adafruit_ILI9341 by Adafruit Version 1.5.10](https://github.com/adafruit/Adafruit_ILI9341)
-- [Adafruit_GFX by Adafruit Version 1.10.14](https://github.com/adafruit/Adafruit-GFX-Library)
+**Bibliotheken:**
+- [Adafruit_ILI9341 by Adafruit Version 1.6.00](https://github.com/adafruit/Adafruit_ILI9341)
+- [Adafruit_GFX by Adafruit Version 1.11.9](https://github.com/adafruit/Adafruit-GFX-Library)
 - [XPT2046_Touchscreen by Paul Stoffregen Version 1.4.0](https://github.com/PaulStoffregen/XPT2046_Touchscreen)
 - [Touchevent by Gerald-Lechner Version 1.3.0](https://github.com/GerLech/TouchEvent)
 - [ESP8266Audio by Earle F. Philhower Version 1.9.7](https://github.com/earlephilhower/ESP8266Audio)
 
-**Screenshots:**
+# Screenshots
 
 ![Main Screen](screenshot/result.jpg?raw=true "Hauptbildschirm")
 

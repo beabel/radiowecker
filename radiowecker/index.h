@@ -30,6 +30,8 @@ $(document).ready(function() {
   $("#btn_alarm").click(btnAlarm);// toggle Alarm zum ESP
   $("#btn_sleep").click(startSleep);// toggle Sleep zum ESP 
   GainSlider();// senden des Sliders zum ESP
+  $("#btn_bwd").click(beforeStation);// toggle beforeStation zum ESP 
+  $("#btn_fwd").click(nextStation);// toggle nextStation zum ESP 
 
   // Zeugs um die aktuellen Daten des ESP regelmäßig zu erhalten um halbwegs sinvolle Anzeigen zu sehen
   $("#tabs").tabs({
@@ -69,6 +71,7 @@ function getStationList() {
         url:"/cmd/stations",
         data:{},
         success: function(data){
+            $("#switchStation").html(data);          
             $("#stationlist").html(data);
             getStation();
         }
@@ -357,6 +360,30 @@ function updateCurrentStatusSleep(sleep) {
   $("#sleepIcon").html(sleepIcon);
   $("#btn_sleep").css('visibility', btn_sleephidden);
 }
+function beforeStation() {
+    $.ajax({
+        type: "POST",
+        url: "/cmd/beforeStation",
+        data: {},
+        success: function (response) {
+            if (response === "OK") {
+              getStationList();
+            }
+        }
+    });
+}
+function nextStation() {
+    $.ajax({
+        type: "POST",
+        url: "/cmd/nextStation",
+        data: {},
+        success: function (response) {
+            if (response === "OK") {
+              getStationList();
+            }
+        }
+    });
+}
 </script>
 <style>
 body {
@@ -370,7 +397,7 @@ label {
   float: left;  
 }
 button {
-    margin: 5px;
+    margin: 3px;
     height: 2.0em;    
 }
 input {
@@ -419,8 +446,12 @@ input {
     </ul>
     <div id="player">
       <div align="center">
+        <select id="switchStation" disabled></select>
+        <br />
         <button id="btn_alarm" type="button"></button>
+        <button id="btn_bwd" type="button"><i class="fa fa-step-backward"></i></button>
         <button id="btn_play" type="button"><i class="fas fa-play"></i></button>
+        <button id="btn_fwd" type="button"><i class="fa fa-step-forward"></i></button>
         <button id="btn_stop" type="button"><i class="fas fa-stop"></i></button>
         <button id="btn_sleep" type="button"><i class="fas fa-bed"></i></button>
         <br />
