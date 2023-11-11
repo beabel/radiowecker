@@ -127,7 +127,7 @@ bool startUrl(String url) {
 
 //change the loudness to current gain
 void setGain(float gain){
-  float v = gain / 100;
+  float v = gain / 100 * 0.5;
   out->SetGain(v);  //the parameter is the loudness as percent
   Serial.printf("New volume = %4.2f\n",v);
 }

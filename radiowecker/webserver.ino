@@ -27,6 +27,8 @@ void setup_webserver() {
   server.on("/cmd/GainSlider",GainSlider); 
   server.on("/cmd/btnAlarm",btnAlarm); 
   server.on("/cmd/startSleep",startSleep);
+  server.on("/cmd/beforeStation",beforeStation);
+  server.on("/cmd/nextStation",nextStation); 
   server.on("/cmd/getCurrentStatus",getCurrentStatus); 
   //start webserver
   server.begin();
@@ -314,13 +316,31 @@ void startSleep(){
   //respond with OK
   server.send(200,"text/plain","OK");  
 }
+//AJAX command /cmd/beforeStation
+void beforeStation(){
+  curStation -= 1;
+  if(curStation >= STATIONS)curStation = STATIONS - 1;
+  changeStation();
+  Serial.println(curStation);  
+  //respond with OK
+  server.send(200,"text/plain","OK");  
+}
+//AJAX command /cmd/nextStation
+void nextStation(){
+  curStation += 1;
+  if(curStation >= STATIONS)curStation = 0;
+  changeStation();
+  Serial.println(curStation);
+  //respond with OK
+  server.send(200,"text/plain","OK");  
+}
 //AJAX command /cmd/getCurrentStatus
 void getCurrentStatus() {
   uint8_t h,m;
   char txt[50] = "";
   // Erstellen eines JSON-Objekt
   StaticJsonDocument<300> jsonDoc;
-  // Lautst‰rke
+  // Lautst√§rke
   jsonDoc["gain"] = curGain;
   // Alarm On / OFF
   if (alarmday < 8){// Wecker aktiv   
@@ -359,7 +379,7 @@ void getCurrentStatus() {
   } else {
     jsonDoc["Sleep"] = 0;
   } 
-  // Erstellen eines String, der das JSON-Objekt enth‰lt
+  // Erstellen eines String, der das JSON-Objekt enth√§lt
   String response;
   serializeJson(jsonDoc, response);
   // Senden der JSON-Antwort
