@@ -265,7 +265,8 @@ void toggleAlarm() {
   }
 
 void startSnooze() {
-  snoozeWait = snoozeTime;
+  // because we decrement snoozeWait every 30 seconds
+  snoozeWait = snoozeTime * 2;
   toggleRadio(false);
   clockmode = true;
   showClock();

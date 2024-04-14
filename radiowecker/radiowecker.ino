@@ -194,8 +194,8 @@ void loop() {
   webserver_loop();
   //check for touch events
   touch_loop();
-  //after 10 seconds switch back from config screen to clock screen
-  if (!clockmode && ((millis() - start_conf) > 10000)) {
+  //after 15 seconds switch back from config screen to clock screen
+  if (!clockmode && ((millis() - start_conf) > 15000)) {
     showClock();
     clockmode = true;
   }
@@ -237,8 +237,8 @@ void loop() {
       lastldr = tmp;
     }
   }
-  //timed event updatetime display every minute
-  if ((millis() - tick) > 60000) {
+  //timed event updatetime display every 30 seconds  
+  if ((millis() - tick) > 30000) {
     tick = millis();
     //get date and time information
     if (connected && getLocalTime(&ti)) {
