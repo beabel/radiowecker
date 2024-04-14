@@ -54,10 +54,20 @@ void onTouchClick(TS_Point p) {
     //we are in the radio mode
     if (p.y > 180) { //if the y value > 180, we are in the button area
       //we need the p.x position to find which button was clicked
-      if (p.x < 64) toggleRadio(radio);
+      if (p.x < 64) {
+        // back to main page
+        clockmode = true;
+        configpage = false;
+        radiopage = false;
+        showClock();
+      }
       if ((p.x>64) && (p.x<128)) startSnooze();
       if ((p.x>128) && (p.x<192)) toggleAlarm();
-      if ((p.x>192) && (p.x<256)) changeStation();
+      // radio symbol pushed
+      if ((p.x>192) && (p.x<256)) {
+        changeStation();
+        toggleRadio(radio);
+      }
       if (p.x > 256) {//rechter Button zu configpage
         clockmode = false;
         configpage = true;
@@ -625,13 +635,8 @@ void showRadioPage() {
     FavoriteButtons();
     showStationList();
     uint16_t color_temp; // Farbvariable
-    //Power
-    if (radio) {//Radio läuft
-        color_temp = ILI9341_GREEN;
-    } else {
-        color_temp = COLOR_KNOEPFE;
-    }      
-    tft.drawBitmap(0,176,knopf_sym[0],64,64,color_temp,COLOR_KNOEPFE_BG);
+    //Back to main page     
+    tft.drawBitmap(0,176,knopf_sym[5],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
     //Sleep
     if (snoozeWait != 0) {//Einschlaf aktiv
         color_temp = ILI9341_ORANGE;
@@ -640,7 +645,7 @@ void showRadioPage() {
     }  
     tft.drawBitmap(64,176,knopf_sym[1],64,64,color_temp,COLOR_KNOEPFE_BG);
     //Alarm
-    uint8_t symbol;  
+    uint8_t symbol;
     if (alarmday < 8){// Wecker aktiv
       color_temp = COLOR_KNOEPFE;
       symbol = 2;
@@ -650,7 +655,12 @@ void showRadioPage() {
     }      
     tft.drawBitmap(128,176,knopf_sym[symbol],64,64,color_temp,COLOR_KNOEPFE_BG);
     //Radio
-    tft.drawBitmap(192,176,knopf_sym[4],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
+    if (radio) {//Radio läuft
+        color_temp = ILI9341_GREEN;
+    } else {
+        color_temp = COLOR_KNOEPFE;
+    }    
+    tft.drawBitmap(192,176,knopf_sym[4],64,64,color_temp,COLOR_KNOEPFE_BG);
     //jump to setting
     tft.drawBitmap(256,176,knopf_sym[6],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
 
