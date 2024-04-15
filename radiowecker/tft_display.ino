@@ -179,6 +179,7 @@ void safeAlarmTime() {
       pref.putUShort("alarmday2",alarmday2);
     }
   }
+  findNextAlarm();
 }
 
 // enable/disable a day for the alarm
