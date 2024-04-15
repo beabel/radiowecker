@@ -181,12 +181,20 @@ void setBGLight(uint8_t prct) {
   uint16_t ledb;
   //if brightness is 0, we read the ambient light from LDR
   if (prct == 0) {
-    ledb = analogRead(LDR) * 255 /4096;
+    // Thx to René Herzmann
+    /*
+    Bei Nutzung des LDR (Slider Helligkeit auf „0“) fing das Display an zu flackern.
+    Jetzt wird nur alle 10 Sekunden die Helligkeit des Displays eingestellt. 
+    */
+    static unsigned long prevMillis = -20000;
+    if (millis() - prevMillis < 10000) return;
+    prevMillis = millis();
+    ledb = analogRead(LDR) * 255 / 4096;
   } else {
-    ledb = 255*prct/100;
+    ledb = 255 * prct / 100;
   }
   if (ledb > 255) ledb = 255;
-  if (ledb <3) ledb = 3; //minimal brightness
+  if (ledb < 3) ledb = 3; //minimal brightness
   if (LED_ON == 0) ledb = 255 - ledb;
   Serial.printf("percent = %i LED = %i\n",prct,ledb);
   //set the LED
@@ -429,6 +437,8 @@ void drawWifiInfo() {
     }
     tft.drawBitmap(303, 0, symbole[0], 17, 17, color_wifi, COLOR_BG);
     textInBox(273, 0, 30, 17, rssiChar, ALIGNCENTER, false, COLOR_WIFI_RSSI, COLOR_BG);
+    String localIPString = WiFi.localIP().toString();
+    textInBox(97, 0, 159, 17, localIPString.c_str(), ALIGNCENTER, false, COLOR_IP, COLOR_BG);    
 }
 
 void drawSnoozeInfo(){
