@@ -307,8 +307,8 @@ void setup_display() {
   //register callback function
   tevent.registerOnTouchClick(onTouchClick);
 }
-//display a text in a rectangle on position x,y with the size w,h 
-//the text can bbe aligned left, center or right text size can be set to standard or big 
+//display a text in a rectangle on position x,y with the size w,h
+//the text can be aligned left, center or right text size can be set to standard or big
 //font color and background color can be selected as well as the number of lines
 void textInBox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE , uint16_t bg = ILI9341_BLACK, uint8_t lines = 1 ) {
   char tmp[256];
@@ -341,7 +341,6 @@ void textInBox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text,
     //if only one line is allowed, the text will be cut off on a word boundary
     l=lines;
     token = strtok(tmp," ");
-    
     msg[0] = 0;
     len = 0;
     while ((token != NULL) && (l>0)) {
