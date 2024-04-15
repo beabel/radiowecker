@@ -49,7 +49,7 @@ uint8_t actStation = 0;           //index for current station in station list us
 uint8_t bright = 25;              //brightness in percent. 0 means use LDR to control brightness
 //other global variables
 uint32_t lastchange = 0;          //time of last selection change
-uint8_t snoozeWait = 0;           //remaining minutes fro snooze
+uint8_t snoozeWait = 0;           //remaining minutes for snooze
 uint16_t alarmtime = 0;           //next relevant alarm time
 uint8_t alarmday = 8;             //weekday for next relevant alarm or 8 means alarm disabled
 char title[64];                   //character array to hold meta data message
@@ -213,6 +213,13 @@ void loop() {
     displayClear();
     displayMessage(5, 10, 310, 30, "Connection lost", ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK,1);
   }
+  //detect a reconnect
+  if (!connected && (WiFi.status() == WL_CONNECTED)){
+    connected = true;
+    //show message on display
+    displayClear();
+    displayMessage(5, 10, 310, 30, "Reconnected", ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK,1);
+  }
   //if radio is on get new stream data
   if (connected && radio) {
     audio_loop();
@@ -229,16 +236,16 @@ void loop() {
       //remember current ambient light to detect changes
       lastldr = tmp;
     }
-  } 
-  //timed event updatetime display every minute  
+  }
+  //timed event updatetime display every minute
   if ((millis() - tick) > 60000) {
     tick = millis();
     //get date and time information
-    if (connected  && getLocalTime(&ti)) {
+    if (connected && getLocalTime(&ti)) {
       minutes = ti.tm_hour * 60 + ti.tm_min;
       weekday = ti.tm_wday;
     }
-    //set BG light if clockk is displayed
+    //set BG light if clock is displayed
     if (connected && clockmode) {
       setBGLight(bright);
       displayDateTime();
@@ -251,7 +258,6 @@ void loop() {
         toggleRadio(true);
         showRadio();
       }
-      
     }
     //if an alarm is activated check for day and time
     if ((alarmday < 8) && getLocalTime(&ti)) {
@@ -266,7 +272,6 @@ void loop() {
         showNextAlarm();
       }
     }
-
   }
   //do a restart if device was disconnected for more then 5 minutes
   if (!connected && ((millis() - discon) > 300000)) ESP.restart();
