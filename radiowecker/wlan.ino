@@ -7,7 +7,8 @@ boolean initWiFi(String ssid, String pkey) {
     Serial.print("Soft AP disconnect");
     WiFi.softAPdisconnect(true);
     Serial.print("Set WLAN Mode");
-    //satrt station mode
+    //start station mode
+    WiFi.setHostname("radioweckerlanname"); //define hostname  
     WiFi.mode(WIFI_STA);
     Serial.print("Verbindung zu ");
     Serial.print(ssid);
