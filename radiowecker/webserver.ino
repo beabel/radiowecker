@@ -142,7 +142,7 @@ void getAlarms() {
   server.send(200,"text/plain",String(buf));
 }
 
-//calculate minutes ffrom hours and minutes
+//calculate minutes from hours and minutes
 uint16_t stringToMinutes(String val){
   uint8_t h,m;
   h = val.substring(0,2).toInt();

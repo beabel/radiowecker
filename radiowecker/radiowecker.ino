@@ -63,9 +63,10 @@ int16_t lastldr;                  //last value from LDR sensor to detect changes
 uint32_t start_conf;              //time of entering config screen
 boolean connected;                //flag to signal active connection
 boolean radio = false;            //flag to signal radio output
+boolean alarmOn = false;            //flag to signal alarm is ongoing
 boolean clockmode = true;         //flag to signal clock is shown on the screen
-boolean configpage = false;         //flag to signal config is shown on the screen
-boolean radiopage = false;         //flag to signal radioselect is shown on the screen
+boolean configpage = false;       //flag to signal config is shown on the screen
+boolean radiopage = false;        //flag to signal radioselect is shown on the screen
 
 //predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE , uint16_t bg = ILI9341_BLACK, uint8_t lines = 1 );
@@ -267,6 +268,7 @@ void loop() {
 
         // Test Beeper#####################        
         toggleRadio(false);
+        alarmOn = true;
         showRadio();
         findNextAlarm();
         showNextAlarm();
