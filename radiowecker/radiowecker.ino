@@ -238,9 +238,9 @@ void loop() {
       lastldr = tmp;
     }
   }
-  //timed event updatetime display every 30 seconds  
+  //timed event updatetime display every minute
   if ((millis() - tick) > 30000) {
-    tick = millis();
+    tick = millis() - ti.tm_sec * 1000;//kingherold ISSUE Time not correct
     //get date and time information
     if (connected && getLocalTime(&ti)) {
       minutes = ti.tm_hour * 60 + ti.tm_min;
