@@ -1,5 +1,6 @@
 // Colors for the Main Screen
 #define COLOR_WIFI_RSSI           ILI9341_ORANGE
+#define COLOR_IP                  ILI9341_ORANGE
 #define COLOR_SLEEP_SYMBOL        ILI9341_ORANGE
 #define COLOR_ALARM_SYMBOL        ILI9341_ORANGE
 

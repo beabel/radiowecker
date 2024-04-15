@@ -437,6 +437,8 @@ void drawWifiInfo() {
     }
     tft.drawBitmap(303, 0, symbole[0], 17, 17, color_wifi, COLOR_BG);
     textInBox(273, 0, 30, 17, rssiChar, ALIGNCENTER, false, COLOR_WIFI_RSSI, COLOR_BG);
+    String localIPString = WiFi.localIP().toString();
+    textInBox(97, 0, 159, 17, localIPString.c_str(), ALIGNCENTER, false, COLOR_IP, COLOR_BG);    
 }
 
 void drawSnoozeInfo(){
