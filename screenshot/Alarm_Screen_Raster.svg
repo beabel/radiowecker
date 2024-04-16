@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="320"
+   height="240"
+   viewBox="0 0 84.666667 63.5"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   sodipodi:docname="Alarm_Screen_Raster.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     showgrid="true"
+     inkscape:zoom="2.8970539"
+     inkscape:cx="148.77183"
+     inkscape:cy="140.14237"
+     inkscape:window-width="1559"
+     inkscape:window-height="1032"
+     inkscape:window-x="314"
+     inkscape:window-y="12"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer2"
+     inkscape:lockguides="false">
+    <inkscape:grid
+       id="grid1"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="0.26458333"
+       spacingy="0.26458333"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="1"
+       dotted="false"
+       gridanglex="30"
+       gridanglez="30"
+       visible="true" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <rect
+       x="-54.538164"
+       y="70.761542"
+       width="28.994973"
+       height="20.365517"
+       id="rect8" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1" />
+  <rect
+     style="fill:#666666;stroke-width:0.35472"
+     id="rect10"
+     width="16.933332"
+     height="16.933332"
+     x="67.400368"
+     y="46.566666"
+     inkscape:label="HOME" />
+  <rect
+     style="fill:#808080;stroke-width:0.35472"
+     id="rect10-8"
+     width="16.933332"
+     height="16.933332"
+     x="50.799999"
+     y="46.566666"
+     inkscape:label="SAVE" />
+  <rect
+     style="fill:#666666;stroke-width:0.35472"
+     id="rect10-2"
+     width="16.933332"
+     height="16.933332"
+     x="33.866665"
+     y="46.566666"
+     inkscape:label="Taste_3" />
+  <rect
+     style="fill:#808080;stroke-width:0.35472"
+     id="rect10-6"
+     width="16.933332"
+     height="16.933332"
+     x="16.933332"
+     y="46.566666"
+     inkscape:label="SLEEP" />
+  <rect
+     style="fill:#666666;stroke-width:0.35472"
+     id="rect10-69"
+     width="16.933332"
+     height="16.933332"
+     x="0"
+     y="46.566666"
+     inkscape:label="POWER" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="MAIN_SCREEN">
+    <g
+       id="g10-1-0-4"
+       inkscape:label="Alarm 2 Time"
+       transform="matrix(1,0,0,1.4666667,-1.156373,-48.096392)">
+      <rect
+         style="fill:#ff00ff;stroke-width:0.994757"
+         id="rect7-8-1-0"
+         width="84.666664"
+         height="7.9375"
+         x="1.156373"
+         y="56.605492"
+         inkscape:label="BG" />
+      <rect
+         style="fill:#800080;stroke-width:0.784764"
+         id="rect34"
+         width="13.229167"
+         height="7.9375"
+         x="72.593872"
+         y="56.605492"
+         inkscape:label="MM DWN" />
+      <rect
+         style="fill:#800080;stroke-width:0.784764"
+         id="rect35"
+         width="13.229167"
+         height="7.9375"
+         x="59.364708"
+         y="56.605492"
+         inkscape:label="MM UP" />
+      <rect
+         style="fill:#800080;stroke-width:1.0368"
+         id="rect36"
+         width="31.75"
+         height="5.772727"
+         x="27.614706"
+         y="58.048676"
+         inkscape:label="HH:MM" />
+      <rect
+         style="fill:#800080;stroke-width:0.784764"
+         id="rect37"
+         width="13.229167"
+         height="7.9375"
+         x="14.38554"
+         y="56.605492"
+         inkscape:label="HH DWN" />
+      <rect
+         style="fill:#800080;stroke-width:0.784764"
+         id="rect38"
+         width="13.229167"
+         height="7.9375"
+         x="1.156373"
+         y="56.605492"
+         inkscape:label="HH UP" />
+    </g>
+    <g
+       id="g10-1-0"
+       inkscape:label="Alarm 2 Days"
+       transform="matrix(1,0,0,1.4666667,0,-58.20833)">
+      <rect
+         style="fill:#008080;stroke-width:0.994757"
+         id="rect7-8-1"
+         width="84.666664"
+         height="7.9375"
+         x="0"
+         y="55.562496"
+         inkscape:label="BG" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect12"
+         width="8.4666662"
+         height="5.772727"
+         x="73.025002"
+         y="57.00568"
+         inkscape:label="So" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect13"
+         width="8.4666662"
+         height="5.772727"
+         x="61.383335"
+         y="57.00568"
+         inkscape:label="Sa" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect14"
+         width="8.4666662"
+         height="5.772727"
+         x="49.741665"
+         y="57.00568"
+         inkscape:label="Fr" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect15"
+         width="8.4666662"
+         height="5.772727"
+         x="38.099998"
+         y="57.00568"
+         inkscape:label="Do" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect16"
+         width="8.4666662"
+         height="5.772727"
+         x="26.458334"
+         y="57.00568"
+         inkscape:label="Mi" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect17"
+         width="8.4666662"
+         height="5.772727"
+         x="14.816667"
+         y="57.00568"
+         inkscape:label="DI" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect18"
+         width="8.4666662"
+         height="5.772727"
+         x="3.175"
+         y="57.00568"
+         inkscape:label="MO" />
+    </g>
+    <g
+       id="g10-1"
+       inkscape:label="Alarm 1 Time"
+       transform="matrix(1,0,0,1.4666667,0,-69.849996)">
+      <rect
+         style="fill:#ff00ff;stroke-width:0.994757"
+         id="rect7-8"
+         width="84.666664"
+         height="7.9375"
+         x="0"
+         y="55.562496"
+         inkscape:label="BG" />
+      <rect
+         style="fill:#800080;stroke-width:0.784764"
+         id="rect27"
+         width="13.229167"
+         height="7.9375"
+         x="71.4375"
+         y="55.562496"
+         inkscape:label="MM DWN" />
+      <rect
+         style="fill:#800080;stroke-width:0.784764"
+         id="rect28"
+         width="13.229167"
+         height="7.9375"
+         x="58.208332"
+         y="55.562496"
+         inkscape:label="MM UP" />
+      <rect
+         style="fill:#800080;stroke-width:1.0368"
+         id="rect31"
+         width="31.75"
+         height="5.772727"
+         x="26.458334"
+         y="57.005676"
+         inkscape:label="HH:MM" />
+      <rect
+         style="fill:#800080;stroke-width:0.784764"
+         id="rect32"
+         width="13.229167"
+         height="7.9375"
+         x="13.229167"
+         y="55.562496"
+         inkscape:label="HH DWN" />
+      <rect
+         style="fill:#800080;stroke-width:0.784764"
+         id="rect33"
+         width="13.229167"
+         height="7.9375"
+         x="4.4408921e-16"
+         y="55.562496"
+         inkscape:label="HH UP" />
+    </g>
+    <g
+       id="g10"
+       inkscape:label="Alarm 1 Days"
+       transform="matrix(1,0,0,1.4666667,0,-81.491663)">
+      <rect
+         style="fill:#008080;stroke-width:0.994757"
+         id="rect7"
+         width="84.666664"
+         height="7.9375"
+         x="0"
+         y="55.562496"
+         inkscape:label="BG" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect11"
+         width="8.4666662"
+         height="5.772727"
+         x="73.025002"
+         y="57.005676"
+         inkscape:label="So" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect9"
+         width="8.4666662"
+         height="5.772727"
+         x="61.383335"
+         y="57.005676"
+         inkscape:label="Sa" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect6"
+         width="8.4666662"
+         height="5.772727"
+         x="49.741665"
+         y="57.005676"
+         inkscape:label="Fr" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect4"
+         width="8.4666662"
+         height="5.772727"
+         x="38.099998"
+         y="57.005676"
+         inkscape:label="Do" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect5"
+         width="8.4666662"
+         height="5.772727"
+         x="26.458334"
+         y="57.005676"
+         inkscape:label="Mi" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect9-8"
+         width="8.4666662"
+         height="5.772727"
+         x="14.816667"
+         y="57.005676"
+         inkscape:label="DI" />
+      <rect
+         style="fill:#800080;stroke-width:0.535399"
+         id="rect3"
+         width="8.4666662"
+         height="5.772727"
+         x="3.175"
+         y="57.005676"
+         inkscape:label="MO" />
+    </g>
+  </g>
+</svg>

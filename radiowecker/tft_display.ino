@@ -27,6 +27,16 @@ const char* const PROGMEM days[] = {"Sonntag","Montag","Dienstag","Mittwoch","Do
 const char* const PROGMEM days_short[] = {"So","Mo","Di","Mi","Do","Fr","Sa"};
 const char* PROGMEM months[] = {"Jan.","Feb.","März","April","Mai","Juni","Juli","Aug.","Sept.","Okt.","Nov.","Dez."};
 
+typedef struct {
+  uint8_t alarmday_1 = 0B00111110;   //valid weekdays (example 00111110 means monday through friday)
+  uint8_t h_1;                       //alarm hour
+  uint8_t m_1;                       //alarm minute
+  uint8_t alarmday_2 = 0B00111110;   //valid weekdays (example 00111110 means monday through friday)
+  uint8_t h_2;                       //alarm hour
+  uint8_t m_2;                       //alarm minute  
+}AlarmEdit;
+AlarmEdit alarmConfig;
+
 //instance of display driver
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 //instance for touchscreen driver
@@ -35,6 +45,40 @@ XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 TouchEvent tevent(touch);
 //Prototype created (i have now optional Arguments) the function down like before
 void showSlider(uint16_t y, float value, uint16_t vmax, uint16_t bgColor = ILI9341_LIGHTGREY, uint16_t lineColor = ILI9341_BLACK);
+
+void DrawFooterButtons_Power_Sleep_Alarm(){
+    uint16_t color_temp; // Farbvariable
+    //Power
+    if (radio) {//Radio läuft
+        color_temp = ILI9341_GREEN;
+    } else {
+        color_temp = COLOR_KNOEPFE;
+    }      
+    tft.drawBitmap(0,176,knopf_sym[0],64,64,color_temp,COLOR_KNOEPFE_BG);
+    //Sleep
+    if (snoozeWait != 0) {//Einschlaf aktiv
+        color_temp = ILI9341_ORANGE;
+    } else {
+        color_temp = COLOR_KNOEPFE;
+    }  
+    tft.drawBitmap(64,176,knopf_sym[1],64,64,color_temp,COLOR_KNOEPFE_BG);
+    //Alarm
+    uint8_t symbol;  
+    if (alarmday < 8){// Wecker aktiv
+      color_temp = COLOR_KNOEPFE;
+      symbol = 2;
+    }else{// Wecker ausgeschalten
+      color_temp = ILI9341_RED;
+      symbol = 3;
+    }      
+    tft.drawBitmap(128,176,knopf_sym[symbol],64,64,color_temp,COLOR_KNOEPFE_BG);  
+}
+
+void handleFooterButtons_Power_Sleep_Alarm(int x, int y) {
+    if (x < 64) toggleRadio(radio);
+    else if ((x > 64) && (x < 128)) startSnooze();
+    else if ((x > 128) && (x < 192)) toggleAlarm();
+}
 
 //register a callback for any touch event.
 //we get position and type of the event
@@ -46,6 +90,7 @@ void onTouchClick(TS_Point p) {
       clockmode = false;
       configpage = false;
       radiopage = true;
+      alarmpage = false;      
       showRadioPage(); 
     }else{// we adjust the Gain
       setGainValue(p.x, "MainPage");      
@@ -54,15 +99,14 @@ void onTouchClick(TS_Point p) {
     //we are in the radio mode
     if (p.y > 180) { //if the y value > 180, we are in the button area
       //we need the p.x position to find which button was clicked
-      if (p.x < 64) toggleRadio(radio);
-      if ((p.x>64) && (p.x<128)) startSnooze();
-      if ((p.x>128) && (p.x<192)) toggleAlarm();
+      handleFooterButtons_Power_Sleep_Alarm(p.x, p.y);
       if ((p.x>192) && (p.x<256)) changeStation();
       if (p.x > 256) {//rechter Button zu configpage
         clockmode = false;
         configpage = true;
         radiopage = false;
-        showCommand(); 
+        alarmpage = false;         
+        showConfigPage(); 
       }
     }
     //from 0 to 44 we have the slider for gain
@@ -92,15 +136,14 @@ void onTouchClick(TS_Point p) {
     //we are in the config mode
     if (p.y > 180) { //if the y value > 180, we are in the button area
       //we need the p.x position to find which button was clicked
-      if (p.x < 64) toggleRadio(radio);
-      if ((p.x>64) && (p.x<128)) startSnooze();
-      if ((p.x>128) && (p.x<192)) toggleAlarm();
+      handleFooterButtons_Power_Sleep_Alarm(p.x, p.y);
       if ((p.x>192) && (p.x<256)) changeStation();
-      if (p.x > 256) {//rechter Button zurück auf Main
-        clockmode = true;
+      if (p.x > 256) {//rechter Button auf Alarm Page
+        clockmode = false;
         configpage = false;
         radiopage = false;
-        showClock();
+        alarmpage = true;        
+        showAlarmPage();
       }
     }
     //from 0 to 44 we have the slider for gain
@@ -111,6 +154,36 @@ void onTouchClick(TS_Point p) {
     if ((p.y > 88) && (p.y<132)) setSnoozeTime(p.x);
     //from 132 to 175 we have the station list
     if ((p.y > 132) && (p.y<175)) selectStation(p.x);
+  }else if (alarmpage) {//################################################ ALARM SETTING PAGE
+    //we are in the alarm setting mode
+    if (p.y > 180) { //if the y value > 180, we are in the button area
+      //we need the p.x position to find which button was clicked
+      handleFooterButtons_Power_Sleep_Alarm(p.x, p.y);
+      if ((p.x>192) && (p.x<256)) safeAlarmTime(); //saving the Alarm setting 
+      if (p.x > 256) {//rechter Button zurück auf Main
+        clockmode = true;
+        configpage = false;
+        radiopage = false;
+        alarmpage = false;         
+        showClock();
+      }
+    }
+    // toggleAlarmDays 1
+    if ((p.y > 0  ) && (p.y < 44 )) toggleAlarmDay(p.x, p.y);
+    // toggleAlarmDays 2     
+    if ((p.y > 88 ) && (p.y < 132)) toggleAlarmDay(p.x, p.y);
+    // in/decrement the alarmtime_HH  
+    if( ((p.y > 44 ) && (p.y < 88 )) || ((p.y > 132 ) && (p.y < 176 )) ) {
+      if (p.x < 50 )    in_de_crementAlarmTimeHH(p.x,p.y);
+      if ((p.x > 50 ) && (p.x < 100 )) in_de_crementAlarmTimeHH(p.x,p.y);
+    }         
+    // in/decrement the alarmtime_MM
+    if( ((p.y > 44 ) && (p.y < 88 )) || ((p.y > 132 ) && (p.y < 176 )) ) {
+      if ((p.x > 220 ) && (p.x < 270 )) in_de_crementAlarmTimeMM(p.x,p.y);
+      if (p.x > 270 ) in_de_crementAlarmTimeMM(p.x,p.y);
+    }
+    // Save Button Action
+
   }
 }
 
@@ -586,42 +659,18 @@ void showStationList() {
 }
 
 //display the complete config screen
-void showCommand() {
+void showConfigPage() {
     setBGLight(100);
     tft.fillScreen(COLOR_BG);
     showGain();
     showBrigthness();
     showSnoozeTime();
     showStationList();
-    uint16_t color_temp; // Farbvariable
-    //Power
-    if (radio) {//Radio läuft
-        color_temp = ILI9341_GREEN;
-    } else {
-        color_temp = COLOR_KNOEPFE;
-    }      
-    tft.drawBitmap(0,176,knopf_sym[0],64,64,color_temp,COLOR_KNOEPFE_BG);
-    //Sleep
-    if (snoozeWait != 0) {//Einschlaf aktiv
-        color_temp = ILI9341_ORANGE;
-    } else {
-        color_temp = COLOR_KNOEPFE;
-    }  
-    tft.drawBitmap(64,176,knopf_sym[1],64,64,color_temp,COLOR_KNOEPFE_BG);
-    //Alarm
-    uint8_t symbol;  
-    if (alarmday < 8){// Wecker aktiv
-      color_temp = COLOR_KNOEPFE;
-      symbol = 2;
-    }else{// Wecker ausgeschalten
-      color_temp = ILI9341_RED;
-      symbol = 3;
-    }      
-    tft.drawBitmap(128,176,knopf_sym[symbol],64,64,color_temp,COLOR_KNOEPFE_BG);
+    DrawFooterButtons_Power_Sleep_Alarm();
     //Radio
     tft.drawBitmap(192,176,knopf_sym[4],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
-    //Jump to Main (CLOCK SCREEN)
-    tft.drawBitmap(256,176,knopf_sym[5],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
+    //Jump to Alarm Page (CLOCK SCREEN)
+    tft.drawBitmap(256,176,knopf_sym[7],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
 
     start_conf = millis();
 }
@@ -633,37 +682,234 @@ void showRadioPage() {
     showGain();
     FavoriteButtons();
     showStationList();
-    uint16_t color_temp; // Farbvariable
-    //Power
-    if (radio) {//Radio läuft
-        color_temp = ILI9341_GREEN;
-    } else {
-        color_temp = COLOR_KNOEPFE;
-    }      
-    tft.drawBitmap(0,176,knopf_sym[0],64,64,color_temp,COLOR_KNOEPFE_BG);
-    //Sleep
-    if (snoozeWait != 0) {//Einschlaf aktiv
-        color_temp = ILI9341_ORANGE;
-    } else {
-        color_temp = COLOR_KNOEPFE;
-    }  
-    tft.drawBitmap(64,176,knopf_sym[1],64,64,color_temp,COLOR_KNOEPFE_BG);
-    //Alarm
-    uint8_t symbol;  
-    if (alarmday < 8){// Wecker aktiv
-      color_temp = COLOR_KNOEPFE;
-      symbol = 2;
-    }else{// Wecker ausgeschalten
-      color_temp = ILI9341_RED;
-      symbol = 3;
-    }      
-    tft.drawBitmap(128,176,knopf_sym[symbol],64,64,color_temp,COLOR_KNOEPFE_BG);
+    DrawFooterButtons_Power_Sleep_Alarm();
     //Radio
     tft.drawBitmap(192,176,knopf_sym[4],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
     //jump to setting
     tft.drawBitmap(256,176,knopf_sym[6],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
 
     start_conf = millis();
+}
+
+//display the complete Alarm screen
+void showAlarmPage() {
+    alarmConfig.alarmday_1 = alarmday1;
+    alarmConfig.h_1 = alarm1 /60;
+    alarmConfig.m_1 = alarm1 % 60;
+
+    alarmConfig.alarmday_2 = alarmday2;
+    alarmConfig.h_2 = alarm2 /60;
+    alarmConfig.m_2 = alarm2 % 60; 
+
+    setBGLight(100);
+    tft.fillScreen(COLOR_KNOEPFE_BG);
+    // Draw a Border arround Time 1
+    tft.fillRect(0,0,320,88,COLOR_SETTING_BG);
+    tft.drawRect(0,0,320,88,COLOR_SETTING_BORDER);    
+    // Draw a Border arround Time 2
+    tft.fillRect(0,88,320,88,COLOR_SETTING_BG);
+    tft.drawRect(0,88,320,88,COLOR_SETTING_BORDER);
+
+    // Button UP DOWN HH and MM LINE 2 + 4
+    // Display HH_1 up/down
+    tft.drawBitmap(0,44,symbole[5],50,44,COLOR_SETTING_UP_DOWN);
+    tft.drawBitmap(50,44,symbole[4],50,44,COLOR_SETTING_UP_DOWN); 
+    // Display MM_1 up/down
+    tft.drawBitmap(220,44,symbole[5],50,44,COLOR_SETTING_UP_DOWN);
+    tft.drawBitmap(270,44,symbole[4],50,44,COLOR_SETTING_UP_DOWN);
+    // Display HH_2 up/down
+    tft.drawBitmap(0,132,symbole[5],50,44,COLOR_SETTING_UP_DOWN);
+    tft.drawBitmap(50,132,symbole[4],50,44,COLOR_SETTING_UP_DOWN);
+    // Display MM_2 up/down
+    tft.drawBitmap(220,132,symbole[5],50,44,COLOR_SETTING_UP_DOWN);
+    tft.drawBitmap(270,132,symbole[4],50,44,COLOR_SETTING_UP_DOWN);  
+
+    showAlarms_Day_and_Time();// Line 1 and 3 (MO - SO Buttons) Line 2 and 4 Time
+
+    DrawFooterButtons_Power_Sleep_Alarm();
+    //Save Icon
+    tft.drawBitmap(192,176,knopf_sym[8],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);
+    //jump to Clock Screen
+    tft.drawBitmap(256,176,knopf_sym[5],64,64,COLOR_KNOEPFE,COLOR_KNOEPFE_BG);  
+
+    start_conf = millis();
+}
+
+// Show Alarm Days and Time
+void showAlarms_Day_and_Time(){
+    uint8_t mask;
+    uint16_t xPos;
+    uint16_t color_txt; // Farbvariable
+    uint16_t color_bg; // Farbvariable
+    char buf[45];
+
+    for (uint8_t i = 1; i < 8; i++) {
+        xPos = 12 + (i - 1) * 44; // 32 = Button + 12 distance between next 
+
+        // Display the weekdays for alarmday_1
+        mask = 1 << (i % 7);
+        color_bg = ((alarmConfig.alarmday_1 & mask) == 0) ? COLOR_SETTING_BG : ILI9341_GREEN;
+        textInBox(xPos, 8, 32, 32, days_short[i % 7], ALIGNCENTER, false, ILI9341_BLACK, color_bg, 1);
+
+        // Display the weekdays for alarmday_2
+        mask = 1 << (i % 7);
+        color_bg = ((alarmConfig.alarmday_2 & mask) == 0) ? COLOR_SETTING_BG : ILI9341_GREEN;
+        textInBox(xPos, 96, 32, 32, days_short[i % 7], ALIGNCENTER, false, ILI9341_BLACK, color_bg, 1);
+    }
+
+    // Display the time for alarm_1
+    sprintf(buf,"%02i : %02i\n",alarmConfig.h_1,alarmConfig.m_1);
+    textInBox(100, 52, 120, 32, buf, ALIGNCENTER, false, ILI9341_BLACK, COLOR_SETTING_BG, 1); 
+ 
+    // Display the time for alarm_2
+    sprintf(buf,"%02i : %02i\n",alarmConfig.h_2,alarmConfig.m_2);
+    textInBox(100, 140, 120, 32, buf, ALIGNCENTER, false, ILI9341_BLACK, COLOR_SETTING_BG, 1);              
+}
+
+// Toggle a day for the alarm
+void toggleAlarmDay(uint16_t xPos, uint16_t yPos) {
+    uint8_t mask = 0B00000000;
+
+    // Bestimme die Maske basierend auf der Position
+    if (xPos < 50) mask = 0B00000010; // Mo
+    if ((xPos > 50) && (xPos < 96)) mask = 0B00000100; // Di
+    if ((xPos > 96) && (xPos < 140)) mask = 0B00001000; // Mi
+    if ((xPos > 140) && (xPos < 184)) mask = 0B00010000; // Do
+    if ((xPos > 184) && (xPos < 228)) mask = 0B00100000; // Fr
+    if ((xPos > 228) && (xPos < 272)) mask = 0B01000000; // Sa
+    if (xPos > 272) mask = 0B00000001; // So
+
+    // Toggle für alarmday_1
+    if ((yPos > 0) && (yPos < 44)) {
+        alarmConfig.alarmday_1 = alarmConfig.alarmday_1 ^ mask;
+    }
+    // Toggle für alarmday_2
+    if ((yPos > 88) && (yPos < 132)) {
+        alarmConfig.alarmday_2 = alarmConfig.alarmday_2 ^ mask;
+    }
+    showAlarms_Day_and_Time();
+}
+
+// in/decrement Alarm HH
+void in_de_crementAlarmTimeHH(uint16_t xPos, uint16_t yPos) {
+    // In-/Dekrementierung für alarmtime_HH_1
+    if ((yPos > 44) && (yPos < 88)) {
+        // Inkrementierung
+        if (xPos < 50) alarmConfig.h_1 = (alarmConfig.h_1 + 1) % 24;
+        // Dekrementierung
+        if ((xPos > 50) && (xPos < 100)) {
+            if (alarmConfig.h_1 == 0) alarmConfig.h_1 = 24;
+            alarmConfig.h_1 = alarmConfig.h_1 - 1;
+        }
+    }
+    // In-/Dekrementierung für alarmtime_HH_2
+    if ((yPos > 132) && (yPos < 176)) {
+        // Inkrementierung
+        if (xPos < 50) alarmConfig.h_2 = (alarmConfig.h_2 + 1) % 24;
+        // Dekrementierung
+        if ((xPos > 50) && (xPos < 100)) {
+            if (alarmConfig.h_2 == 0) alarmConfig.h_2 = 24;
+            alarmConfig.h_2 = alarmConfig.h_2 - 1;
+        }
+    }
+    showAlarms_Day_and_Time();
+}
+
+// in/decrement in 5 min Steps Alarm MM
+void in_de_crementAlarmTimeMM(uint16_t xPos, uint16_t yPos) {
+    uint8_t min1_1, min2_1, min1_2, min2_2;
+    min1_1 = alarmConfig.m_1 / 10;
+    min2_1 = alarmConfig.m_1 % 10;
+    min1_2 = alarmConfig.m_2 / 10;
+    min2_2 = alarmConfig.m_2 % 10;
+
+    //Increment
+    if ((xPos > 220) && (xPos < 270)) {
+        if ((yPos > 44) && (yPos < 88)) { // increment MM_1
+            // Berechne die Minuten in 5-Minuten-Schritten vorwärts
+            uint8_t currentMinutes_1 = min1_1 * 10 + min2_1;
+            if (currentMinutes_1 % 5 == 0) {
+                currentMinutes_1 += 5; // Füge 5 hinzu, wenn der aktuelle Wert durch 5 teilbar ist
+            } else {
+                currentMinutes_1 = ((currentMinutes_1 + 4) / 5) * 5; // Runde auf nächste durch 5 teilbare Zahl
+            }
+            if (currentMinutes_1 >= 60) currentMinutes_1 -= 60; // Setze auf 0 wenn 60 erreicht wird
+            // Trenne die Minuten in Zehner- und Einerstelle
+            min1_1 = currentMinutes_1 / 10;
+            min2_1 = currentMinutes_1 % 10;
+            alarmConfig.m_1 = min1_1 * 10 + min2_1;
+        }
+        if ((yPos > 132) && (yPos < 176)) { // increment MM_2
+            // Berechne die Minuten in 5-Minuten-Schritten vorwärts
+            uint8_t currentMinutes_2 = min1_2 * 10 + min2_2;
+            if (currentMinutes_2 % 5 == 0) {
+                currentMinutes_2 += 5; // Füge 5 hinzu, wenn der aktuelle Wert durch 5 teilbar ist
+            } else {
+                currentMinutes_2 = ((currentMinutes_2 + 4) / 5) * 5; // Runde auf nächste durch 5 teilbare Zahl
+            }
+            if (currentMinutes_2 >= 60) currentMinutes_2 -= 60; // Setze auf 0 wenn 60 erreicht wird
+            // Trenne die Minuten in Zehner- und Einerstelle
+            min1_2 = currentMinutes_2 / 10;
+            min2_2 = currentMinutes_2 % 10;
+            alarmConfig.m_2 = min1_2 * 10 + min2_2;
+        }    
+    }
+    //Decrement
+    if (xPos > 270) {
+        if ((yPos > 44) && (yPos < 88)) { // decrement MM_1
+            // Berechne die Minuten in 5-Minuten-Schritten rückwärts
+            uint8_t currentMinutes_1 = min1_1 * 10 + min2_1;
+            if (currentMinutes_1 % 5 == 0) {
+                currentMinutes_1 -= 5; // Subtrahiere 5, wenn der aktuelle Wert durch 5 teilbar ist
+            } else {
+                currentMinutes_1 = ((currentMinutes_1 - 1) / 5) * 5; // Runde auf vorherige durch 5 teilbare Zahl
+            }
+            if (currentMinutes_1 > 60) currentMinutes_1 += 60; // Setze auf 55 wenn < 0
+            // Trenne die Minuten in Zehner- und Einerstelle
+            min1_1 = currentMinutes_1 / 10;
+            min2_1 = currentMinutes_1 % 10;
+            alarmConfig.m_1 = min1_1 * 10 + min2_1;
+        }
+        if ((yPos > 132) && (yPos < 176)) { // decrement MM_2
+            // Berechne die Minuten in 5-Minuten-Schritten rückwärts
+            uint8_t currentMinutes_2 = min1_2 * 10 + min2_2;
+            if (currentMinutes_2 % 5 == 0) {
+                currentMinutes_2 -= 5; // Subtrahiere 5, wenn der aktuelle Wert durch 5 teilbar ist
+            } else {
+                currentMinutes_2 = ((currentMinutes_2 - 1) / 5) * 5; // Runde auf vorherige durch 5 teilbare Zahl
+            }
+            if (currentMinutes_2 > 60) currentMinutes_2 += 60; // Setze auf 55 wenn < 0
+            // Trenne die Minuten in Zehner- und Einerstelle
+            min1_2 = currentMinutes_2 / 10;
+            min2_2 = currentMinutes_2 % 10;
+            alarmConfig.m_2 = min1_2 * 10 + min2_2;
+        }    
+    }
+    showAlarms_Day_and_Time();
+}
+
+// safe the changed alarm time and show 'OK'
+void safeAlarmTime() {
+  start_conf -= 9000;
+
+  uint16_t alarmtime_1, alarmtime_2;
+  alarmtime_1 = alarmConfig.h_1 * 60 + alarmConfig.m_1;
+  alarmtime_2 = alarmConfig.h_2 * 60 + alarmConfig.m_2;
+
+  alarm1 = alarmtime_1;
+  alarmday1 = alarmConfig.alarmday_1;
+  pref.putUInt("alarm1",alarm1);
+  pref.putUShort("alarmday1",alarmday1); 
+
+  alarm2 = alarmtime_2;
+  alarmday2 = alarmConfig.alarmday_2;
+  pref.putUInt("alarm2",alarm2);
+  pref.putUShort("alarmday2",alarmday2);
+
+  tft.fillScreen(COLOR_BG);
+  textInBox(0, 0, 320, 240, "OK", ALIGNCENTER, true, ILI9341_GREEN, COLOR_BG, 1);
+
+  findNextAlarm();
 }
 
 //show name of active station on TFT display
