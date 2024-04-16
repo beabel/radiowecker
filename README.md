@@ -41,6 +41,9 @@ The main changes include:
 3. splitting the radio and settings pages to make space for favorites buttons.
 4. a completely redesigned web configuration page with full remote view and control of the radio.
 
+NEW SINCE V3.0.0
+5. Alarm Setting possible on Touchscreen (Big Thx to JeaneLG)
+
 At the time of publishing this blog article, a complete set was available for purchase from AZ-Delivery. Currently this is not offered, but all required parts can be ordered individually.
 
 
@@ -60,6 +63,9 @@ Die wesentlichen Änderungen umfassen:
 2. Mehr Informationen auf der Hauptseite.
 3. Aufteilung der Radio- und Einstellungsseiten, um Platz für Favoritentasten zu schaffen.
 4. Eine vollständig überarbeitete Webkonfigurationsseite mit umfassender Fernansicht und Steuerung des Radios.
+
+NEU seit V3.0.0
+5. Alarm Einstellungen auch auf dem Touchscreen möglich (Danke an JeaneLG)
 
 Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges Set bei AZ-Delivery zu kaufen. Aktuell wird dies nicht angeboten, aber alle benötigten Teile können einzeln bestellt werden.
 
@@ -83,6 +89,8 @@ Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges S
 ![Radio Screen](screenshot/radio.jpg?raw=true "Radiobildschirm")
 
 ![Setting Screen](screenshot/settings.jpg?raw=true "Einstellungen")
+
+![Alarm Screen](screenshot/alarm.jpg?raw=true "Alarm Einstellungen")
 
 ![Color Setting](screenshot/settings_color.png?raw=true "Farbeinstellungen")
 
