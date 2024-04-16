@@ -42,6 +42,7 @@ The main changes include:
 4. a completely redesigned web configuration page with full remote view and control of the radio.
 
 NEW SINCE V3.0.0
+
 5. Alarm Setting possible on Touchscreen (Big Thx to JeaneLG)
 
 At the time of publishing this blog article, a complete set was available for purchase from AZ-Delivery. Currently this is not offered, but all required parts can be ordered individually.
@@ -65,6 +66,7 @@ Die wesentlichen Änderungen umfassen:
 4. Eine vollständig überarbeitete Webkonfigurationsseite mit umfassender Fernansicht und Steuerung des Radios.
 
 NEU seit V3.0.0
+
 5. Alarm Einstellungen auch auf dem Touchscreen möglich (Danke an JeaneLG)
 
 Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges Set bei AZ-Delivery zu kaufen. Aktuell wird dies nicht angeboten, aber alle benötigten Teile können einzeln bestellt werden.
