@@ -80,6 +80,36 @@ void handleFooterButtons_Power_Sleep_Alarm(int x, int y) {
     else if ((x > 128) && (x < 192)) toggleAlarm();
 }
 
+void HandleFavoriteButtons(int xpos, int ypos){
+  int loopCount = 0;
+  int favoriteIndexes[10]; // Array von 0 bis 9 für die Indizes der Favoriten
+  // Array initialisieren
+  for (int i = 0; i < 10; i++) {
+      favoriteIndexes[i] = -1; // Ein negativer Wert zeigt an, dass kein Favorit vorhanden ist
+  }
+
+  for (int i = 0; i < STATIONS && loopCount < 10; i++) {
+    if (stationlist[i].enabled) {
+      favoriteIndexes[loopCount] = i;
+      loopCount++;
+    }
+  }
+
+  if(ypos<88){
+    if ((xpos < 64) && (favoriteIndexes[0] > -1)){curStation = favoriteIndexes[0];} 
+    if ((xpos>64) && (xpos<128)  && (favoriteIndexes[1] > -1) ){curStation = favoriteIndexes[1];} 
+    if ((xpos>128) && (xpos<192) && (favoriteIndexes[2] > -1)){curStation = favoriteIndexes[2];} 
+    if ((xpos>192) && (xpos<256) && (favoriteIndexes[3] > -1)){curStation = favoriteIndexes[3];} 
+    if ((xpos > 256)  && (favoriteIndexes[4] > -1)){curStation = favoriteIndexes[4];}
+  }else{
+    if ((xpos < 64) && (favoriteIndexes[5] > -1)){curStation = favoriteIndexes[5];} 
+    if ((xpos>64) && (xpos<128) && (favoriteIndexes[6] > -1)){curStation = favoriteIndexes[6];} 
+    if ((xpos>128) && (xpos<192) && (favoriteIndexes[7] > -1)){curStation = favoriteIndexes[7];} 
+    if ((xpos>192) && (xpos<256) && (favoriteIndexes[8] > -1)){curStation = favoriteIndexes[8];} 
+    if ((xpos > 256)  && (favoriteIndexes[9] > -1)){curStation = favoriteIndexes[9];}        
+  }
+
+}
 //register a callback for any touch event.
 //we get position and type of the event
 void onTouchClick(TS_Point p) {
@@ -113,19 +143,7 @@ void onTouchClick(TS_Point p) {
     if ((p.y > 0) && (p.y<44)) setGainValue(p.x, "RadioPage");
     //from 44 to 132 we have now space for Favorite Sender Buttons/////////////////////////////////////////
     if ((p.y > 44) && (p.y<132)){
-      if(p.y<88){
-        if (p.x < 64){curStation = 0;} 
-        if ((p.x>64) && (p.x<128)){curStation = 1;} 
-        if ((p.x>128) && (p.x<192)){curStation = 2;} 
-        if ((p.x>192) && (p.x<256)){curStation = 3;} 
-        if (p.x > 256){curStation = 4;}
-      }else{
-        if (p.x < 64){curStation = 5;} 
-        if ((p.x>64) && (p.x<128)){curStation = 6;} 
-        if ((p.x>128) && (p.x<192)){curStation = 7;} 
-        if ((p.x>192) && (p.x<256)){curStation = 8;} 
-        if (p.x > 256){curStation = 9;}        
-      }
+      HandleFavoriteButtons(p.x, p.y);
       changeStation();
       showClock();       
     }
@@ -993,7 +1011,7 @@ void FavoriteButtons(){
   for (int i = 0; i < STATIONS && loopCount < 10; i++) {
     if (stationlist[i].enabled) {
       bool active = (actStation == i); // Aktiv für die aktuelle Station
-      tft.drawBitmap((loopCount % 5) * 64, y, num_64_44[i], 64, 44, active ? COLOR_FAV_BUTTONS_AKTIV : COLOR_FAV_BUTTONS, COLOR_FAV_BUTTONS_BG);
+      tft.drawBitmap((loopCount % 5) * 64, y, num_64_44[loopCount], 64, 44, active ? COLOR_FAV_BUTTONS_AKTIV : COLOR_FAV_BUTTONS, COLOR_FAV_BUTTONS_BG);
       loopCount++;
       if (loopCount % 5 == 0) {
         y = 88;
@@ -1001,3 +1019,4 @@ void FavoriteButtons(){
     }
   }
 }
+
