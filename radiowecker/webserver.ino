@@ -29,7 +29,9 @@ void setup_webserver() {
   server.on("/cmd/startSleep",startSleep);
   server.on("/cmd/beforeStation",beforeStation);
   server.on("/cmd/nextStation",nextStation); 
-  server.on("/cmd/getCurrentStatus",getCurrentStatus); 
+  server.on("/cmd/getCurrentStatus",getCurrentStatus);
+   // Info Tab ######################
+  server.on("/cmd/getInfo",getInfo);     
   //start webserver
   server.begin();
 }
@@ -379,6 +381,34 @@ void getCurrentStatus() {
   } else {
     jsonDoc["Sleep"] = 0;
   } 
+  // Erstellen eines String, der das JSON-Objekt enthält
+  String response;
+  serializeJson(jsonDoc, response);
+  // Senden der JSON-Antwort
+  server.send(200, "application/json", response);
+}
+//################ Info Tab
+//AJAX command /cmd/getInfo
+void getInfo() {
+  // Erstellen eines JSON-Objekt
+  StaticJsonDocument<500> jsonDoc;
+  // installierte Radio Version
+  jsonDoc["radioversion"] = RADIOVERSION;
+  //Board Informationen
+  // Erstellen eines Unterordners "system"
+  JsonObject ESP_INFO = jsonDoc.createNestedObject("ESP_INFO");  
+  //HEAP
+  JsonObject HEAP = ESP_INFO.createNestedObject("HEAP");
+  HEAP["getHeapSize"] = ESP.getHeapSize();  
+  HEAP["getFreeHeap"] = ESP.getFreeHeap();
+  //SKETCH
+  JsonObject SKETCH = ESP_INFO.createNestedObject("SKETCH");   
+  SKETCH["getSketchSize"] = ESP.getSketchSize();
+  SKETCH["getFreeSketchSpace"] = ESP.getFreeSketchSpace();
+  //CHIP
+  JsonObject CHIP = ESP_INFO.createNestedObject("CHIP");  
+  CHIP["getChipModel"] = ESP.getChipModel();
+
   // Erstellen eines String, der das JSON-Objekt enthält
   String response;
   serializeJson(jsonDoc, response);

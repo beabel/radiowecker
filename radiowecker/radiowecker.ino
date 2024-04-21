@@ -1,3 +1,4 @@
+#define RADIOVERSION "v3.0.2";
 #include <WiFi.h> 
 #include <ArduinoOTA.h>
 

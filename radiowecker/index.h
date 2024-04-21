@@ -3,13 +3,14 @@ const char OPTION_entry[] PROGMEM =
 "<option value='%i' %s>%s %s</option>";
 
 const char MAIN_page[] PROGMEM = R"=====(
+<!DOCTYPE html>
 <html>
 <head>
 <meta http-equiv='content-type' content='text/html; charset=UTF-8'>
 <meta name='viewport' content='width=320' />
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.min.css">
-<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.min.css">
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <link rel="stylesheet" href="//use.fontawesome.com/releases/v5.0.7/css/all.css">
 <script>
 $(document).ready(function() {
@@ -63,6 +64,8 @@ function getAll() {
     getSSID();
     getStationList();
     getAlarms();
+    getInfo();
+    updateGitHubInfo();
 }
 
 function getStationList() {
@@ -384,6 +387,127 @@ function nextStation() {
         }
     });
 }
+function getInfo() {
+  $.ajax({
+    type: "GET",
+    url: "/cmd/getInfo",
+    success: function (data) {
+      // Ausgabe des JSON-Objekts in der Konsole
+      console.log(data);
+
+      // Funktion für die rekursive Iteration über das JSON-Objekt
+      function iterateObject(obj, prefix = "") {
+        $.each(obj, function(key, value) {
+          // Überprüfe, ob es sich um ein Objekt handelt (Unterordner)
+          if (typeof value === 'object') {
+            // Wenn ja, rekursiv weiter iterieren
+            iterateObject(value, prefix + key + "_");
+          } else {
+            // Wenn nicht, aktualisiere das entsprechende HTML-Element
+            $("#" + prefix + key).text(value);
+            // Ausgabe der ID auf der Konsole
+            //console.log("Element ID:", prefix + key);
+          }
+        });
+      }
+
+      // Starte die rekursive Iteration mit dem Hauptobjekt
+      iterateObject(data);
+
+      // Berechne den Prozentsatz des freien Heaps
+      var heapSize = data.ESP_INFO.HEAP.getHeapSize;
+      var freeHeap = data.ESP_INFO.HEAP.getFreeHeap;
+      var heapPercentage = (freeHeap / heapSize) * 100;
+      $( "#heapprogressbar" ).progressbar({
+        value: heapPercentage
+      });
+      // Aktualisiere den Text
+      $("#heapBarText").text(freeHeap + "(" + heapPercentage.toFixed(2) + "%) used from " + heapSize); 
+
+      // Berechne den tatsächlich verwendeten Platz für den Sketch
+      var usedSketchSpace = data.ESP_INFO.SKETCH.getSketchSize;//1112544
+      var SketchSpace = data.ESP_INFO.SKETCH.getFreeSketchSpace;//1310720
+
+      // Berechne den Prozentsatz des verwendeten Sketch-Speichers
+      var sketchPercentage = (usedSketchSpace / SketchSpace) * 100;
+      $( "#sketchprogressbar" ).progressbar({
+        value: sketchPercentage
+      });
+      // Aktualisiere den Text 
+      $("#sketchBarText").text("Der Sketch verwendet " + usedSketchSpace + " Bytes (" + sketchPercentage.toFixed(2) + "%). Das Maximum sind " + SketchSpace + " Bytes."); 
+
+      checkForUpdate(data.radioversion);                
+    },
+    error: function () {
+      alert("Fehler beim Abrufen der Daten.");
+    },
+  });
+}
+
+function checkForUpdate(currentVersion) {
+  $.ajax({
+    url: "https://api.github.com/repos/beabel/radiowecker/releases/latest",
+    type: "GET",
+    dataType: "json",
+    success: function (data) {
+      console.log(data);
+
+      var latestVersion = data.tag_name;
+
+      if (latestVersion !== currentVersion) {
+        // Wenn eine neuere Version verfügbar ist
+        $("#githubVersion").html('<i class="fas fa-exclamation-triangle" style="color: red;"></i> <a href="' + data.html_url + '" target="_blank">Neue Version verfügbar (' + latestVersion + ')</a>');
+      } else {
+        // Ansonsten ist die aktuelle Version bereits die neueste
+        $("#githubVersion").html('<i class="fas fa-check" style="color: green;"></i> Du verwendest bereits die neueste Version (' + currentVersion + ').');
+      }
+    },
+    error: function () {
+      // Zeige eine Fehlermeldung an, falls ein Fehler beim Abrufen der Daten auftritt
+      $("#githubVersion").text("Fehler beim Überprüfen auf Updates.");
+    }
+  });
+}
+
+function updateGitHubInfo() {
+  $.ajax({
+    url: "https://api.github.com/repos/beabel/radiowecker",
+    type: "GET",
+    dataType: "json",
+    success: function (data) {
+      console.log(data);
+      var updatedAt = new Date(data.updated_at);
+      var day = updatedAt.getDate();
+      var month = updatedAt.getMonth() + 1;
+      var year = updatedAt.getFullYear();
+      var hours = updatedAt.getHours();
+      var minutes = updatedAt.getMinutes();
+
+      // Führende Nullen hinzufügen, wenn nötig
+      if (day < 10) { day = '0' + day; }
+      if (month < 10) { month = '0' + month; }
+      if (hours < 10) { hours = '0' + hours; }
+      if (minutes < 10) { minutes = '0' + minutes; }
+
+      var formattedDate = day + '.' + month + '.' + year + ' ' + hours + ':' + minutes;
+
+      var html = '<div class="ui-state-highlight ui-corner-all">';
+      html += '<p><a href="' + data.html_url + '" target="_blank"><i class="fab fa-github"></i>' + data.name + '</a></p>';      
+      html += '<p><a href="' + data.html_url + '/stargazers" target="_blank"><i class="fas fa-star"></i>Stars: ' + data.stargazers_count + '</a> ';
+      html += '<a href="' + data.html_url + '/wiki" target="_blank"><i class="fas fa-info"></i> Wiki</a> ';
+      html += '<a href="' + data.html_url + '/discussions" target="_blank"><i class="fas fa-users"></i> Forum</a></p>';
+      html += '<p>Letztes Update: ' + formattedDate + '</p>';
+      html += '<p>Created with <i class="fas fa-heart"></i> by kunigunde</p>';
+      html += '</div>';            
+      $("#footer").html(html);
+    },
+    error: function () {
+      $("#footer").html("Fehler beim Abrufen der GitHub-Informationen.");
+    }
+  });
+}
+
+
 </script>
 <style>
 body {
@@ -443,6 +567,7 @@ input {
         <li><a href="#wecker"><i class="fa fa-clock"></i></a></li>
         <li><a href="#radio"><i class="fas fa-list-ol"></i></a></li>   
         <li><a href="#wlan"><i class="fa fa-wifi"></i></a></li>
+        <li><a href="#info"><i class="fas fa-question"></i></a></li>        
     </ul>
     <div id="player">
       <div align="center">
@@ -625,6 +750,31 @@ input {
         <button id="btn_restore" type="button">Senderliste Reset</button>
       </div>
     </div>
+    <div id="info">
+      <label for="radioversion">Version:
+        <span id="radioversion"></span><br />
+        <span id="githubVersion"></span>        
+      </label>
+      <hr />
+      
+      <label for="BarContainer">HEAP:
+      </label>
+      <div id="heapprogressbar"></div>
+      <div id="heapBarText"></div>
+      <br />
+      <label for="BarContainer">SKETCH:
+      </label>
+      <div id="sketchprogressbar"></div>
+      <div id="sketchBarText"></div>
+      <hr />
+      <label for="ESP_INFO_CHIP_getChipModel">ChipModel:
+        <span id="ESP_INFO_CHIP_getChipModel"></span>
+      </label>
+      <hr />
+      <div id="footer" class="ui-widget">
+        <!-- Hier wird der Footer mit Informationen zum GitHub-Repository angezeigt -->
+      </div>
+    </div>    
 </div>
 </body>
 </html>
