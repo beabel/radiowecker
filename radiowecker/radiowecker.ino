@@ -31,7 +31,8 @@ typedef struct {
   uint8_t enabled;//flag to activate the station
 } Station;
 
-#define STATIONS 30 //number of stations in the list
+#define STATIONS 30          // number of stations in the list
+#define MINUTES_PER_DAY 1440 // minutes a day has
 
 //gloabal variables
 Station stationlist[STATIONS];    //list of available stations
@@ -81,13 +82,14 @@ void findNextAlarm() {
   uint8_t mask;
   if (getLocalTime(&ti)) { //get current date and time
     wd = weekday; //variable to iterate over weekdays starting with today
-    alarmday = 8;  //alarmday = 8 means no alarm
+    alarmday = 8; //alarmday = 8 means no alarm
+    alarmtime = MINUTES_PER_DAY + 1; // set alarmtime to a value higher it could have
     mask = 1 << wd;  //mask to filter weekday to be tested
     //test if alarm settings 1 matchs
-    if ((alarmday == 8) && ((alarmday1 & mask) != 0) && (alarm1 > minutes)) 
+    if (((alarmday1 & mask) != 0) && (alarm1 > minutes))
       { alarmtime = alarm1; alarmday = wd;}
-    //test if alarm settings 2 matchs
-    if ((alarmday == 8) && ((alarmday2 & mask) != 0) && (alarm2 > minutes)) 
+    //test if alarm settings 2 matchs and if the alarm is before a possibly set alarm 1
+    if (((alarmday2 & mask) != 0) && (alarm2 > minutes) && (alarmtime > alarm2))
       { alarmtime = alarm2; alarmday = wd;}
     if (alarmday == 8) { //if no alarm continue search
       do {
@@ -95,13 +97,12 @@ void findNextAlarm() {
         if (wd > 7) wd = 0;
         mask = 1 << wd;
         //test if alarm settings 1 matchs
-        if ((alarmday == 8) && ((alarmday1 & mask) != 0) ) { alarmtime = alarm1; alarmday = wd;}
-        //test if alarm settings 1 matchs
-        if ((alarmday == 8) && ((alarmday2 & mask) != 0) ) { alarmtime = alarm2; alarmday = wd;}
+        if ((alarmday1 & mask) != 0) { alarmtime = alarm1; alarmday = wd;}
+        //test if alarm settings 2 matchs
+        if (((alarmday2 & mask) != 0) && (alarmtime > alarm2)) { alarmtime = alarm2; alarmday = wd;}
         
       } while ((alarmday == 8) && (wd != weekday)); //continue until an valid alarm was found or a week is over
     }
-    
     Serial.printf("Next alarm %i on %i\n",alarmtime,alarmday);
   }
 }
