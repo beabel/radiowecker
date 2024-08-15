@@ -22,16 +22,16 @@ void ota_onStart() {
   String type;
   if (ArduinoOTA.getCommand() == U_FLASH)
     type = "sketch";
-  else // U_SPIFFS
+  else  // U_SPIFFS
     type = "filesystem";
 
   // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-  displayMessage(5, 10, 310, 30, "Updating Sketch", ALIGNCENTER, true, ILI9341_YELLOW, ILI9341_BLACK,1);
+  displayMessage(5, 10, 310, 30, "Updating Sketch", ALIGNCENTER, true, ILI9341_YELLOW, ILI9341_BLACK, 1);
   showProgress(0);
 }
 //on end no extra processing
 void ota_onEnd() {
-  displayMessage(5, 120, 310, 30, "Done", ALIGNLEFT, true, ILI9341_GREEN, ILI9341_BLACK,1);
+  displayMessage(5, 120, 310, 30, "Done", ALIGNLEFT, true, ILI9341_GREEN, ILI9341_BLACK, 1);
 }
 
 //s
@@ -46,11 +46,11 @@ void ota_onProgress(unsigned int progress, unsigned int total) {
 
 void ota_onError(ota_error_t error) {
   char err[80];
-  sprintf(err,"Error[%u]: ", error);
-  if (error == OTA_AUTH_ERROR) sprintf(err,"Error[%u]: Auth Failed",error);
-  else if (error == OTA_BEGIN_ERROR) sprintf(err,"Error[%u] Begin Failed",error);
-  else if (error == OTA_CONNECT_ERROR) sprintf(err,"Error[%u] Connect Failed",error);
-  else if (error == OTA_RECEIVE_ERROR) sprintf(err,"Error[%u] Receive Failed",error);
-  else if (error == OTA_END_ERROR) sprintf(err,"Error[%u] End Failed",error);
-  displayMessage(5,200,310,30,err,ALIGNLEFT,false,ILI9341_RED);
+  sprintf(err, "Error[%u]: ", error);
+  if (error == OTA_AUTH_ERROR) sprintf(err, "Error[%u]: Auth Failed", error);
+  else if (error == OTA_BEGIN_ERROR) sprintf(err, "Error[%u] Begin Failed", error);
+  else if (error == OTA_CONNECT_ERROR) sprintf(err, "Error[%u] Connect Failed", error);
+  else if (error == OTA_RECEIVE_ERROR) sprintf(err, "Error[%u] Receive Failed", error);
+  else if (error == OTA_END_ERROR) sprintf(err, "Error[%u] End Failed", error);
+  displayMessage(5, 200, 310, 30, err, ALIGNLEFT, false, ILI9341_RED);
 }
