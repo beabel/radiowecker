@@ -103,3 +103,5 @@ Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges S
 ![Konfigurationswebsite](screenshot/website_3.png?raw=true "Radio")
 
 ![Konfigurationswebsite](screenshot/website_4.png?raw=true "WLAN")
+
+![Info Tab](screenshot/info_tab.png?raw=true "Info Tab")
