@@ -69,5 +69,5 @@ boolean alarmpage = false;   // Flag zum Signalisieren, dass die Alarm-Einstells
 #define TIME_ZONE "CET-1CEST,M3.5.0/02,M10.5.0/03"  // Zeitzone für Mitteleuropa mit Sommerzeitregelung
 
 // OTA-Konfiguration
-#define OTA_HOSTNAME "radiowecker"   // Definiert den Hostnamen
-#define OTA_PASSWORD "weckerupdate"  // Definiert den SSID-Namen des Soft-AP
+#define OTA_HOSTNAME "radiowecker"   // Definiert den Hostnamen für OTA Update
+#define OTA_PASSWORD "weckerupdate"  // Definiert das Passwort für OTA Update
