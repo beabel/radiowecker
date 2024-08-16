@@ -1,9 +1,7 @@
-
-//default stationlist
+// Anzahl der Standardstationen in der Liste
 #define DEFAULTSTATIONS 26
 
-
-//Definition of a set of tested default stations
+// Definition eines Sets getesteter Standardstationen, gespeichert im Flash-Speicher (PROGMEM)
 Station defstations[DEFAULTSTATIONS] PROGMEM = {
   { "http://stream01.zogl.net:8906/stream", "Radino", 1 },
   { "http://radio.toggo.de/live/mp3-192/radio.toggo.de/", "Toggo", 1 },
@@ -33,20 +31,26 @@ Station defstations[DEFAULTSTATIONS] PROGMEM = {
   { "http://stream.streambase.ch/vrock/mp3-192/", "Virgin Radio", 1 }
 };
 
-//fill the station list from preferences. If an entry not exists the default list will be used
+// Füllt die Stationenliste aus den gespeicherten Präferenzen. Wenn ein Eintrag nicht existiert, wird die Standardliste verwendet
 void setup_senderList() {
-  char nkey[4];
-  char ukey[4];
-  char fkey[4];
+  char nkey[4];  // Schlüssel für den Namen
+  char ukey[4];  // Schlüssel für die URL
+  char fkey[4];  // Schlüssel für den Aktivierungsstatus
+
+  // Schleife über alle möglichen Stationen
   for (uint8_t i = 0; i < STATIONS; i++) {
+    // Erzeuge die Schlüssel für die aktuellen Index-Station
     sprintf(nkey, "n%i", i);
     sprintf(ukey, "u%i", i);
     sprintf(fkey, "f%i", i);
+
     if (i < DEFAULTSTATIONS) {
+      // Wenn der Index innerhalb der Standardstationen liegt, lade die Daten aus den Präferenzen oder verwende Standardwerte
       strlcpy(stationlist[i].name, sender.getString(nkey, defstations[i].name).c_str(), 32);
       strlcpy(stationlist[i].url, sender.getString(ukey, defstations[i].url).c_str(), 150);
       stationlist[i].enabled = sender.getUChar(fkey, defstations[i].enabled);
     } else {
+      // Wenn der Index außerhalb der Standardstationen liegt, lade die Daten aus den Präferenzen oder verwende leere Standardwerte
       strlcpy(stationlist[i].name, sender.getString(nkey, nkey).c_str(), 32);
       strlcpy(stationlist[i].url, sender.getString(ukey, "").c_str(), 150);
       stationlist[i].enabled = sender.getUChar(fkey, 0);
@@ -54,17 +58,24 @@ void setup_senderList() {
   }
 }
 
-//fill the station list from default list and save it into preferences
+// Füllt die Stationenliste mit den Standardstationen und speichert sie in den Präferenzen
 void restore() {
-  char nkey[4];
-  char ukey[4];
-  char fkey[4];
+  char nkey[4];  // Schlüssel für den Namen
+  char ukey[4];  // Schlüssel für die URL
+  char fkey[4];  // Schlüssel für den Aktivierungsstatus
+
+  // Schleife über alle möglichen Stationen
   for (uint8_t i = 0; i < STATIONS; i++) {
+    // Lösche die vorherigen Einträge in den Präferenzen
     sender.clear();
+
+    // Erzeuge die Schlüssel für den aktuellen Index
     sprintf(nkey, "n%i", i);
     sprintf(ukey, "u%i", i);
     sprintf(fkey, "f%i", i);
+
     if (i < DEFAULTSTATIONS) {
+      // Wenn der Index innerhalb der Standardstationen liegt, verwende die Standardwerte
       strlcpy(stationlist[i].name, defstations[i].name, 32);
       sender.putString(nkey, defstations[i].name);
       strlcpy(stationlist[i].url, defstations[i].url, 150);
@@ -72,6 +83,7 @@ void restore() {
       stationlist[i].enabled = defstations[i].enabled;
       sender.putUChar(fkey, defstations[i].enabled);
     } else {
+      // Wenn der Index außerhalb der Standardstationen liegt, speichere leere Werte
       strlcpy(stationlist[i].name, nkey, 32);
       sender.putString(nkey, nkey);
       strlcpy(stationlist[i].url, "", 150);
@@ -82,37 +94,46 @@ void restore() {
   }
 }
 
-//save stationlist into preferences
+// Speichert die Stationenliste in den Präferenzen
 void saveList() {
-  char nkey[4];
-  char ukey[4];
-  char fkey[4];
+  char nkey[4];  // Schlüssel für den Namen
+  char ukey[4];  // Schlüssel für die URL
+  char fkey[4];  // Schlüssel für den Aktivierungsstatus
+
+  // Schleife über alle möglichen Stationen
   for (uint8_t i = 0; i < STATIONS; i++) {
+    // Erzeuge die Schlüssel für den aktuellen Index
     sprintf(nkey, "n%i", i);
     sprintf(ukey, "u%i", i);
     sprintf(fkey, "f%i", i);
+
+    // Speichere die Stationen-Daten in den Präferenzen
     sender.putString(nkey, stationlist[i].name);
     sender.putString(ukey, stationlist[i].url);
     sender.putUChar(fkey, stationlist[i].enabled);
   }
 }
 
-//move a station inside the station list from old position to newposition
+// Verschiebt eine Station innerhalb der Stationenliste von der alten Position zur neuen Position
 void reorder(uint8_t oldpos, uint8_t newpos) {
-  Station temp;
+  Station temp;  // Temporäre Variable zum Speichern der Station während des Verschiebens
+
+  // Überprüfe, ob die alten und neuen Positionen innerhalb der gültigen Grenzen liegen
   if ((oldpos < STATIONS) && (newpos < STATIONS)) {
     if (oldpos > newpos) {
-      memcpy(&temp, &stationlist[oldpos], sizeof(Station));
+      // Verschieben nach oben in der Liste
+      memcpy(&temp, &stationlist[oldpos], sizeof(Station));  // Speichere die Station vorübergehend
       for (uint8_t i = oldpos; i > newpos; i--) {
-        memcpy(&stationlist[i], &stationlist[i - 1], sizeof(Station));
+        memcpy(&stationlist[i], &stationlist[i - 1], sizeof(Station));  // Verschiebe die Stationen nach oben
       }
-      memcpy(&stationlist[newpos], &temp, sizeof(Station));
+      memcpy(&stationlist[newpos], &temp, sizeof(Station));  // Setze die Station an die neue Position
     } else {
-      memcpy(&temp, &stationlist[oldpos], sizeof(Station));
+      // Verschieben nach unten in der Liste
+      memcpy(&temp, &stationlist[oldpos], sizeof(Station));  // Speichere die Station vorübergehend
       for (uint8_t i = oldpos; i < newpos; i++) {
-        memcpy(&stationlist[i], &stationlist[i + 1], sizeof(Station));
+        memcpy(&stationlist[i], &stationlist[i + 1], sizeof(Station));  // Verschiebe die Stationen nach unten
       }
-      memcpy(&stationlist[newpos], &temp, sizeof(Station));
+      memcpy(&stationlist[newpos], &temp, sizeof(Station));  // Setze die Station an die neue Position
     }
   }
 }

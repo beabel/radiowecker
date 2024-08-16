@@ -1,291 +1,273 @@
-#define RADIOVERSION "v3.0.3";
-#include <WiFi.h>
-#include <ArduinoOTA.h>
-
-#include "Adafruit_ILI9341.h"     //Display driver
-#include <XPT2046_Touchscreen.h>  //Touchscreen driver
-#include <TouchEvent.h>           //Examines touchscreen events
-
-
-//esp32 library to save preferences in flash
-#include <Preferences.h>
-
-//definitions for text output alignment
-#define ALIGNLEFT 0
-#define ALIGNCENTER 1
-#define ALIGNRIGHT 2
-
-//pin to be used for light sensor
-#define LDR 36
-// pin for Beeper
-#define BEEPER 21
-
-//instance of prefernces
-Preferences pref;
-Preferences sender;
-
-//structure for station list
-typedef struct {
-  char url[150];    //stream url
-  char name[32];    //stations name
-  uint8_t enabled;  //flag to activate the station
-} Station;
-
-#define STATIONS 30           // number of stations in the list
-#define MINUTES_PER_DAY 1440  // minutes a day has
-
-//gloabal variables
-Station stationlist[STATIONS];  //list of available stations
-//variables to hold configuration data
-String ssid = "";                //ssid for WLAN connection
-String pkey = "";                //passkey for WLAN connection
-String ntp = "de.pool.ntp.org";  //NTP server url
-uint8_t curStation = 0;          //index for current selected station in stationlist
-uint8_t curGain = 200;           //current loudness
-uint8_t snoozeTime = 30;         //snooze time in minutes
-uint16_t alarm1 = 390;           //first alarm time 6:30
-uint8_t alarmday1 = 0B00111110;  //valid weekdays (example 00111110 means monday through friday)
-uint16_t alarm2 = 480;           //second alarm time 8:00
-uint8_t alarmday2 = 0B01000001;  //valid week days (example 01000001 means sunday and saturday)
-uint8_t actStation = 0;          //index for current station in station list used for streaming
-uint8_t bright = 25;             //brightness in percent. 0 means use LDR to control brightness
-//other global variables
-uint32_t lastchange = 0;     //time of last selection change
-uint8_t snoozeWait = 0;      //remaining minutes for snooze
-uint16_t alarmtime = 0;      //next relevant alarm time
-uint8_t alarmday = 8;        //weekday for next relevant alarm or 8 means alarm disabled
-char title[64];              //character array to hold meta data message
-bool newTitle = false;       //flag to signal a new title
-uint32_t tick = 0;           //last tick-counter value to trigger timed event
-uint32_t discon = 0;         //tick-counter value to calculate disconnected time
-uint16_t minutes;            //current number of minutes since midnight
-uint8_t weekday;             //current weekday
-struct tm ti;                //time structure with current time
-int16_t lastldr;             //last value from LDR sensor to detect changes
-uint32_t start_conf;         //time of entering config screen
-boolean connected;           //flag to signal active connection
-boolean radio = false;       //flag to signal radio output
-boolean clockmode = true;    //flag to signal clock is shown on the screen
-boolean configpage = false;  //flag to signal config is shown on the screen
-boolean radiopage = false;   //flag to signal radioselect is shown on the screen
-boolean alarmpage = false;   //flag to signal alarm setting page is shown on the screen
+#define RADIOVERSION "v3.0.4";
+#include "00_librarys.h"      //Lade alle benötigten Bibliotheken
+#include "00_pin_settings.h"  //Einstellungen der genutzten Pins
+#include "00_settings.h"      //einstellungen
+#include "00_texte.h"         //Strings
 
 //predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
 
-//calculate date and time for next expected alarm
-//set alarmtime to the time on the day and alarmday on weekday for alarm
-//or 8 if no alarm exists
+// Berechnet das Datum und die Uhrzeit für den nächsten erwarteten Alarm
+// Setzt `alarmtime` auf die Zeit des Tages und `alarmday` auf den Wochentag für den Alarm
+// oder auf 8, wenn kein Alarm vorhanden ist
 void findNextAlarm() {
   Serial.println("Search next alarm time");
-  int wd;
-  uint8_t mask;
-  if (getLocalTime(&ti)) {            //get current date and time
-    wd = weekday;                     //variable to iterate over weekdays starting with today
-    alarmday = 8;                     //alarmday = 8 means no alarm
-    alarmtime = MINUTES_PER_DAY + 1;  // set alarmtime to a value higher it could have
-    mask = 1 << wd;                   //mask to filter weekday to be tested
-    //test if alarm settings 1 matchs
+  int wd;        // Variable für den aktuellen Wochentag
+  uint8_t mask;  // Maske zum Filtern von Wochentagen
+
+  if (getLocalTime(&ti)) {            // Hole das aktuelle Datum und die Uhrzeit
+    wd = weekday;                     // Setze wd auf den aktuellen Wochentag
+    alarmday = 8;                     // Setze alarmday auf 8, was bedeutet, dass kein Alarm vorhanden ist
+    alarmtime = MINUTES_PER_DAY + 1;  // Setze alarmtime auf einen Wert, der höher ist als der maximal mögliche Wert für Minuten pro Tag
+
+    mask = 1 << wd;  // Erstelle eine Maske für den aktuellen Wochentag
+
+    // Überprüfe, ob die Alarmzeit 1 übereinstimmt und ob der Alarm vor der aktuellen Zeit liegt
     if (((alarmday1 & mask) != 0) && (alarm1 > minutes)) {
-      alarmtime = alarm1;
-      alarmday = wd;
+      alarmtime = alarm1;  // Setze alarmtime auf alarm1
+      alarmday = wd;       // Setze alarmday auf den aktuellen Wochentag
     }
-    //test if alarm settings 2 matchs and if the alarm is before a possibly set alarm 1
+
+    // Überprüfe, ob die Alarmzeit 2 übereinstimmt und ob der Alarm vor alarm1 liegt
     if (((alarmday2 & mask) != 0) && (alarm2 > minutes) && (alarmtime > alarm2)) {
-      alarmtime = alarm2;
-      alarmday = wd;
+      alarmtime = alarm2;  // Setze alarmtime auf alarm2
+      alarmday = wd;       // Setze alarmday auf den aktuellen Wochentag
     }
-    if (alarmday == 8) {  //if no alarm continue search
+
+    // Wenn kein Alarm gefunden wurde, fahre fort mit der Suche nach dem nächsten Alarm in der kommenden Woche
+    if (alarmday == 8) {  // Wenn alarmday immer noch 8 ist (kein Alarm gefunden)
       do {
-        wd++;  //next weekday
-        if (wd > 7) wd = 0;
-        mask = 1 << wd;
-        //test if alarm settings 1 matchs
+        wd++;                // Gehe zum nächsten Wochentag
+        if (wd > 7) wd = 0;  // Wenn der Wochentag über 7 hinausgeht, setze ihn auf 0 (Sonntag)
+
+        mask = 1 << wd;  // Erstelle eine neue Maske für den aktuellen Wochentag
+
+        // Überprüfe erneut Alarmzeit 1
         if ((alarmday1 & mask) != 0) {
-          alarmtime = alarm1;
-          alarmday = wd;
-        }
-        //test if alarm settings 2 matchs
-        if (((alarmday2 & mask) != 0) && (alarmtime > alarm2)) {
-          alarmtime = alarm2;
-          alarmday = wd;
+          alarmtime = alarm1;  // Setze alarmtime auf alarm1
+          alarmday = wd;       // Setze alarmday auf den aktuellen Wochentag
         }
 
-      } while ((alarmday == 8) && (wd != weekday));  //continue until an valid alarm was found or a week is over
+        // Überprüfe erneut Alarmzeit 2
+        if (((alarmday2 & mask) != 0) && (alarmtime > alarm2)) {
+          alarmtime = alarm2;  // Setze alarmtime auf alarm2
+          alarmday = wd;       // Setze alarmday auf den aktuellen Wochentag
+        }
+
+      } while ((alarmday == 8) && (wd != weekday));  // Wiederhole, bis ein gültiger Alarm gefunden wird oder eine Woche vorbei ist
     }
-    Serial.printf("Next alarm %i on %i\n", alarmtime, alarmday);
+    Serial.printf("Next alarm %i on %i\n", alarmtime, alarmday);  // Gib die nächste Alarmzeit und den Wochentag aus
   }
 }
 
-//setup
+// Initialisierung des Systems
 void setup() {
+  // Starte die serielle Kommunikation mit einer Baudrate von 115200
   Serial.begin(115200);
-  Serial.println("Load preferences");
-  title[0] = 0;
-  //preferences will be saved in the EPROM of the ESP32 to keep the values
-  //when power supply will be interrupted
-  //Two topics "radio" and "senderliste" are defined. We will mount both
+  Serial.println("Load preferences");  // Debug-Ausgabe: "Lade Einstellungen"
+
+  title[0] = 0;  // Setze das erste Zeichen des Titels auf 0 (leerer Titel)
+
+  // Lade die gespeicherten Präferenzen aus dem EEPROM des ESP32
+  // Die Präferenzen werden in zwei Themen gespeichert: "radio" und "senderliste"
+  // Beide Themen werden hier geladen
   pref.begin("radio", false);
   sender.begin("senderlist", false);
-  //get values from preferences
-  if (pref.isKey("ssid")) ssid = pref.getString("ssid");
-  if (pref.isKey("pkey")) pkey = pref.getString("pkey");
-  if (pref.isKey("ntp")) ntp = pref.getString("ntp");
-  curGain = 50;  //default value
-  if (pref.isKey("gain")) curGain = pref.getUShort("gain");
-  snoozeTime = 30;  //default value
-  if (pref.isKey("snooze")) snoozeTime = pref.getUShort("snooze");
-  bright = 80;  //default value
-  if (pref.isKey("bright")) bright = pref.getUShort("bright");
-  alarm1 = 390;  //6:30
-  if (pref.isKey("alarm1")) alarm1 = pref.getUInt("alarm1");
-  alarmday1 = 0B00111110;  //mo-fr
-  if (pref.isKey("alarmday1")) alarmday1 = pref.getUShort("alarmday1");
-  alarm2 = 480;  //8:00
-  if (pref.isKey("alarm2")) alarm2 = pref.getUInt("alarm2");
-  alarmday2 = 0B01000001;  //so,sa
-  if (pref.isKey("alarmday2")) alarmday2 = pref.getUShort("alarmday2");
-  alarmtime = 0;
-  alarmday = 8;    //alarm is off
-  curStation = 0;  //default value
-  //set current station to saved value if available
+
+  // Werte aus den gespeicherten Präferenzen abrufen, falls vorhanden
+  if (pref.isKey("ssid")) ssid = pref.getString("ssid");  // SSID für WLAN-Verbindung
+  if (pref.isKey("pkey")) pkey = pref.getString("pkey");  // Passkey für WLAN-Verbindung
+  if (pref.isKey("ntp")) ntp = pref.getString("ntp");     // NTP-Server-URL für die Zeitabgleich
+
+  curGain = 50;                                              // Standardwert für Lautstärke
+  if (pref.isKey("gain")) curGain = pref.getUShort("gain");  // Abrufen des Lautstärkewerts
+
+  snoozeTime = 30;                                                  // Standardwert für Schlummerzeit in Minuten
+  if (pref.isKey("snooze")) snoozeTime = pref.getUShort("snooze");  // Abrufen der Schlummerzeit
+
+  bright = 80;                                                  // Standardwert für Helligkeit in Prozent
+  if (pref.isKey("bright")) bright = pref.getUShort("bright");  // Abrufen des Helligkeitswerts
+
+  alarm1 = 390;                                               // Standardwert für die erste Alarmzeit (6:30)
+  if (pref.isKey("alarm1")) alarm1 = pref.getUInt("alarm1");  // Abrufen der ersten Alarmzeit
+
+  alarmday1 = 0B00111110;                                                // Standardwert für die Tage (Mo-Fr)
+  if (pref.isKey("alarmday1")) alarmday1 = pref.getUShort("alarmday1");  // Abrufen der Wochentage für den ersten Alarm
+
+  alarm2 = 480;                                               // Standardwert für die zweite Alarmzeit (8:00)
+  if (pref.isKey("alarm2")) alarm2 = pref.getUInt("alarm2");  // Abrufen der zweiten Alarmzeit
+
+  alarmday2 = 0B01000001;                                                // Standardwert für die Tage (So, Sa)
+  if (pref.isKey("alarmday2")) alarmday2 = pref.getUShort("alarmday2");  // Abrufen der Wochentage für den zweiten Alarm
+
+  alarmtime = 0;  // Startwert für die nächste Alarmzeit
+  alarmday = 8;   // Startwert für den nächsten Alarmtag (8 bedeutet, Alarm ist deaktiviert)
+
+  curStation = 0;  // Standardwert für die aktuelle Station
+  // Setze die aktuelle Station auf den gespeicherten Wert, falls vorhanden
   if (pref.isKey("station")) curStation = pref.getUShort("station");
-  if (curStation >= STATIONS) curStation = 0;  //check to avoid invalid station number
-  actStation = curStation;                     //set active station to current station
+  // Überprüfe, ob die aktuelle Station innerhalb des gültigen Bereichs liegt
+  if (curStation >= STATIONS) curStation = 0;
+
+  actStation = curStation;  // Setze die aktive Station auf die aktuelle Station
+
+  // Debug-Ausgabe der aktuellen Station, Lautstärke, SSID und NTP-Server
   Serial.printf("station %i, gain %i, ssid %s, ntp %s\n", curStation, curGain, ssid.c_str(), ntp.c_str());
-  //run setup functions in the sub parts
-  setup_audio();       //setup audio streams
-  setup_display();     //setup display interface
-  setup_senderList();  //load station list from preferences
-  setGain(0);          //set the current gain
-  //Try to connect WLAN show progress on display
-  displayClear();
-  displayMessage(5, 10, 310, 30, "Connect WLAN", ALIGNCENTER, true, ILI9341_YELLOW, ILI9341_BLACK, 1);
-  displayMessage(5, 50, 310, 30, ssid.c_str(), ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);
-  Serial.println("Connect WiFi");
+
+  // Führe die Setup-Funktionen für Audio, Display und Senderliste aus
+  setup_audio();       // Initialisiere die Audio-Streams
+  setup_display();     // Initialisiere die Display-Schnittstelle
+  setup_senderList();  // Lade die Senderliste aus den Präferenzen
+  setGain(0);          // Setze die aktuelle Lautstärke
+
+  // Versuche, eine WLAN-Verbindung herzustellen und zeige den Fortschritt auf dem Display an
+  displayClear();                                                                                          // Bildschirm löschen
+  displayMessage(5, 10, 310, 30, TXT_CONNECTING_TO, ALIGNCENTER, true, ILI9341_YELLOW, ILI9341_BLACK, 1);  // Zeige "Verbinden zu" auf dem Display an
+  displayMessage(5, 50, 310, 30, ssid.c_str(), ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);        // Zeige die SSID auf dem Display an
+  Serial.println("Connect WiFi");                                                                          // Debug-Ausgabe: "Verbinde zu WiFi"
+
+  // Versuche, sich mit dem WLAN zu verbinden
   connected = initWiFi(ssid, pkey);
-  if (connected) {  //successful connection
-    //setup real time clock
-    configTzTime("CET-1CEST,M3.5.0/03,M10.5.0/03", ntp.c_str());
-    //show date and time and the name of the station
-    delay(500);
-    //fill timestarukture ti, minutes and weekday with now
+
+  // Wenn die Verbindung erfolgreich war
+  if (connected) {
+    // Konfiguriere die Echtzeituhr mit der Zeitzone und dem NTP-Server
+    configTzTime(TIME_ZONE, ntp.c_str());
+
+    // Zeige Datum und Uhrzeit sowie den Namen der Station an
+    delay(500);  // Kurze Verzögerung für die Anzeige
+    // Fülle die Zeitstruktur ti, Minuten und Wochentag mit der aktuellen Zeit
     getLocalTime(&ti);
-    minutes = ti.tm_hour * 60 + ti.tm_min;
-    weekday = ti.tm_wday;
-    Serial.println("Start");
-    //if alarm is on get date and time for next alarm
+    minutes = ti.tm_hour * 60 + ti.tm_min;  // Berechne Minuten seit Mitternacht
+    weekday = ti.tm_wday;                   // Wochentag (0 = Sonntag, 1 = Montag, usw.)
+
+    Serial.println("Start");  // Debug-Ausgabe: "Start"
+
+    // Wenn der Alarm aktiviert ist, berechne das Datum und die Uhrzeit für den nächsten Alarm
     if (pref.isKey("alarmon") && pref.getBool("alarmon")) findNextAlarm();
-    //Display time and next alarm if one is set
+
+    // Zeige Uhrzeit und nächsten Alarm auf dem Display an
     showClock();
-  } else {  //connection not successful
-    //we have no connection. A message will be shown on the display
-    displayClear();
-    displayMessage(5, 10, 310, 30, "Not connected", ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);
-    displayMessage(5, 60, 310, 30, "connect to SSID radioweckerconf", ALIGNCENTER, false, ILI9341_WHITE, ILI9341_BLACK, 1);
-    displayMessage(5, 90, 310, 30, "Configuration on IP: 192.168.4.1", ALIGNCENTER, false, ILI9341_WHITE, ILI9341_BLACK, 1);
-    //remember current tick count to allow
-    //a retry after five minutes disconnected
+  } else {  // Wenn die Verbindung nicht erfolgreich war
+    // Es konnte keine Verbindung hergestellt werden. Eine entsprechende Nachricht wird auf dem Display angezeigt
+    displayClear();                                                                                          // Bildschirm löschen
+    displayMessage(5, 10, 310, 30, TXT_NOT_CONNECTED, ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);     // Zeige "Nicht verbunden" auf dem Display an
+    displayMessage(5, 60, 310, 30, TXT_CONNECT_TO_AP, ALIGNCENTER, false, ILI9341_WHITE, ILI9341_BLACK, 1);  // Zeige "Verbinden zu AP" auf dem Display an
+    displayMessage(5, 90, 310, 30, TXT_CONFIG_IP, ALIGNCENTER, false, ILI9341_WHITE, ILI9341_BLACK, 1);      // Zeige "IP konfigurieren" auf dem Display an
+
+    // Merke den aktuellen Zeitstempel, um später nach 5 Minuten einen Retry zu ermöglichen
     discon = millis();
   }
-  Serial.println("Start webserver");
-  //setup the web server and the over the air update
-  setup_webserver();
-  setup_ota();
-  //remember the tick count for the timed event
+
+  Serial.println("Start webserver");  // Debug-Ausgabe: "Starte Webserver"
+
+  // Initialisiere den Webserver und das OTA-Update
+  setup_webserver();  // Initialisiere den Webserver
+  setup_ota();        // Initialisiere das OTA-Update
+
+  // Merke den aktuellen Zeitstempel für zeitgesteuerte Ereignisse
   tick = millis();
-  start_conf = 0;
+  start_conf = 0;  // Setze den Startwert für die Konfiguration
 }
 
-
 void loop() {
-  long rssi = WiFi.RSSI();
+  long rssi = WiFi.RSSI();  // Hole das Signalstärke- (RSSI) Level des WiFi
 
-  //Check over the air update
+  // Überprüfe und verarbeite mögliche OTA-Updates
   ArduinoOTA.handle();
-  //Check for http requests
+
+  // Verarbeite HTTP-Anfragen
   webserver_loop();
-  //check for touch events
+
+  // Überprüfe Touch-Ereignisse
   touch_loop();
-  //after 10 seconds switch back from config screen to clock screen
+
+  // Nach 10 Sekunden im Konfigurationsmodus, zurück zum Uhrmodus wechseln
   if (!clockmode && ((millis() - start_conf) > 10000)) {
-    showClock();
-    clockmode = true;
+    showClock();       // Zeige die Uhrzeit an
+    clockmode = true;  // Setze den Modus auf Uhr
   }
-  //show metadata if radio is active
+
+  // Zeige Metadaten an, wenn das Radio aktiv ist und wir im Uhrmodus sind
   if (newTitle && radio && clockmode) {
-    showTitle();
-    newTitle = false;
+    showTitle();       // Zeige den Titel des aktuellen Radiosenders an
+    newTitle = false;  // Setze das Flag zurück
   }
-  //detect a disconnect
+
+  // Erkenne einen Verbindungsabbruch
   if (connected && (WiFi.status() != WL_CONNECTED)) {
-    connected = false;
-    //remember tick count for automatic retry
-    discon = millis();
-    //show message on display
-    displayClear();
-    displayMessage(5, 10, 310, 30, "Connection lost", ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);
+    connected = false;  // Setze die Verbindung auf false
+    discon = millis();  // Merke den aktuellen Zeitstempel für einen automatischen Retry
+    displayClear();     // Bildschirm löschen
+    // Zeige eine Nachricht an, dass die Verbindung verloren gegangen ist
+    displayMessage(5, 10, 310, 30, TXT_NOT_CONNECTED, ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);
   }
-  //detect a reconnect
+
+  // Erkenne eine Wiederverbindung
   if (!connected && (WiFi.status() == WL_CONNECTED)) {
-    connected = true;
-    //show message on display
-    displayClear();
-    displayMessage(5, 10, 310, 30, "Reconnected", ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);
+    connected = true;  // Setze die Verbindung auf true
+    displayClear();    // Bildschirm löschen
+    // Zeige eine Nachricht an, dass die Verbindung wiederhergestellt wurde
+    displayMessage(5, 10, 310, 30, TXT_RECONNECTED, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);
   }
-  //if radio is on get new stream data
+
+  // Wenn das Radio eingeschaltet ist, hole neue Stream-Daten
   if (connected && radio) {
-    audio_loop();
+    audio_loop();  // Verarbeite Audiodaten
   }
-  //if brightness is set to 0, brightness will be controlled by ambient light
+
+  // Wenn die Helligkeit auf 0 gesetzt ist, wird die Helligkeit durch das Umgebungslicht gesteuert
   if (bright == 0) {
-    int16_t tmp = analogRead(LDR);
-    int16_t diff = lastldr - tmp;
-    diff = abs(diff);
-    //set BG light if clock is displayed
+    int16_t tmp = analogRead(LDR);  // Lese den Wert vom Lichtsensor (LDR)
+    int16_t diff = lastldr - tmp;   // Berechne die Differenz zum vorherigen Wert
+    diff = abs(diff);               // Nehme den absoluten Wert der Differenz
+
+    // Setze die Hintergrundbeleuchtung, wenn die Uhr angezeigt wird und eine signifikante Änderung des Umgebungslichts erkannt wurde
     if (clockmode && (diff > 50)) {
-      setBGLight(bright);
-      Serial.printf("ldr %i letzter %i\n", tmp, lastldr);
-      //remember current ambient light to detect changes
-      lastldr = tmp;
+      setBGLight(bright);                                  // Setze die Hintergrundbeleuchtung
+      Serial.printf("ldr %i letzter %i\n", tmp, lastldr);  // Debug-Ausgabe der aktuellen und letzten LDR-Werte
+      lastldr = tmp;                                       // Merke den aktuellen LDR-Wert für die nächste Messung
     }
   }
-  //timed event updatetime display every minute
+
+  // Zeitgesteuertes Ereignis: Update der Anzeige alle 60 Sekunden
   if ((millis() - tick) > 60000) {
-    tick = millis() - ti.tm_sec * 1000;  //kingherold ISSUE Time not correct
-    //get date and time information
+    tick = millis() - ti.tm_sec * 1000;  // Korrigiere die Zeit (Kingherold ISSUE: Zeit nicht korrekt)
+    // Hole das Datum und die Uhrzeit
     if (connected && getLocalTime(&ti)) {
-      minutes = ti.tm_hour * 60 + ti.tm_min;
-      weekday = ti.tm_wday;
+      minutes = ti.tm_hour * 60 + ti.tm_min;  // Berechne Minuten seit Mitternacht
+      weekday = ti.tm_wday;                   // Wochentag (0 = Sonntag, 1 = Montag, usw.)
     }
-    //set BG light if clock is displayed
+    // Setze die Hintergrundbeleuchtung, wenn die Uhr angezeigt wird
     if (connected && clockmode) {
-      setBGLight(bright);
-      displayDateTime();
+      setBGLight(bright);  // Setze die Hintergrundbeleuchtung
+      displayDateTime();   // Zeige Datum und Uhrzeit an
     }
-    //if we are in snooze mode decrement snooze counter
-    //and turn radio off if snooze counter is zero
+
+    // Wenn der Schlummermodus aktiviert ist, zähle den Schlummer-Zähler herunter und schalte das Radio aus, wenn der Zähler 0 erreicht
     if (snoozeWait > 0) {
-      snoozeWait--;
+      snoozeWait--;  // Verringere den Schlummer-Zähler
       if (snoozeWait == 0) {
-        toggleRadio(true);
-        showRadio();
+        toggleRadio(true);  // Schalte das Radio ein
+        showRadio();        // Zeige Radio-Informationen an
       }
     }
-    //if an alarm is activated check for day and time
+
+    // Wenn ein Alarm aktiviert ist, überprüfe den Tag und die Zeit
     if ((alarmday < 8) && getLocalTime(&ti)) {
-      //if alarm day and time is reached turn radio on and get values for next expected alarm
+      // Wenn der Alarmtag und die Zeit erreicht sind, schalte das Radio ein und berechne die Werte für den nächsten erwarteten Alarm
       if ((alarmday == weekday) && ((minutes == alarmtime) || (minutes == (alarmtime + 1)))) {
         // Test Beeper#####################
 
         // Test Beeper#####################
-        toggleRadio(false);
-        showRadio();
-        findNextAlarm();
-        showNextAlarm();
+        toggleRadio(false);  // Schalte das Radio aus
+        showRadio();         // Zeige Radio-Informationen an
+        findNextAlarm();     // Berechne den nächsten Alarm
+        showNextAlarm();     // Zeige den nächsten Alarm an
       }
     }
   }
-  //do a restart if device was disconnected for more then 5 minutes
+
+  // Starte einen Neustart, wenn das Gerät mehr als 5 Minuten getrennt war
   if (!connected && ((millis() - discon) > 300000)) ESP.restart();
 }
