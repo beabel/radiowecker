@@ -11,7 +11,7 @@ const char MAIN_page[] PROGMEM = R"=====(
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.min.css">
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-<link rel="stylesheet" href="//use.fontawesome.com/releases/v5.0.7/css/all.css">
+<link rel="stylesheet" href="//use.fontawesome.com/releases/v6.6.0/css/all.css">
 <script>
 $(document).ready(function() {
   $("#tabs").tabs();
