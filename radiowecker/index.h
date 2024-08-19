@@ -445,6 +445,22 @@ function getInfo() {
 }
 
 function checkForUpdate(currentVersion) {
+  // Funktion zum Vergleichen von semantischen Versionen
+  function compareVersions(v1, v2) {
+    // Entferne das führende "v" und teile die Versionsnummern in ihre Bestandteile
+    const v1Parts = v1.replace(/^v/, '').split('.').map(Number);
+    const v2Parts = v2.replace(/^v/, '').split('.').map(Number);
+
+    // Vergleiche die einzelnen Teile der Versionsnummern
+    for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
+      const v1Part = v1Parts[i] || 0; // Standardwert 0, falls ein Teil fehlt
+      const v2Part = v2Parts[i] || 0; // Standardwert 0, falls ein Teil fehlt
+      if (v1Part > v2Part) return 1;  // Erste Version ist größer
+      if (v1Part < v2Part) return -1; // Zweite Version ist größer
+    }
+    return 0; // Beide Versionen sind gleich
+  }
+
   $.ajax({
     url: "https://api.github.com/repos/beabel/radiowecker/releases/latest",
     type: "GET",
@@ -452,18 +468,25 @@ function checkForUpdate(currentVersion) {
     success: function (data) {
       console.log(data);
 
+      // Aktuellste Version von GitHub-API abrufen
       var latestVersion = data.tag_name;
 
-      if (latestVersion !== currentVersion) {
-        // Wenn eine neuere Version verfügbar ist
+      // Vergleich der aktuellen Version mit der neuesten Version
+      var comparisonResult = compareVersions(currentVersion, latestVersion);
+
+      if (comparisonResult < 0) {
+        // Wenn die neueste Version größer ist, zeige eine Update-Benachrichtigung
         $("#githubVersion").html('<i class="fas fa-exclamation-triangle" style="color: red;"></i> <a href="' + data.html_url + '" target="_blank">Neue Version verfügbar (' + latestVersion + ')</a>');
+      } else if (comparisonResult > 0) {
+        // Wenn die aktuelle Version größer ist, zeige eine Meldung, dass diese neuer ist
+        $("#githubVersion").html('<i class="fas fa-code" style="color: blue;"></i> Du verwendest eine neuere Version (' + currentVersion + ') als die neueste offizielle Version (' + latestVersion + ').');
       } else {
-        // Ansonsten ist die aktuelle Version bereits die neueste
+        // Wenn die Versionen gleich sind, zeige an, dass die neueste Version verwendet wird
         $("#githubVersion").html('<i class="fas fa-check" style="color: green;"></i> Du verwendest bereits die neueste Version (' + currentVersion + ').');
       }
     },
     error: function () {
-      // Zeige eine Fehlermeldung an, falls ein Fehler beim Abrufen der Daten auftritt
+      // Zeige eine Fehlermeldung an, falls der AJAX-Request fehlschlägt
       $("#githubVersion").text("Fehler beim Überprüfen auf Updates.");
     }
   });
