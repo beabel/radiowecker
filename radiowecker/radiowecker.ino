@@ -152,8 +152,10 @@ void setup() {
     // Es konnte keine Verbindung hergestellt werden. Eine entsprechende Nachricht wird auf dem Display angezeigt
     displayClear();                                                                                          // Bildschirm löschen
     displayMessage(5, 10, 310, 30, TXT_NOT_CONNECTED, ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);     // Zeige "Nicht verbunden" auf dem Display an
-    displayMessage(5, 60, 310, 30, TXT_CONNECT_TO_AP, ALIGNCENTER, false, ILI9341_WHITE, ILI9341_BLACK, 1);  // Zeige "Verbinden zu AP" auf dem Display an
-    displayMessage(5, 90, 310, 30, TXT_CONFIG_IP, ALIGNCENTER, false, ILI9341_WHITE, ILI9341_BLACK, 1);      // Zeige "IP konfigurieren" auf dem Display an
+    displayMessage(5, 50, 310, 30, TXT_CONNECT_TO_AP, ALIGNCENTER, true, ILI9341_WHITE, ILI9341_BLACK, 1);  // Zeige "Verbinden zu AP" auf dem Display an
+    displayMessage(5, 100, 310, 30, AP_NAME, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);            // Zeige "Ap Name" auf dem Display an
+    displayMessage(5, 150, 310, 30, TXT_CONFIG_IP, ALIGNCENTER, true, ILI9341_WHITE, ILI9341_BLACK, 1);     // Zeige "IP konfigurieren" auf dem Display an
+    displayMessage(5, 200, 310, 30, "192.168.4.1", ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);     // Zeige "IP " auf dem Display an
 
     // Merke den aktuellen Zeitstempel, um später nach 5 Minuten einen Retry zu ermöglichen
     discon = millis();
