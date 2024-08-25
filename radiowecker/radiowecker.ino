@@ -1,4 +1,4 @@
-#define RADIOVERSION "v3.0.4";
+#define RADIOVERSION "v3.0.4"
 #include "00_librarys.h"      //Lade alle benötigten Bibliotheken
 #include "00_pin_settings.h"  //Einstellungen der genutzten Pins
 #include "00_settings.h"      //einstellungen
@@ -148,6 +148,8 @@ void setup() {
 
     // Zeige Uhrzeit und nächsten Alarm auf dem Display an
     showClock();
+    //Github Update starten
+    handleGithubUpdate();
   } else {  // Wenn die Verbindung nicht erfolgreich war
     // Es konnte keine Verbindung hergestellt werden. Eine entsprechende Nachricht wird auf dem Display angezeigt
     displayClear();                                                                                          // Bildschirm löschen

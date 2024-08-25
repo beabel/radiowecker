@@ -776,7 +776,7 @@ input {
     <div id="info">
       <label for="radioversion">Version:
         <span id="radioversion"></span><br />
-        <span id="githubVersion"></span>        
+        <span id="githubVersion"></span> 
       </label>
       <hr />
       

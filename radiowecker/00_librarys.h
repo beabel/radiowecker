@@ -20,3 +20,8 @@
 #include <AudioFileSourceBuffer.h>     // Klasse für das Puffern von Audio-Daten
 #include <AudioGeneratorMP3.h>         // MP3-Decoder Klasse
 #include <AudioOutputI2S.h>            // Klasse für die Audioausgabe über I2S (Inter-IC Sound) Schnittstelle
+
+#include <HTTPClient.h>
+#include <Update.h>
+
+#include "ArduinoJson.h"

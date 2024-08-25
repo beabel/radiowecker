@@ -1,6 +1,5 @@
 //home page and templatefor options
 #include "index.h"
-#include "ArduinoJson.h"
 
 WebServer server(80);
 
