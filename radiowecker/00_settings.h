@@ -71,6 +71,3 @@ boolean alarmpage = false;   // Flag zum Signalisieren, dass die Alarm-Einstells
 // OTA-Konfiguration
 #define OTA_HOSTNAME "radiowecker"   // Definiert den Hostnamen für OTA Update
 #define OTA_PASSWORD "weckerupdate"  // Definiert das Passwort für OTA Update
-
-String nextbinURL = "http://ne-xt.de/esp_flasher/firmware/x.x.x/radiowecker.ino.bin";  // URL zur .bin Datei
-String GITHUB = "https://api.github.com/repos/beabel/radiowecker/releases/latest";
