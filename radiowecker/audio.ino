@@ -1,70 +1,64 @@
-//Includes from ESP8266audio
-#include "AudioFileSourceICYStream.h"  //input stream
-#include "AudioFileSourceBuffer.h"     //input buffer
-#include "AudioGeneratorMP3.h"         //decoder
-#include "AudioOutputI2S.h"            //output stream
+// Puffergröße für das Stream-Buffern
+const int preallocateBufferSize = 82 * 1024;  // Größe des vorab zugewiesenen Puffers in Bytes
+const int preallocateCodecSize = 29192;       // Maximal benötigter Speicher für den MP3-Codec in Bytes
 
+// Zeiger auf vorab zugewiesenen Speicher
+void *preallocateBuffer = NULL;  // Zeiger auf den vorab zugewiesenen Puffer für die Daten
+void *preallocateCodec = NULL;   // Zeiger auf den vorab zugewiesenen Puffer für den Codec
 
-#define LRCLK 25
-#define BCLK 26
-#define DOUT 33
+// Instanzen für Audio-Komponenten
+AudioGenerator *decoder = NULL;         // MP3-Decoder
+AudioFileSourceICYStream *file = NULL;  // Eingabemodul für ICY-Streams aus dem Web
+AudioFileSourceBuffer *buff = NULL;     // Puffer für den Eingabestream
+AudioOutputI2S *out;                    // Ausgabemodul zum Erzeugen von I2S-Signalen
 
-//buffer size for stream buffering
-const int preallocateBufferSize = 82 * 1024;  //size of preallocated buffer
-const int preallocateCodecSize = 29192;       // MP3 codec max mem needed
-//pointer to preallocated memory
-void *preallocateBuffer = NULL;
-void *preallocateCodec = NULL;
-
-//instances for audio components
-AudioGenerator *decoder = NULL;         //MP3 decoder
-AudioFileSourceICYStream *file = NULL;  //Input modul for ICY stream from web
-AudioFileSourceBuffer *buff = NULL;     //Buffer for input stream
-AudioOutputI2S *out;                    //Output module to produce I2S
-
-//function to do all the required setup
+// Funktion für die gesamte erforderliche Einrichtung
 void setup_audio() {
-  //reserve buffer für for decoder and stream
-  preallocateBuffer = malloc(preallocateBufferSize);  // allocate memory for stream-file-buffer
-  preallocateCodec = malloc(preallocateCodecSize);    // allocate memory for decoder- buffer
-  delay(1000);
-  //check if we got the memory
+  // Speicher für Decoder und Stream reservieren
+  preallocateBuffer = malloc(preallocateBufferSize);  // Speicher für den Stream-Dateipuffer anfordern
+  preallocateCodec = malloc(preallocateCodecSize);    // Speicher für den Decoder-Puffer anfordern
+  delay(1000);                                        // Warte 1 Sekunde, um sicherzustellen, dass der Speicher zugewiesen wurde
+
+  // Überprüfen, ob der Speicher erfolgreich zugewiesen wurde
   if (!preallocateBuffer || !preallocateCodec) {
-    Serial.printf_P(PSTR("FATAL ERROR:  Unable to preallocate %d bytes for app\n"), preallocateBufferSize + preallocateCodecSize);
+    Serial.printf_P(PSTR("FATAL ERROR: Unable to preallocate %d bytes for app\n"), preallocateBufferSize + preallocateCodecSize);
     while (1) {
-      yield();  // Infinite halt
+      yield();  // Endlosschleife zur Behebung des Fehlers
     }
   }
-  //create I2S output do use with decoder
-  out = new AudioOutputI2S();
-  out->SetPinout(BCLK, LRCLK, DOUT);
+
+  // I2S-Ausgabe erstellen, um sie mit dem Decoder zu verwenden
+  out = new AudioOutputI2S();         // Neues AudioOutputI2S-Objekt erstellen
+  out->SetPinout(BCLK, LRCLK, DOUT);  // Pin-Konfiguration für I2S-Ausgabe festlegen
 }
 
-//this function checks if decoder runs
+// Diese Funktion überprüft, ob der Decoder läuft
 void audio_loop() {
-  //check if stream has ended normally not on ICY streams
+  // Überprüfen, ob der Decoder läuft
   if (decoder->isRunning()) {
+    // Wenn der Decoder läuft, überprüfen, ob der Loop noch läuft
     if (!decoder->loop()) {
+      // Wenn der Loop nicht mehr läuft, stoppen Sie den Decoder
       decoder->stop();
     }
   } else {
-    //we have an error decoder has stop
+    // Der Decoder hat gestoppt, was auf einen Fehler hindeutet
     Serial.printf("MP3 done\n");
-    //to avoid running in the same problem after restart
-    //the station will be set to the first station entry
-    //The first station on the list should be a stable
-    //working URL. Do not use the first entry in the table
-    //for experiments
+    // Um zu vermeiden, dass das gleiche Problem nach einem Neustart erneut auftritt,
+    // wird die Station auf den ersten Eintrag in der Liste gesetzt.
+    // Der erste Eintrag sollte eine stabile, funktionierende URL sein.
+    // Verwenden Sie diesen ersten Eintrag nicht für Experimente.
     pref.putUShort("station", 0);
 
-    // Restart ESP when streaming is done or errored
+    // Warten Sie 10 Sekunden, bevor Sie das ESP neu starten
     delay(10000);
 
+    // Neustart des ESP
     ESP.restart();
   }
 }
 
-//callback function will be called if meta data were found in input stream
+// Callback-Funktion, die aufgerufen wird, wenn Metadaten im Eingabestream gefunden werden
 void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string) {
   // Sicherstellen, dass die Zeiger gültig sind
   if (type == nullptr || string == nullptr) {
@@ -94,55 +88,62 @@ void MDCallback(void *cbData, const char *type, bool isUnicode, const char *stri
   // Serial.flush(); // Optional: Zum Flushing der Serial-Ausgabe, falls notwendig
 }
 
-//stop playing the input stream release memory, delete instances
+// Stoppt das Abspielen des Eingabestreams, gibt den Speicher frei und löscht die Instanzen
 void stopPlaying() {
   if (decoder) {
-    decoder->stop();  //stop playing
-    delete decoder;   //free decoder an its memory
-    decoder = NULL;
+    decoder->stop();  // Stoppt das Abspielen
+    delete decoder;   // Gibt den Decoder und seinen Speicher frei
+    decoder = NULL;   // Setzt den Zeiger auf NULL, um darauf hinzuweisen, dass der Speicher freigegeben wurde
   }
+
   if (buff) {
-    buff->close();  //do the same for buffer
-    delete buff;
-    buff = NULL;
+    buff->close();  // Schließt den Puffer
+    delete buff;    // Gibt den Puffer und seinen Speicher frei
+    buff = NULL;    // Setzt den Zeiger auf NULL
   }
-  if (file) {  //AND FINALLY FOR THE STREAM
-    file->close();
-    delete file;
-    file = NULL;
+
+  if (file) {       // Und schließlich für den Stream
+    file->close();  // Schließt den Stream
+    delete file;    // Gibt den Stream und seinen Speicher frei
+    file = NULL;    // Setzt den Zeiger auf NULL
   }
 }
 
-//start playing a stream from given station
+// Startet das Abspielen eines Streams von der angegebenen Station
 bool startUrl(String url) {
   bool ret = true;
-  stopPlaying();  //first close existing streams
-  //open input file for selected url
+  stopPlaying();  // Zuerst bestehende Streams schließen
+
+  // Öffne die Eingabedatei für die ausgewählte URL
   Serial.printf("Active station %s\n", url.c_str());
   file = new AudioFileSourceICYStream();
   ret = file->open(url.c_str());
+
   if (ret) {
-    //register callback for meta data
+    // Registriere Callback für Metadaten
     file->RegisterMetadataCB(MDCallback, NULL);
-    //create a new buffer which uses the preallocated memory
+
+    // Erstelle einen neuen Puffer, der den vorab zugewiesenen Speicher verwendet
     buff = new AudioFileSourceBuffer(file, preallocateBuffer, preallocateBufferSize);
     Serial.printf_P(PSTR("sourcebuffer created - Free mem=%d\n"), ESP.getFreeHeap());
-    //create and start a new decoder
+
+    // Erstelle und starte einen neuen Decoder
     decoder = (AudioGenerator *)new AudioGeneratorMP3(preallocateCodec, preallocateCodecSize);
     Serial.printf_P(PSTR("created decoder\n"));
     Serial.printf_P("Decoder start...\n");
     delay(1000);
     decoder->begin(buff, out);
   } else {
-    delete file;  //if no success delete the file
+    delete file;  // Wenn kein Erfolg, lösche die Datei
     file = NULL;
   }
+
   return ret;
 }
 
-//change the loudness to current gain
+// Ändert die Lautstärke auf den aktuellen Gain-Wert
 void setGain(float gain) {
-  float v = gain / 100 * 0.5;
-  out->SetGain(v);  //the parameter is the loudness as percent
-  Serial.printf("New volume = %4.2f\n", v);
+  float v = gain / 100 * 0.5;                // Berechnet die Lautstärke als Prozentsatz von 0,5
+  out->SetGain(v);                           // Setzt die Lautstärke
+  Serial.printf("New volume = %4.2f\n", v);  // Gibt den neuen Lautstärkewert aus
 }

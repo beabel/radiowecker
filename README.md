@@ -45,6 +45,10 @@ NEW SINCE V3.0.0
 
 5. Alarm Setting possible on Touchscreen (Big Thx to JeaneLG)
 
+NEW SINCE V3.0.4
+
+6. complete Code equal comments everywhere and more Tabs
+
 At the time of publishing this blog article, a complete set was available for purchase from AZ-Delivery. Currently this is not offered, but all required parts can be ordered individually.
 
 
@@ -69,6 +73,10 @@ NEU seit V3.0.0
 
 5. Alarm Einstellungen auch auf dem Touchscreen möglich (Danke an JeaneLG)
 
+NEU seit V3.0.4
+
+6. Kompletter Code einheitlich kommentiert und mehr Tabs
+
 Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges Set bei AZ-Delivery zu kaufen. Aktuell wird dies nicht angeboten, aber alle benötigten Teile können einzeln bestellt werden.
 
 # Informationen
@@ -78,8 +86,8 @@ Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges S
 - ESP32 von Espressif Systems
 
 **Bibliotheken:**
-- [Adafruit_ILI9341 by Adafruit Version 1.6.00](https://github.com/adafruit/Adafruit_ILI9341)
-- [Adafruit_GFX by Adafruit Version 1.11.9](https://github.com/adafruit/Adafruit-GFX-Library)
+- [Adafruit_ILI9341 by Adafruit Version 1.6.1](https://github.com/adafruit/Adafruit_ILI9341)
+- [Adafruit_GFX by Adafruit Version 1.11.10](https://github.com/adafruit/Adafruit-GFX-Library)
 - [XPT2046_Touchscreen by Paul Stoffregen Version 1.4.0](https://github.com/PaulStoffregen/XPT2046_Touchscreen)
 - [Touchevent by Gerald-Lechner Version 1.3.0](https://github.com/GerLech/TouchEvent)
 - [ESP8266Audio by Earle F. Philhower Version 1.9.7](https://github.com/earlephilhower/ESP8266Audio)
