@@ -18,9 +18,14 @@ https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32
 1. Gehe zu `Werkzeuge` > `Board` > `Boardverwalter`.
 2. Suche nach **ESP32** im Suchfeld.
 3. Wähle **ESP32 by Espressif Systems** aus und klicke auf **Installieren**.
+
+> [!IMPORTANT]  
+> **Hinweis:** Stelle sicher, dass du **Version 2.0.17** auswählst, da es zu Problemen mit größeren Versionen ab 3.x kommen kann.
+
 4. Warte, bis die Installation abgeschlossen ist.
 
 Nach der Installation sollte **ESP32** unter `Werkzeuge` > `Board` auswählbar sein.
+
 
 ## 3. Benötigte Bibliotheken installieren
 
