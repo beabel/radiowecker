@@ -14,6 +14,9 @@
 |This project is based on the blog article "[Internet clock radio with touchscreen](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen)" by Gerald Lechner / Az-Delivery. | Dieses Projekt basiert auf dem Blogartikel "[Internet Radiowecker mit Touchscreen](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen)" von Gerald Lechner / Az-Delivery.  |
 |--|--|
 
+> [!NOTE]  
+> **Instruction / Anleitung**
+> Eine detailierte Anleitung befindet sich [hier](https://github.com/beabel/radiowecker/wiki).
 
 **Parts required: / Benötigte Teile:** 
 
