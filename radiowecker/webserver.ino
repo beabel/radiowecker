@@ -410,26 +410,64 @@ void startSleep() {
   server.send(200, "text/plain", "OK");
 }
 
-// Verarbeitet den AJAX-Befehl /cmd/beforeStation, um zur vorherigen Station zu wechseln
+// Verarbeitet den AJAX-Befehl /cmd/beforeStation, um zur vorherigen "aktiven" Station zu wechseln
 void beforeStation() {
-  // Verringert die aktuelle Station um eins
-  curStation -= 1;
-  // Wenn die aktuelle Station kleiner als 0 wird, setze sie auf die letzte Station
-  if (curStation >= STATIONS) curStation = STATIONS - 1;
+  // Zähle die Anzahl der Versuche, um Endlosschleifen zu vermeiden
+  int attempts = 0;
+  // Schleife, um die vorherige aktive Station zu finden
+  do {
+    // Verringert die aktuelle Station um eins
+    curStation -= 1;
+    // Wenn die aktuelle Station kleiner als 0 wird, setze sie auf die letzte Station
+    if (curStation < 0) {
+      curStation = STATIONS - 1;
+    }
+    // Erhöhe den Versuchszähler
+    attempts++;
+    // Wenn alle Stationen durchlaufen wurden und keine aktive gefunden wurde
+    if (attempts >= STATIONS) {
+      // Optional: Setze auf die letzte Station zurück (auch wenn sie deaktiviert ist)
+      curStation = STATIONS - 1;
+      // Debug-Ausgabe, dass keine aktive Station gefunden wurde
+      Serial.println("Keine aktive Station gefunden."); 
+      // Antwortet mit einer Fehlermeldung
+      server.send(200, "text/plain", "Keine aktive Station verfügbar.");
+      return;  // Beende die Funktion
+    }
+  } while (!stationlist[curStation].enabled);
   // Ändert die Station und zeigt die neue Station an
   changeStation();
   // Debug-Ausgabe der aktuellen Station
-  Serial.println(curStation);
+  Serial.println(curStation); 
   // Antwortet mit "OK"
   server.send(200, "text/plain", "OK");
 }
 
-// Verarbeitet den AJAX-Befehl /cmd/nextStation, um zur nächsten Station zu wechseln
+// Verarbeitet den AJAX-Befehl /cmd/nextStation, um zur nächsten "aktiven" Station zu wechseln
 void nextStation() {
-  // Erhöht die aktuelle Station um eins
-  curStation += 1;
-  // Wenn die aktuelle Station den Maximalwert überschreitet, setze sie auf die erste Station
-  if (curStation >= STATIONS) curStation = 0;
+  // Zähle die Anzahl der Versuche, um Endlosschleifen zu vermeiden
+  int attempts = 0;
+  // Schleife, um die nächste aktive Station zu finden
+  do {
+    // Erhöht die aktuelle Station um eins
+    curStation += 1; 
+    // Wenn die aktuelle Station den Maximalwert überschreitet, setze sie auf die erste Station
+    if (curStation >= STATIONS) {
+      curStation = 0;
+    }
+    // Erhöhe den Versuchszähler
+    attempts++;
+    // Wenn alle Stationen durchlaufen wurden und keine aktive gefunden wurde
+    if (attempts >= STATIONS) {
+      // Optional: Setze auf die erste Station zurück (auch wenn sie deaktiviert ist)
+      curStation = 0;
+      // Debug-Ausgabe, dass keine aktive Station gefunden wurde
+      Serial.println("Keine aktive Station gefunden.");
+      // Antwortet mit einer Fehlermeldung
+      server.send(200, "text/plain", "Keine aktive Station verfügbar.");
+      return;  // Beende die Funktion
+    }
+  } while (!stationlist[curStation].enabled);
   // Ändert die Station und zeigt die neue Station an
   changeStation();
   // Debug-Ausgabe der aktuellen Station
