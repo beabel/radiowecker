@@ -172,15 +172,21 @@ void onTouchClick(TS_Point p) {
   // Debug-Ausgabe der berührten Koordinaten
   Serial.printf("Touch on %i, %i\n", p.x, p.y);
 
-  if (clockmode) {    // Wenn wir im Uhrmodus sind
-    if (p.y < 210) {  // Wenn Y-Koordinate kleiner als 210, wechseln zur Radiopage
-      clockmode = false;
-      configpage = false;
-      radiopage = true;
-      alarmpage = false;
-      showRadioPage();
-    } else {  // Ansonsten passen wir die Lautstärke an
-      setGainValue(p.x, "MainPage");
+  if (clockmode) {             // Wenn wir im Uhrmodus sind
+    if (p.y < 210) {           // Überprüfe, ob der Klick oberhalb von 210px ist
+      if (p.x < 40) {          // Links (X < 40)
+        beforeStation();       // Ruft die Funktion zum Wechseln zur vorherigen Station auf
+      } else if (p.x > 280) {  // Rechts (X > 280)
+        nextStation();         // Ruft die Funktion zum Wechseln zur nächsten Station auf
+      } else {                 // Restlicher Bereich oberhalb von 210px
+        clockmode = false;
+        configpage = false;
+        radiopage = true;
+        alarmpage = false;
+        showRadioPage();  // Wechselt zur Radiopage
+      }
+    } else {                          // Unterhalb von 210px
+      setGainValue(p.x, "MainPage");  // Passt die Lautstärke an
     }
   } else if (radiopage) {  //################################################ RADIO PAGE
     // Wenn wir im Radiomodus sind
