@@ -23,6 +23,17 @@ https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32
 > **Hinweis:** ~~Stelle sicher, dass du **Version 2.0.17** auswählst, da es zu Problemen mit größeren Versionen ab 3.x kommen kann.~~
 > Wenn die ESP8266Audio Bibliothek Version mind. 1.9.9 hat, gibt es keine Probleme mehr. 
 
+> [!IMPORTANT]
+> maximal die Version 3.0.0 sonst wird der sketch zu groß.
+
+|Boardverwalter Version|Sketchgröße|
+| ------------- | ------------- |
+|2.0.17|:white_check_mark: 1113105|
+|3.0.0|:white_check_mark: 1288101|
+|3.0.5|:x: 1312869|
+
+Das Maximum sind 1310720 Bytes
+
 4. Warte, bis die Installation abgeschlossen ist.
 
 Nach der Installation sollte **ESP32** unter `Werkzeuge` > `Board` auswählbar sein.
