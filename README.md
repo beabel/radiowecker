@@ -64,7 +64,7 @@ Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges S
 - [Adafruit_GFX by Adafruit Version 1.11.10](https://github.com/adafruit/Adafruit-GFX-Library)
 - [XPT2046_Touchscreen by Paul Stoffregen Version 1.4.0](https://github.com/PaulStoffregen/XPT2046_Touchscreen)
 - [Touchevent by Gerald-Lechner Version 1.3.0](https://github.com/GerLech/TouchEvent)
-- [ESP8266Audio by Earle F. Philhower Version 1.9.7](https://github.com/earlephilhower/ESP8266Audio)
+- [ESP8266Audio by Earle F. Philhower Version 1.9.9](https://github.com/earlephilhower/ESP8266Audio)
 
 # Screenshots
 

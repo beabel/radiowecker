@@ -20,7 +20,8 @@ https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32
 3. Wähle **ESP32 by Espressif Systems** aus und klicke auf **Installieren**.
 
 > [!IMPORTANT]  
-> **Hinweis:** Stelle sicher, dass du **Version 2.0.17** auswählst, da es zu Problemen mit größeren Versionen ab 3.x kommen kann.
+> **Hinweis:** ~~Stelle sicher, dass du **Version 2.0.17** auswählst, da es zu Problemen mit größeren Versionen ab 3.x kommen kann.~~
+> Wenn die ESP8266Audio Bibliothek Version mind. 1.9.9 hat, gibt es keine Probleme mehr. 
 
 4. Warte, bis die Installation abgeschlossen ist.
 
@@ -52,10 +53,10 @@ Um die benötigten Bibliotheken zu installieren, befolge diese Schritte:
 1. Im **Library Manager** suche nach **Touchevent**.
 2. Wähle die **Version 1.3.0** und klicke auf **Installieren**.
 
-### 3.5 ESP8266Audio by Earle F. Philhower (Version 1.9.7)
+### 3.5 ESP8266Audio by Earle F. Philhower (Version 1.9.9)
 
 1. Im **Library Manager** suche nach **ESP8266Audio**.
-2. Wähle die **Version 1.9.7** und klicke auf **Installieren**.
+2. Wähle die **Version 1.9.9** und klicke auf **Installieren**.
 
 ## 4. Abschluss
 
