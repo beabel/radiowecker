@@ -641,6 +641,8 @@ void updateTime(boolean redraw) {
     // Formatierung des Datums als "Wochentag Tag. Monat Jahr"
     sprintf(tim, "%s %i. %s %i", days[ti.tm_wday], ti.tm_mday, months[ti.tm_mon], ti.tm_year + 1900);
 
+    tick = millis() - ti.tm_sec * 1000;  // Berechnung der Systemzeit vom Startpunkt der aktuellen Minute
+
     // Überprüft, ob die Anzeige neu gezeichnet werden soll oder sich das Datum geändert hat.
     // Wenn ja, wird die Datumszeile neu gezeichnet.
     if (redraw || (strcmp(tim, lastdate) != 0)) {

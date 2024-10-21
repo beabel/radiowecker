@@ -167,8 +167,6 @@ void setup() {
   setup_webserver();  // Initialisiere den Webserver
   setup_ota();        // Initialisiere das OTA-Update
 
-  // Merke den aktuellen Zeitstempel für zeitgesteuerte Ereignisse
-  tick = millis();
   start_conf = 0;  // Setze den Startwert für die Konfiguration
 }
 
