@@ -150,10 +150,10 @@ void setup() {
     showClock();
   } else {  // Wenn die Verbindung nicht erfolgreich war
     // Es konnte keine Verbindung hergestellt werden. Eine entsprechende Nachricht wird auf dem Display angezeigt
-    displayClear();                                                                                          // Bildschirm löschen
-    displayMessage(5, 10, 310, 30, TXT_NOT_CONNECTED, ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);     // Zeige "Nicht verbunden" auf dem Display an
+    displayClear();                                                                                         // Bildschirm löschen
+    displayMessage(5, 10, 310, 30, TXT_NOT_CONNECTED, ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);    // Zeige "Nicht verbunden" auf dem Display an
     displayMessage(5, 50, 310, 30, TXT_CONNECT_TO_AP, ALIGNCENTER, true, ILI9341_WHITE, ILI9341_BLACK, 1);  // Zeige "Verbinden zu AP" auf dem Display an
-    displayMessage(5, 100, 310, 30, AP_NAME, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);            // Zeige "Ap Name" auf dem Display an
+    displayMessage(5, 100, 310, 30, AP_NAME, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);           // Zeige "Ap Name" auf dem Display an
     displayMessage(5, 150, 310, 30, TXT_CONFIG_IP, ALIGNCENTER, true, ILI9341_WHITE, ILI9341_BLACK, 1);     // Zeige "IP konfigurieren" auf dem Display an
     displayMessage(5, 200, 310, 30, "192.168.4.1", ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);     // Zeige "IP " auf dem Display an
 
@@ -230,9 +230,19 @@ void loop() {
     }
   }
 
-  // Zeitgesteuertes Ereignis: Update der Anzeige alle 60 Sekunden
-  if ((millis() - tick) > 60000) {
-    tick = millis() - ti.tm_sec * 1000;  // Korrigiere die Zeit (Kingherold ISSUE: Zeit nicht korrekt)
+
+
+  // Zeitgesteuertes Ereignis: Update der Anzeige alle 1 Sekunde
+  if ((millis() - lastUpdate) > 1000) {
+    lastUpdate = millis();  // Aktualisiere den Zeitstempel
+
+    // Regelmäßige Prüfung der Schlummerzeit
+    if (millis() > snoozeTimeEnd && snoozeTimeEnd > 0) {
+      snoozeTimeEnd = 0;  // Setze den Schlummermodus zurück
+      toggleRadio(true);  // Schalte das Radio aus
+      showRadio();        // Zeige Radio-Status an
+    }
+
     // Hole das Datum und die Uhrzeit
     if (connected && getLocalTime(&ti)) {
       minutes = ti.tm_hour * 60 + ti.tm_min;  // Berechne Minuten seit Mitternacht
@@ -244,15 +254,6 @@ void loop() {
       displayDateTime();   // Zeige Datum und Uhrzeit an
     }
 
-    // Wenn der Schlummermodus aktiviert ist, zähle den Schlummer-Zähler herunter und schalte das Radio aus, wenn der Zähler 0 erreicht
-    if (snoozeWait > 0) {
-      snoozeWait--;  // Verringere den Schlummer-Zähler
-      if (snoozeWait == 0) {
-        toggleRadio(true);  // Schalte das Radio ein
-        showRadio();        // Zeige Radio-Informationen an
-      }
-    }
-
     // Wenn ein Alarm aktiviert ist, überprüfe den Tag und die Zeit
     if ((alarmday < 8) && getLocalTime(&ti)) {
       // Wenn der Alarmtag und die Zeit erreicht sind, schalte das Radio ein und berechne die Werte für den nächsten erwarteten Alarm
@@ -260,7 +261,7 @@ void loop() {
         // Test Beeper#####################
 
         // Test Beeper#####################
-        toggleRadio(false);  // Schalte das Radio aus
+        toggleRadio(false);  // Schalte das Radio an
         showRadio();         // Zeige Radio-Informationen an
         findNextAlarm();     // Berechne den nächsten Alarm
         showNextAlarm();     // Zeige den nächsten Alarm an

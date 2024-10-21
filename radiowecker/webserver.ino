@@ -530,7 +530,7 @@ void getCurrentStatus() {
   jsonDoc["Rssi"] = WiFi.RSSI();
 
   // Status des Sleeptimers
-  jsonDoc["Sleep"] = snoozeWait != 0 ? 1 : 0;
+  jsonDoc["Sleep"] = snoozeTimeEnd != 0 ? 1 : 0;
 
   // Konvertieren des JSON-Dokuments in einen String
   String response;
