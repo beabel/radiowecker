@@ -53,9 +53,6 @@
 #    define ARDUINOJSON_ENABLE_STRING_VIEW 0
 #  endif
 #endif
-#ifndef ARDUINOJSON_USE_DOUBLE
-#  define ARDUINOJSON_USE_DOUBLE 1
-#endif
 #ifndef ARDUINOJSON_SIZEOF_POINTER
 #  if defined(__SIZEOF_POINTER__)
 #    define ARDUINOJSON_SIZEOF_POINTER __SIZEOF_POINTER__
@@ -63,6 +60,13 @@
 #    define ARDUINOJSON_SIZEOF_POINTER 8  // 64 bits
 #  else
 #    define ARDUINOJSON_SIZEOF_POINTER 4  // assume 32 bits otherwise
+#  endif
+#endif
+#ifndef ARDUINOJSON_USE_DOUBLE
+#  if ARDUINOJSON_SIZEOF_POINTER >= 4  // 32 & 64 bits systems
+#    define ARDUINOJSON_USE_DOUBLE 1
+#  else
+#    define ARDUINOJSON_USE_DOUBLE 0
 #  endif
 #endif
 #ifndef ARDUINOJSON_USE_LONG_LONG
@@ -85,12 +89,12 @@
 #  endif
 #endif
 #ifndef ARDUINOJSON_POOL_CAPACITY
-#  if ARDUINOJSON_SIZEOF_POINTER <= 2
-#    define ARDUINOJSON_POOL_CAPACITY 16  // 128 bytes
-#  elif ARDUINOJSON_SIZEOF_POINTER == 4
-#    define ARDUINOJSON_POOL_CAPACITY 64  // 1024 bytes
+#  if ARDUINOJSON_SLOT_ID_SIZE == 1
+#    define ARDUINOJSON_POOL_CAPACITY 16  // 96 bytes
+#  elif ARDUINOJSON_SLOT_ID_SIZE == 2
+#    define ARDUINOJSON_POOL_CAPACITY 128  // 1024 bytes
 #  else
-#    define ARDUINOJSON_POOL_CAPACITY 128  // 3072 bytes
+#    define ARDUINOJSON_POOL_CAPACITY 256  // 4096 bytes
 #  endif
 #endif
 #ifndef ARDUINOJSON_INITIAL_POOL_COUNT
@@ -189,6 +193,11 @@
 #    define ARDUINOJSON_DEBUG 0
 #  endif
 #endif
+#if ARDUINOJSON_USE_LONG_LONG || ARDUINOJSON_USE_DOUBLE
+#  define ARDUINOJSON_USE_EXTENSIONS 1
+#else
+#  define ARDUINOJSON_USE_EXTENSIONS 0
+#endif
 #if defined(nullptr)
 #  error nullptr is defined as a macro. Remove the faulty #define or #undef nullptr
 #endif
@@ -230,11 +239,11 @@
 #define ARDUINOJSON_BIN2ALPHA_1111() P
 #define ARDUINOJSON_BIN2ALPHA_(A, B, C, D) ARDUINOJSON_BIN2ALPHA_##A##B##C##D()
 #define ARDUINOJSON_BIN2ALPHA(A, B, C, D) ARDUINOJSON_BIN2ALPHA_(A, B, C, D)
-#define ARDUINOJSON_VERSION "7.1.0"
+#define ARDUINOJSON_VERSION "7.2.0"
 #define ARDUINOJSON_VERSION_MAJOR 7
-#define ARDUINOJSON_VERSION_MINOR 1
+#define ARDUINOJSON_VERSION_MINOR 2
 #define ARDUINOJSON_VERSION_REVISION 0
-#define ARDUINOJSON_VERSION_MACRO V710
+#define ARDUINOJSON_VERSION_MACRO V720
 #ifndef ARDUINOJSON_VERSION_NAMESPACE
 #  define ARDUINOJSON_VERSION_NAMESPACE                               \
     ARDUINOJSON_CONCAT5(                                              \
@@ -326,6 +335,86 @@ struct uint_<32> {
 };
 template <int Bits>
 using uint_t = typename uint_<Bits>::type;
+using SlotId = uint_t<ARDUINOJSON_SLOT_ID_SIZE * 8>;
+using SlotCount = SlotId;
+const SlotId NULL_SLOT = SlotId(-1);
+template <typename T>
+class Slot {
+ public:
+  Slot() : ptr_(nullptr), id_(NULL_SLOT) {}
+  Slot(T* p, SlotId id) : ptr_(p), id_(id) {
+    ARDUINOJSON_ASSERT((p == nullptr) == (id == NULL_SLOT));
+  }
+  explicit operator bool() const {
+    return ptr_ != nullptr;
+  }
+  SlotId id() const {
+    return id_;
+  }
+  T* ptr() const {
+    return ptr_;
+  }
+  T* operator->() const {
+    ARDUINOJSON_ASSERT(ptr_ != nullptr);
+    return ptr_;
+  }
+ private:
+  T* ptr_;
+  SlotId id_;
+};
+template <typename T>
+class MemoryPool {
+ public:
+  void create(SlotCount cap, Allocator* allocator) {
+    ARDUINOJSON_ASSERT(cap > 0);
+    slots_ = reinterpret_cast<T*>(allocator->allocate(slotsToBytes(cap)));
+    capacity_ = slots_ ? cap : 0;
+    usage_ = 0;
+  }
+  void destroy(Allocator* allocator) {
+    if (slots_)
+      allocator->deallocate(slots_);
+    slots_ = nullptr;
+    capacity_ = 0;
+    usage_ = 0;
+  }
+  Slot<T> allocSlot() {
+    if (!slots_)
+      return {};
+    if (usage_ >= capacity_)
+      return {};
+    auto index = usage_++;
+    return {slots_ + index, SlotId(index)};
+  }
+  T* getSlot(SlotId id) const {
+    ARDUINOJSON_ASSERT(id < usage_);
+    return slots_ + id;
+  }
+  void clear() {
+    usage_ = 0;
+  }
+  void shrinkToFit(Allocator* allocator) {
+    auto newSlots = reinterpret_cast<T*>(
+        allocator->reallocate(slots_, slotsToBytes(usage_)));
+    if (newSlots) {
+      slots_ = newSlots;
+      capacity_ = usage_;
+    }
+  }
+  SlotCount usage() const {
+    return usage_;
+  }
+  static SlotCount bytesToSlots(size_t n) {
+    return static_cast<SlotCount>(n / sizeof(T));
+  }
+  static size_t slotsToBytes(SlotCount n) {
+    return n * sizeof(T);
+  }
+ private:
+  SlotCount capacity_;
+  SlotCount usage_;
+  T* slots_;
+};
 template <bool Condition, class TrueType, class FalseType>
 struct conditional {
   typedef TrueType type;
@@ -547,6 +636,187 @@ struct make_void {
 };
 template <typename... Args>
 using void_t = typename make_void<Args...>::type;
+using nullptr_t = decltype(nullptr);
+template <class T>
+T&& forward(remove_reference_t<T>& t) noexcept {
+  return static_cast<T&&>(t);
+}
+template <class T>
+remove_reference_t<T>&& move(T&& t) {
+  return static_cast<remove_reference_t<T>&&>(t);
+}
+template <class T>
+void swap_(T& a, T& b) {
+  T tmp = move(a);
+  a = move(b);
+  b = move(tmp);
+}
+ARDUINOJSON_END_PRIVATE_NAMESPACE
+#include <string.h>
+ARDUINOJSON_BEGIN_PRIVATE_NAMESPACE
+using PoolCount = SlotId;
+template <typename T>
+class MemoryPoolList {
+  struct FreeSlot {
+    SlotId next;
+  };
+  static_assert(sizeof(FreeSlot) <= sizeof(T), "T is too small");
+ public:
+  using Pool = MemoryPool<T>;
+  MemoryPoolList() = default;
+  ~MemoryPoolList() {
+    ARDUINOJSON_ASSERT(count_ == 0);
+  }
+  friend void swap(MemoryPoolList& a, MemoryPoolList& b) {
+    bool aUsedPreallocated = a.pools_ == a.preallocatedPools_;
+    bool bUsedPreallocated = b.pools_ == b.preallocatedPools_;
+    if (aUsedPreallocated && bUsedPreallocated) {
+      for (PoolCount i = 0; i < ARDUINOJSON_INITIAL_POOL_COUNT; i++)
+        swap_(a.preallocatedPools_[i], b.preallocatedPools_[i]);
+    } else if (bUsedPreallocated) {
+      for (PoolCount i = 0; i < b.count_; i++)
+        a.preallocatedPools_[i] = b.preallocatedPools_[i];
+      b.pools_ = a.pools_;
+      a.pools_ = a.preallocatedPools_;
+    } else if (aUsedPreallocated) {
+      for (PoolCount i = 0; i < a.count_; i++)
+        b.preallocatedPools_[i] = a.preallocatedPools_[i];
+      a.pools_ = b.pools_;
+      b.pools_ = b.preallocatedPools_;
+    } else {
+      swap_(a.pools_, b.pools_);
+    }
+    swap_(a.count_, b.count_);
+    swap_(a.capacity_, b.capacity_);
+    swap_(a.freeList_, b.freeList_);
+  }
+  MemoryPoolList& operator=(MemoryPoolList&& src) {
+    ARDUINOJSON_ASSERT(count_ == 0);
+    if (src.pools_ == src.preallocatedPools_) {
+      memcpy(preallocatedPools_, src.preallocatedPools_,
+             sizeof(preallocatedPools_));
+      pools_ = preallocatedPools_;
+    } else {
+      pools_ = src.pools_;
+      src.pools_ = nullptr;
+    }
+    count_ = src.count_;
+    capacity_ = src.capacity_;
+    src.count_ = 0;
+    src.capacity_ = 0;
+    return *this;
+  }
+  Slot<T> allocSlot(Allocator* allocator) {
+    if (freeList_ != NULL_SLOT) {
+      return allocFromFreeList();
+    }
+    if (count_) {
+      auto slot = allocFromLastPool();
+      if (slot)
+        return slot;
+    }
+    auto pool = addPool(allocator);
+    if (!pool)
+      return {};
+    return allocFromLastPool();
+  }
+  void freeSlot(Slot<T> slot) {
+    reinterpret_cast<FreeSlot*>(slot.ptr())->next = freeList_;
+    freeList_ = slot.id();
+  }
+  T* getSlot(SlotId id) const {
+    if (id == NULL_SLOT)
+      return nullptr;
+    auto poolIndex = SlotId(id / ARDUINOJSON_POOL_CAPACITY);
+    auto indexInPool = SlotId(id % ARDUINOJSON_POOL_CAPACITY);
+    ARDUINOJSON_ASSERT(poolIndex < count_);
+    return pools_[poolIndex].getSlot(indexInPool);
+  }
+  void clear(Allocator* allocator) {
+    for (PoolCount i = 0; i < count_; i++)
+      pools_[i].destroy(allocator);
+    count_ = 0;
+    freeList_ = NULL_SLOT;
+    if (pools_ != preallocatedPools_) {
+      allocator->deallocate(pools_);
+      pools_ = preallocatedPools_;
+      capacity_ = ARDUINOJSON_INITIAL_POOL_COUNT;
+    }
+  }
+  SlotCount usage() const {
+    SlotCount total = 0;
+    for (PoolCount i = 0; i < count_; i++)
+      total = SlotCount(total + pools_[i].usage());
+    return total;
+  }
+  size_t size() const {
+    return Pool::slotsToBytes(usage());
+  }
+  void shrinkToFit(Allocator* allocator) {
+    if (count_ > 0)
+      pools_[count_ - 1].shrinkToFit(allocator);
+    if (pools_ != preallocatedPools_ && count_ != capacity_) {
+      pools_ = static_cast<Pool*>(
+          allocator->reallocate(pools_, count_ * sizeof(Pool)));
+      ARDUINOJSON_ASSERT(pools_ != nullptr);  // realloc to smaller can't fail
+      capacity_ = count_;
+    }
+  }
+ private:
+  Slot<T> allocFromFreeList() {
+    ARDUINOJSON_ASSERT(freeList_ != NULL_SLOT);
+    auto id = freeList_;
+    auto slot = getSlot(freeList_);
+    freeList_ = reinterpret_cast<FreeSlot*>(slot)->next;
+    return {slot, id};
+  }
+  Slot<T> allocFromLastPool() {
+    ARDUINOJSON_ASSERT(count_ > 0);
+    auto poolIndex = SlotId(count_ - 1);
+    auto slot = pools_[poolIndex].allocSlot();
+    if (!slot)
+      return {};
+    return {slot.ptr(),
+            SlotId(poolIndex * ARDUINOJSON_POOL_CAPACITY + slot.id())};
+  }
+  Pool* addPool(Allocator* allocator) {
+    if (count_ == capacity_ && !increaseCapacity(allocator))
+      return nullptr;
+    auto pool = &pools_[count_++];
+    SlotCount poolCapacity = ARDUINOJSON_POOL_CAPACITY;
+    if (count_ == maxPools)  // last pool is smaller because of NULL_SLOT
+      poolCapacity--;
+    pool->create(poolCapacity, allocator);
+    return pool;
+  }
+  bool increaseCapacity(Allocator* allocator) {
+    if (capacity_ == maxPools)
+      return false;
+    void* newPools;
+    auto newCapacity = PoolCount(capacity_ * 2);
+    if (pools_ == preallocatedPools_) {
+      newPools = allocator->allocate(newCapacity * sizeof(Pool));
+      if (!newPools)
+        return false;
+      memcpy(newPools, preallocatedPools_, sizeof(preallocatedPools_));
+    } else {
+      newPools = allocator->reallocate(pools_, newCapacity * sizeof(Pool));
+      if (!newPools)
+        return false;
+    }
+    pools_ = static_cast<Pool*>(newPools);
+    capacity_ = newCapacity;
+    return true;
+  }
+  Pool preallocatedPools_[ARDUINOJSON_INITIAL_POOL_COUNT];
+  Pool* pools_ = preallocatedPools_;
+  PoolCount count_ = 0;
+  PoolCount capacity_ = ARDUINOJSON_INITIAL_POOL_COUNT;
+  SlotId freeList_ = NULL_SLOT;
+ public:
+  static const PoolCount maxPools =
+      PoolCount(NULL_SLOT / ARDUINOJSON_POOL_CAPACITY + 1);
+};
 ARDUINOJSON_END_PRIVATE_NAMESPACE
 #ifdef _MSC_VER
 #  pragma warning(push)
@@ -625,23 +895,7 @@ struct StringNode {
 constexpr size_t sizeofString(size_t n) {
   return StringNode::sizeForLength(n);
 }
-using nullptr_t = decltype(nullptr);
-template <class T>
-T&& forward(remove_reference_t<T>& t) noexcept {
-  return static_cast<T&&>(t);
-}
-template <class T>
-remove_reference_t<T>&& move(T&& t) {
-  return static_cast<remove_reference_t<T>&&>(t);
-}
-template <class T>
-void swap_(T& a, T& b) {
-  T tmp = move(a);
-  a = move(b);
-  b = move(tmp);
-}
 ARDUINOJSON_END_PRIVATE_NAMESPACE
-#include <string.h>
 #ifdef _MSC_VER  // Visual Studio
 #  define FORCE_INLINE  // __forceinline causes C4714 when returning std::string
 #  ifndef ARDUINOJSON_DEPRECATED
@@ -1161,8 +1415,6 @@ static void stringGetChars(TAdaptedString s, char* p, size_t n) {
     p[i] = s[i];
   }
 }
-class VariantSlot;
-class VariantPool;
 class StringPool {
  public:
   StringPool() = default;
@@ -1236,282 +1488,6 @@ class StringPool {
  private:
   StringNode* strings_ = nullptr;
 };
-class VariantSlot;
-using SlotId = uint_t<ARDUINOJSON_SLOT_ID_SIZE * 8>;
-using SlotCount = SlotId;
-const SlotId NULL_SLOT = SlotId(-1);
-class SlotWithId {
- public:
-  SlotWithId() : slot_(nullptr), id_(NULL_SLOT) {}
-  SlotWithId(VariantSlot* slot, SlotId id) : slot_(slot), id_(id) {
-    ARDUINOJSON_ASSERT((slot == nullptr) == (id == NULL_SLOT));
-  }
-  SlotId id() const {
-    return id_;
-  }
-  operator VariantSlot*() {
-    return slot_;
-  }
-  VariantSlot* operator->() {
-    ARDUINOJSON_ASSERT(slot_ != nullptr);
-    return slot_;
-  }
- private:
-  VariantSlot* slot_;
-  SlotId id_;
-};
-class VariantPool {
- public:
-  void create(SlotCount cap, Allocator* allocator);
-  void destroy(Allocator* allocator);
-  SlotWithId allocSlot();
-  VariantSlot* getSlot(SlotId id) const;
-  void clear();
-  void shrinkToFit(Allocator*);
-  SlotCount usage() const;
-  static SlotCount bytesToSlots(size_t);
-  static size_t slotsToBytes(SlotCount);
- private:
-  SlotCount capacity_;
-  SlotCount usage_;
-  VariantSlot* slots_;
-};
-using PoolCount = SlotId;
-class VariantPoolList {
- public:
-  VariantPoolList() = default;
-  ~VariantPoolList() {
-    ARDUINOJSON_ASSERT(count_ == 0);
-  }
-  friend void swap(VariantPoolList& a, VariantPoolList& b) {
-    bool aUsedPreallocated = a.pools_ == a.preallocatedPools_;
-    bool bUsedPreallocated = b.pools_ == b.preallocatedPools_;
-    if (aUsedPreallocated && bUsedPreallocated) {
-      for (PoolCount i = 0; i < ARDUINOJSON_INITIAL_POOL_COUNT; i++)
-        swap_(a.preallocatedPools_[i], b.preallocatedPools_[i]);
-    } else if (bUsedPreallocated) {
-      for (PoolCount i = 0; i < b.count_; i++)
-        a.preallocatedPools_[i] = b.preallocatedPools_[i];
-      b.pools_ = a.pools_;
-      a.pools_ = a.preallocatedPools_;
-    } else if (aUsedPreallocated) {
-      for (PoolCount i = 0; i < a.count_; i++)
-        b.preallocatedPools_[i] = a.preallocatedPools_[i];
-      a.pools_ = b.pools_;
-      b.pools_ = b.preallocatedPools_;
-    } else {
-      swap_(a.pools_, b.pools_);
-    }
-    swap_(a.count_, b.count_);
-    swap_(a.capacity_, b.capacity_);
-    swap_(a.freeList_, b.freeList_);
-  }
-  VariantPoolList& operator=(VariantPoolList&& src) {
-    ARDUINOJSON_ASSERT(count_ == 0);
-    if (src.pools_ == src.preallocatedPools_) {
-      memcpy(preallocatedPools_, src.preallocatedPools_,
-             sizeof(preallocatedPools_));
-      pools_ = preallocatedPools_;
-    } else {
-      pools_ = src.pools_;
-      src.pools_ = nullptr;
-    }
-    count_ = src.count_;
-    capacity_ = src.capacity_;
-    src.count_ = 0;
-    src.capacity_ = 0;
-    return *this;
-  }
-  SlotWithId allocSlot(Allocator* allocator) {
-    if (freeList_ != NULL_SLOT) {
-      return allocFromFreeList();
-    }
-    if (count_) {
-      auto slot = allocFromLastPool();
-      if (slot)
-        return slot;
-    }
-    auto pool = addPool(allocator);
-    if (!pool)
-      return {};
-    return allocFromLastPool();
-  }
-  void freeSlot(SlotWithId slot);
-  VariantSlot* getSlot(SlotId id) const {
-    if (id == NULL_SLOT)
-      return nullptr;
-    auto poolIndex = SlotId(id / ARDUINOJSON_POOL_CAPACITY);
-    auto indexInPool = SlotId(id % ARDUINOJSON_POOL_CAPACITY);
-    ARDUINOJSON_ASSERT(poolIndex < count_);
-    return pools_[poolIndex].getSlot(indexInPool);
-  }
-  void clear(Allocator* allocator) {
-    for (PoolCount i = 0; i < count_; i++)
-      pools_[i].destroy(allocator);
-    count_ = 0;
-    freeList_ = NULL_SLOT;
-    if (pools_ != preallocatedPools_) {
-      allocator->deallocate(pools_);
-      pools_ = preallocatedPools_;
-      capacity_ = ARDUINOJSON_INITIAL_POOL_COUNT;
-    }
-  }
-  SlotCount usage() const {
-    SlotCount total = 0;
-    for (PoolCount i = 0; i < count_; i++)
-      total = SlotCount(total + pools_[i].usage());
-    return total;
-  }
-  void shrinkToFit(Allocator* allocator) {
-    if (count_ > 0)
-      pools_[count_ - 1].shrinkToFit(allocator);
-    if (pools_ != preallocatedPools_ && count_ != capacity_) {
-      pools_ = static_cast<VariantPool*>(
-          allocator->reallocate(pools_, count_ * sizeof(VariantPool)));
-      ARDUINOJSON_ASSERT(pools_ != nullptr);  // realloc to smaller can't fail
-      capacity_ = count_;
-    }
-  }
- private:
-  SlotWithId allocFromFreeList();
-  SlotWithId allocFromLastPool() {
-    ARDUINOJSON_ASSERT(count_ > 0);
-    auto poolIndex = SlotId(count_ - 1);
-    auto slot = pools_[poolIndex].allocSlot();
-    if (!slot)
-      return {};
-    return {slot, SlotId(poolIndex * ARDUINOJSON_POOL_CAPACITY + slot.id())};
-  }
-  VariantPool* addPool(Allocator* allocator) {
-    if (count_ == capacity_ && !increaseCapacity(allocator))
-      return nullptr;
-    auto pool = &pools_[count_++];
-    SlotCount poolCapacity = ARDUINOJSON_POOL_CAPACITY;
-    if (count_ == maxPools)  // last pool is smaller because of NULL_SLOT
-      poolCapacity--;
-    pool->create(poolCapacity, allocator);
-    return pool;
-  }
-  bool increaseCapacity(Allocator* allocator) {
-    if (capacity_ == maxPools)
-      return false;
-    void* newPools;
-    auto newCapacity = PoolCount(capacity_ * 2);
-    if (pools_ == preallocatedPools_) {
-      newPools = allocator->allocate(newCapacity * sizeof(VariantPool));
-      if (!newPools)
-        return false;
-      memcpy(newPools, preallocatedPools_, sizeof(preallocatedPools_));
-    } else {
-      newPools =
-          allocator->reallocate(pools_, newCapacity * sizeof(VariantPool));
-      if (!newPools)
-        return false;
-    }
-    pools_ = static_cast<VariantPool*>(newPools);
-    capacity_ = newCapacity;
-    return true;
-  }
-  VariantPool preallocatedPools_[ARDUINOJSON_INITIAL_POOL_COUNT];
-  VariantPool* pools_ = preallocatedPools_;
-  PoolCount count_ = 0;
-  PoolCount capacity_ = ARDUINOJSON_INITIAL_POOL_COUNT;
-  SlotId freeList_ = NULL_SLOT;
- public:
-  static const PoolCount maxPools =
-      PoolCount(NULL_SLOT / ARDUINOJSON_POOL_CAPACITY + 1);
-};
-class VariantSlot;
-class VariantPool;
-class ResourceManager {
- public:
-  ResourceManager(Allocator* allocator = DefaultAllocator::instance())
-      : allocator_(allocator), overflowed_(false) {}
-  ~ResourceManager() {
-    stringPool_.clear(allocator_);
-    variantPools_.clear(allocator_);
-  }
-  ResourceManager(const ResourceManager&) = delete;
-  ResourceManager& operator=(const ResourceManager& src) = delete;
-  friend void swap(ResourceManager& a, ResourceManager& b) {
-    swap(a.stringPool_, b.stringPool_);
-    swap(a.variantPools_, b.variantPools_);
-    swap_(a.allocator_, b.allocator_);
-    swap_(a.overflowed_, b.overflowed_);
-  }
-  Allocator* allocator() const {
-    return allocator_;
-  }
-  size_t size() const {
-    return VariantPool::slotsToBytes(variantPools_.usage()) +
-           stringPool_.size();
-  }
-  bool overflowed() const {
-    return overflowed_;
-  }
-  SlotWithId allocSlot() {
-    auto p = variantPools_.allocSlot(allocator_);
-    if (!p)
-      overflowed_ = true;
-    return p;
-  }
-  void freeSlot(SlotWithId slot);
-  VariantSlot* getSlot(SlotId id) const {
-    return variantPools_.getSlot(id);
-  }
-  template <typename TAdaptedString>
-  StringNode* saveString(TAdaptedString str) {
-    if (str.isNull())
-      return 0;
-    auto node = stringPool_.add(str, allocator_);
-    if (!node)
-      overflowed_ = true;
-    return node;
-  }
-  void saveString(StringNode* node) {
-    stringPool_.add(node);
-  }
-  template <typename TAdaptedString>
-  StringNode* getString(const TAdaptedString& str) const {
-    return stringPool_.get(str);
-  }
-  StringNode* createString(size_t length) {
-    auto node = StringNode::create(length, allocator_);
-    if (!node)
-      overflowed_ = true;
-    return node;
-  }
-  StringNode* resizeString(StringNode* node, size_t length) {
-    node = StringNode::resize(node, length, allocator_);
-    if (!node)
-      overflowed_ = true;
-    return node;
-  }
-  void destroyString(StringNode* node) {
-    StringNode::destroy(node, allocator_);
-  }
-  void dereferenceString(const char* s) {
-    stringPool_.dereference(s, allocator_);
-  }
-  void clear() {
-    variantPools_.clear(allocator_);
-    overflowed_ = false;
-    stringPool_.clear(allocator_);
-  }
-  void shrinkToFit() {
-    variantPools_.shrinkToFit(allocator_);
-  }
- private:
-  Allocator* allocator_;
-  bool overflowed_;
-  StringPool stringPool_;
-  VariantPoolList variantPools_;
-};
-template <typename T, typename Enable = void>
-struct IsString : false_type {};
-template <typename T>
-struct IsString<T, void_t<typename StringAdapter<T>::AdaptedString>>
-    : true_type {};
 ARDUINOJSON_END_PRIVATE_NAMESPACE
 ARDUINOJSON_BEGIN_PUBLIC_NAMESPACE
 template <typename T>
@@ -1880,6 +1856,12 @@ canConvertNumber(TIn value) {
          value <= FloatTraits<TIn>::template highest_for<TOut>();
 }
 template <typename TOut, typename TIn>
+enable_if_t<is_floating_point<TIn>::value && is_floating_point<TOut>::value,
+            bool>
+canConvertNumber(TIn) {
+  return true;
+}
+template <typename TOut, typename TIn>
 TOut convertNumber(TIn value) {
   return canConvertNumber<TOut>(value) ? TOut(value) : 0;
 }
@@ -1891,7 +1873,7 @@ ARDUINOJSON_END_PRIVATE_NAMESPACE
 #endif
 ARDUINOJSON_BEGIN_PRIVATE_NAMESPACE
 class VariantData;
-class VariantSlot;
+class ResourceManager;
 class CollectionIterator {
   friend class CollectionData;
  public:
@@ -1918,10 +1900,6 @@ class CollectionIterator {
     ARDUINOJSON_ASSERT(slot_ != nullptr);
     return *data();
   }
-  const char* key() const;
-  bool ownsKey() const;
-  void setKey(StringNode*);
-  void setKey(const char*);
   VariantData* data() {
     return reinterpret_cast<VariantData*>(slot_);
   }
@@ -1929,8 +1907,8 @@ class CollectionIterator {
     return reinterpret_cast<const VariantData*>(slot_);
   }
  private:
-  CollectionIterator(VariantSlot* slot, SlotId slotId);
-  VariantSlot* slot_;
+  CollectionIterator(VariantData* slot, SlotId slotId);
+  VariantData* slot_;
   SlotId currentId_, nextId_;
 };
 class CollectionData {
@@ -1942,9 +1920,7 @@ class CollectionData {
   }
   static void operator delete(void*, void*) noexcept {}
   using iterator = CollectionIterator;
-  iterator createIterator(const ResourceManager* resources) const {
-    return iterator(resources->getSlot(head_), head_);
-  }
+  iterator createIterator(const ResourceManager* resources) const;
   size_t size(const ResourceManager*) const;
   size_t nesting(const ResourceManager*) const;
   void clear(ResourceManager* resources);
@@ -1953,20 +1929,17 @@ class CollectionData {
       return;
     collection->clear(resources);
   }
-  void remove(iterator it, ResourceManager* resources);
-  static void remove(CollectionData* collection, iterator it,
-                     ResourceManager* resources) {
-    if (collection)
-      return collection->remove(it, resources);
-  }
   SlotId head() const {
     return head_;
   }
-  void addSlot(SlotWithId slot, ResourceManager* resources);
  protected:
-  iterator addSlot(ResourceManager*);
+  void appendOne(Slot<VariantData> slot, const ResourceManager* resources);
+  void appendPair(Slot<VariantData> key, Slot<VariantData> value,
+                  const ResourceManager* resources);
+  void removeOne(iterator it, ResourceManager* resources);
+  void removePair(iterator it, ResourceManager* resources);
  private:
-  SlotWithId getPreviousSlot(VariantSlot*, const ResourceManager*) const;
+  Slot<VariantData> getPreviousSlot(VariantData*, const ResourceManager*) const;
 };
 inline const VariantData* collectionToVariant(
     const CollectionData* collection) {
@@ -1979,9 +1952,7 @@ inline VariantData* collectionToVariant(CollectionData* collection) {
 }
 class ArrayData : public CollectionData {
  public:
-  VariantData* addElement(ResourceManager* resources) {
-    return addSlot(resources).data();
-  }
+  VariantData* addElement(ResourceManager* resources);
   static VariantData* addElement(ArrayData* array, ResourceManager* resources) {
     if (!array)
       return nullptr;
@@ -2011,12 +1982,13 @@ class ArrayData : public CollectionData {
       return;
     array->removeElement(index, resources);
   }
-  bool copyFrom(const ArrayData& src, ResourceManager* resources);
-  static bool copy(ArrayData* dst, const ArrayData* src,
-                   ResourceManager* resources) {
-    if (!dst || !src)
-      return false;
-    return dst->copyFrom(*src, resources);
+  void remove(iterator it, ResourceManager* resources) {
+    CollectionData::removeOne(it, resources);
+  }
+  static void remove(ArrayData* array, iterator it,
+                     ResourceManager* resources) {
+    if (array)
+      return array->remove(it, resources);
   }
  private:
   iterator at(size_t index, const ResourceManager* resources) const;
@@ -2039,32 +2011,8 @@ ARDUINOJSON_END_PUBLIC_NAMESPACE
 ARDUINOJSON_BEGIN_PRIVATE_NAMESPACE
 class ObjectData : public CollectionData {
  public:
-  VariantData* addMember(StringNode* key, ResourceManager* resources) {
-    ARDUINOJSON_ASSERT(key != nullptr);
-    auto it = addSlot(resources);
-    if (it.done())
-      return nullptr;
-    it.setKey(key);
-    return it.data();
-  }
-  template <typename TAdaptedString>
-  VariantData* addMember(TAdaptedString key, ResourceManager* resources) {
-    ARDUINOJSON_ASSERT(!key.isNull());
-    if (key.isLinked()) {
-      auto it = addSlot(resources);
-      if (!it.done())
-        it.setKey(key.data());
-      return it.data();
-    } else {
-      auto storedKey = resources->saveString(key);
-      if (!storedKey)
-        return nullptr;
-      auto it = addSlot(resources);
-      if (!it.done())
-        it.setKey(storedKey);
-      return it.data();
-    }
-  }
+  template <typename TAdaptedString>  // also works with StringNode*
+  VariantData* addMember(TAdaptedString key, ResourceManager* resources);
   template <typename TAdaptedString>
   VariantData* getOrAddMember(TAdaptedString key, ResourceManager* resources);
   template <typename TAdaptedString>
@@ -2086,119 +2034,140 @@ class ObjectData : public CollectionData {
       return;
     obj->removeMember(key, resources);
   }
+  void remove(iterator it, ResourceManager* resources) {
+    CollectionData::removePair(it, resources);
+  }
+  static void remove(ObjectData* obj, ObjectData::iterator it,
+                     ResourceManager* resources) {
+    if (!obj)
+      return;
+    obj->remove(it, resources);
+  }
+  size_t size(const ResourceManager* resources) const {
+    return CollectionData::size(resources) / 2;
+  }
+  static size_t size(const ObjectData* obj, const ResourceManager* resources) {
+    if (!obj)
+      return 0;
+    return obj->size(resources);
+  }
  private:
   template <typename TAdaptedString>
   iterator findKey(TAdaptedString key, const ResourceManager* resources) const;
 };
-enum {
-  VALUE_MASK = 0x7F,
-  OWNED_VALUE_BIT = 0x01,
-  VALUE_IS_NULL = 0,
-  VALUE_IS_RAW_STRING = 0x03,
-  VALUE_IS_LINKED_STRING = 0x04,
-  VALUE_IS_OWNED_STRING = 0x05,
-  VALUE_IS_BOOLEAN = 0x06,
-  NUMBER_BIT = 0x08,
-  VALUE_IS_UNSIGNED_INTEGER = 0x08,
-  VALUE_IS_SIGNED_INTEGER = 0x0A,
-  VALUE_IS_FLOAT = 0x0C,
-  COLLECTION_MASK = 0x60,
-  VALUE_IS_OBJECT = 0x20,
-  VALUE_IS_ARRAY = 0x40,
-  OWNED_KEY_BIT = 0x80
+enum class VariantTypeBits : uint8_t {
+  OwnedStringBit = 0x01,  // 0000 0001
+  NumberBit = 0x08,       // 0000 1000
+#if ARDUINOJSON_USE_EXTENSIONS
+  ExtensionBit = 0x10,  // 0001 0000
+#endif
+  CollectionMask = 0x60,
 };
+enum class VariantType : uint8_t {
+  Null = 0,             // 0000 0000
+  RawString = 0x03,     // 0000 0011
+  LinkedString = 0x04,  // 0000 0100
+  OwnedString = 0x05,   // 0000 0101
+  Boolean = 0x06,       // 0000 0110
+  Uint32 = 0x0A,        // 0000 1010
+  Int32 = 0x0C,         // 0000 1100
+  Float = 0x0E,         // 0000 1110
+#if ARDUINOJSON_USE_LONG_LONG
+  Uint64 = 0x1A,  // 0001 1010
+  Int64 = 0x1C,   // 0001 1100
+#endif
+#if ARDUINOJSON_USE_DOUBLE
+  Double = 0x1E,  // 0001 1110
+#endif
+  Object = 0x20,
+  Array = 0x40,
+};
+inline bool operator&(VariantType type, VariantTypeBits bit) {
+  return (uint8_t(type) & uint8_t(bit)) != 0;
+}
 union VariantContent {
   VariantContent() {}
-  JsonFloat asFloat;
+  float asFloat;
   bool asBoolean;
-  JsonUInt asUnsignedInteger;
-  JsonInteger asSignedInteger;
+  uint32_t asUint32;
+  int32_t asInt32;
+#if ARDUINOJSON_USE_EXTENSIONS
+  SlotId asSlotId;
+#endif
   ArrayData asArray;
   ObjectData asObject;
   CollectionData asCollection;
   const char* asLinkedString;
   struct StringNode* asOwnedString;
 };
-struct StringNode;
-class VariantSlot {
-  VariantContent content_;
-  uint8_t flags_;
+#if ARDUINOJSON_USE_EXTENSIONS
+union VariantExtension {
+#  if ARDUINOJSON_USE_LONG_LONG
+  uint64_t asUint64;
+  int64_t asInt64;
+#  endif
+#  if ARDUINOJSON_USE_DOUBLE
+  double asDouble;
+#  endif
+};
+#endif
+template <typename T>
+T parseNumber(const char* s);
+class VariantData {
+  VariantContent content_;  // must be first to allow cast from array to variant
+  VariantType type_;
   SlotId next_;
-  const char* key_;
  public:
   static void* operator new(size_t, void* p) noexcept {
     return p;
   }
   static void operator delete(void*, void*) noexcept {}
-  VariantSlot() : flags_(0), next_(NULL_SLOT), key_(0) {}
-  VariantData* data() {
-    return reinterpret_cast<VariantData*>(&content_);
-  }
-  const VariantData* data() const {
-    return reinterpret_cast<const VariantData*>(&content_);
-  }
+  VariantData() : type_(VariantType::Null), next_(NULL_SLOT) {}
   SlotId next() const {
     return next_;
   }
   void setNext(SlotId slot) {
     next_ = slot;
   }
-  void setKey(const char* k) {
-    ARDUINOJSON_ASSERT(k);
-    flags_ &= VALUE_MASK;
-    key_ = k;
-  }
-  void setKey(StringNode* k) {
-    ARDUINOJSON_ASSERT(k);
-    flags_ |= OWNED_KEY_BIT;
-    key_ = k->data;
-  }
-  const char* key() const {
-    return key_;
-  }
-  bool ownsKey() const {
-    return (flags_ & OWNED_KEY_BIT) != 0;
-  }
-};
-inline VariantData* slotData(VariantSlot* slot) {
-  return reinterpret_cast<VariantData*>(slot);
-}
-constexpr size_t sizeofArray(size_t n) {
-  return n * sizeof(VariantSlot);
-}
-constexpr size_t sizeofObject(size_t n) {
-  return n * sizeof(VariantSlot);
-}
-template <typename T>
-T parseNumber(const char* s);
-class VariantData {
-  VariantContent content_;  // must be first to allow cast from array to variant
-  uint8_t flags_;
- public:
-  VariantData() : flags_(VALUE_IS_NULL) {}
   template <typename TVisitor>
-  typename TVisitor::result_type accept(TVisitor& visit) const {
-    switch (type()) {
-      case VALUE_IS_FLOAT:
+  typename TVisitor::result_type accept(
+      TVisitor& visit, const ResourceManager* resources) const {
+#if ARDUINOJSON_USE_EXTENSIONS
+    auto extension = getExtension(resources);
+#else
+    (void)resources;  // silence warning
+#endif
+    switch (type_) {
+      case VariantType::Float:
         return visit.visit(content_.asFloat);
-      case VALUE_IS_ARRAY:
+#if ARDUINOJSON_USE_DOUBLE
+      case VariantType::Double:
+        return visit.visit(extension->asDouble);
+#endif
+      case VariantType::Array:
         return visit.visit(content_.asArray);
-      case VALUE_IS_OBJECT:
+      case VariantType::Object:
         return visit.visit(content_.asObject);
-      case VALUE_IS_LINKED_STRING:
+      case VariantType::LinkedString:
         return visit.visit(JsonString(content_.asLinkedString));
-      case VALUE_IS_OWNED_STRING:
+      case VariantType::OwnedString:
         return visit.visit(JsonString(content_.asOwnedString->data,
                                       content_.asOwnedString->length,
                                       JsonString::Copied));
-      case VALUE_IS_RAW_STRING:
+      case VariantType::RawString:
         return visit.visit(RawString(content_.asOwnedString->data,
                                      content_.asOwnedString->length));
-      case VALUE_IS_SIGNED_INTEGER:
-        return visit.visit(content_.asSignedInteger);
-      case VALUE_IS_UNSIGNED_INTEGER:
-        return visit.visit(content_.asUnsignedInteger);
-      case VALUE_IS_BOOLEAN:
+      case VariantType::Int32:
+        return visit.visit(static_cast<JsonInteger>(content_.asInt32));
+      case VariantType::Uint32:
+        return visit.visit(static_cast<JsonUInt>(content_.asUint32));
+#if ARDUINOJSON_USE_LONG_LONG
+      case VariantType::Int64:
+        return visit.visit(extension->asInt64);
+      case VariantType::Uint64:
+        return visit.visit(extension->asUint64);
+#endif
+      case VariantType::Boolean:
         return visit.visit(content_.asBoolean != 0);
       default:
         return visit.visit(nullptr);
@@ -2206,9 +2175,10 @@ class VariantData {
   }
   template <typename TVisitor>
   static typename TVisitor::result_type accept(const VariantData* var,
+                                               const ResourceManager* resources,
                                                TVisitor& visit) {
     if (var != 0)
-      return var->accept(visit);
+      return var->accept(visit, resources);
     else
       return visit.visit(nullptr);
   }
@@ -2234,17 +2204,31 @@ class VariantData {
       return false;
     return var->addValue(value, resources);
   }
-  bool asBoolean() const {
-    switch (type()) {
-      case VALUE_IS_BOOLEAN:
+  bool asBoolean(const ResourceManager* resources) const {
+#if ARDUINOJSON_USE_EXTENSIONS
+    auto extension = getExtension(resources);
+#else
+    (void)resources;  // silence warning
+#endif
+    switch (type_) {
+      case VariantType::Boolean:
         return content_.asBoolean;
-      case VALUE_IS_SIGNED_INTEGER:
-      case VALUE_IS_UNSIGNED_INTEGER:
-        return content_.asUnsignedInteger != 0;
-      case VALUE_IS_FLOAT:
+      case VariantType::Uint32:
+      case VariantType::Int32:
+        return content_.asUint32 != 0;
+      case VariantType::Float:
         return content_.asFloat != 0;
-      case VALUE_IS_NULL:
+#if ARDUINOJSON_USE_DOUBLE
+      case VariantType::Double:
+        return extension->asDouble != 0;
+#endif
+      case VariantType::Null:
         return false;
+#if ARDUINOJSON_USE_LONG_LONG
+      case VariantType::Uint64:
+      case VariantType::Int64:
+        return extension->asUint64 != 0;
+#endif
       default:
         return true;
     }
@@ -2262,40 +2246,70 @@ class VariantData {
     return const_cast<VariantData*>(this)->asCollection();
   }
   template <typename T>
-  T asFloat() const {
+  T asFloat(const ResourceManager* resources) const {
     static_assert(is_floating_point<T>::value, "T must be a floating point");
-    switch (type()) {
-      case VALUE_IS_BOOLEAN:
+#if ARDUINOJSON_USE_EXTENSIONS
+    auto extension = getExtension(resources);
+#else
+    (void)resources;  // silence warning
+#endif
+    switch (type_) {
+      case VariantType::Boolean:
         return static_cast<T>(content_.asBoolean);
-      case VALUE_IS_UNSIGNED_INTEGER:
-        return static_cast<T>(content_.asUnsignedInteger);
-      case VALUE_IS_SIGNED_INTEGER:
-        return static_cast<T>(content_.asSignedInteger);
-      case VALUE_IS_LINKED_STRING:
-      case VALUE_IS_OWNED_STRING:
+      case VariantType::Uint32:
+        return static_cast<T>(content_.asUint32);
+      case VariantType::Int32:
+        return static_cast<T>(content_.asInt32);
+#if ARDUINOJSON_USE_LONG_LONG
+      case VariantType::Uint64:
+        return static_cast<T>(extension->asUint64);
+      case VariantType::Int64:
+        return static_cast<T>(extension->asInt64);
+#endif
+      case VariantType::LinkedString:
+      case VariantType::OwnedString:
         return parseNumber<T>(content_.asOwnedString->data);
-      case VALUE_IS_FLOAT:
+      case VariantType::Float:
         return static_cast<T>(content_.asFloat);
+#if ARDUINOJSON_USE_DOUBLE
+      case VariantType::Double:
+        return static_cast<T>(extension->asDouble);
+#endif
       default:
         return 0;
     }
   }
   template <typename T>
-  T asIntegral() const {
+  T asIntegral(const ResourceManager* resources) const {
     static_assert(is_integral<T>::value, "T must be an integral type");
-    switch (type()) {
-      case VALUE_IS_BOOLEAN:
+#if ARDUINOJSON_USE_EXTENSIONS
+    auto extension = getExtension(resources);
+#else
+    (void)resources;  // silence warning
+#endif
+    switch (type_) {
+      case VariantType::Boolean:
         return content_.asBoolean;
-      case VALUE_IS_UNSIGNED_INTEGER:
-        return convertNumber<T>(content_.asUnsignedInteger);
-      case VALUE_IS_SIGNED_INTEGER:
-        return convertNumber<T>(content_.asSignedInteger);
-      case VALUE_IS_LINKED_STRING:
+      case VariantType::Uint32:
+        return convertNumber<T>(content_.asUint32);
+      case VariantType::Int32:
+        return convertNumber<T>(content_.asInt32);
+#if ARDUINOJSON_USE_LONG_LONG
+      case VariantType::Uint64:
+        return convertNumber<T>(extension->asUint64);
+      case VariantType::Int64:
+        return convertNumber<T>(extension->asInt64);
+#endif
+      case VariantType::LinkedString:
         return parseNumber<T>(content_.asLinkedString);
-      case VALUE_IS_OWNED_STRING:
+      case VariantType::OwnedString:
         return parseNumber<T>(content_.asOwnedString->data);
-      case VALUE_IS_FLOAT:
+      case VariantType::Float:
         return convertNumber<T>(content_.asFloat);
+#if ARDUINOJSON_USE_DOUBLE
+      case VariantType::Double:
+        return convertNumber<T>(extension->asDouble);
+#endif
       default:
         return 0;
     }
@@ -2307,8 +2321,8 @@ class VariantData {
     return const_cast<VariantData*>(this)->asObject();
   }
   JsonString asRawString() const {
-    switch (type()) {
-      case VALUE_IS_RAW_STRING:
+    switch (type_) {
+      case VariantType::RawString:
         return JsonString(content_.asOwnedString->data,
                           content_.asOwnedString->length, JsonString::Copied);
       default:
@@ -2316,16 +2330,19 @@ class VariantData {
     }
   }
   JsonString asString() const {
-    switch (type()) {
-      case VALUE_IS_LINKED_STRING:
+    switch (type_) {
+      case VariantType::LinkedString:
         return JsonString(content_.asLinkedString, JsonString::Linked);
-      case VALUE_IS_OWNED_STRING:
+      case VariantType::OwnedString:
         return JsonString(content_.asOwnedString->data,
                           content_.asOwnedString->length, JsonString::Copied);
       default:
         return JsonString();
     }
   }
+#if ARDUINOJSON_USE_EXTENSIONS
+  const VariantExtension* getExtension(const ResourceManager* resources) const;
+#endif
   VariantData* getElement(size_t index,
                           const ResourceManager* resources) const {
     return ArrayData::getElement(asArray(), index, resources);
@@ -2362,30 +2379,41 @@ class VariantData {
     return obj->getOrAddMember(key, resources);
   }
   bool isArray() const {
-    return (flags_ & VALUE_IS_ARRAY) != 0;
+    return type_ == VariantType::Array;
   }
   bool isBoolean() const {
-    return type() == VALUE_IS_BOOLEAN;
+    return type_ == VariantType::Boolean;
   }
   bool isCollection() const {
-    return (flags_ & COLLECTION_MASK) != 0;
+    return type_ & VariantTypeBits::CollectionMask;
   }
   bool isFloat() const {
-    return (flags_ & NUMBER_BIT) != 0;
+    return type_ & VariantTypeBits::NumberBit;
   }
   template <typename T>
-  bool isInteger() const {
-    switch (type()) {
-      case VALUE_IS_UNSIGNED_INTEGER:
-        return canConvertNumber<T>(content_.asUnsignedInteger);
-      case VALUE_IS_SIGNED_INTEGER:
-        return canConvertNumber<T>(content_.asSignedInteger);
+  bool isInteger(const ResourceManager* resources) const {
+#if ARDUINOJSON_USE_LONG_LONG
+    auto extension = getExtension(resources);
+#else
+    (void)resources;  // silence warning
+#endif
+    switch (type_) {
+      case VariantType::Uint32:
+        return canConvertNumber<T>(content_.asUint32);
+      case VariantType::Int32:
+        return canConvertNumber<T>(content_.asInt32);
+#if ARDUINOJSON_USE_LONG_LONG
+      case VariantType::Uint64:
+        return canConvertNumber<T>(extension->asUint64);
+      case VariantType::Int64:
+        return canConvertNumber<T>(extension->asInt64);
+#endif
       default:
         return false;
     }
   }
   bool isNull() const {
-    return type() == VALUE_IS_NULL;
+    return type_ == VariantType::Null;
   }
   static bool isNull(const VariantData* var) {
     if (!var)
@@ -2393,10 +2421,11 @@ class VariantData {
     return var->isNull();
   }
   bool isObject() const {
-    return (flags_ & VALUE_IS_OBJECT) != 0;
+    return type_ == VariantType::Object;
   }
   bool isString() const {
-    return type() == VALUE_IS_LINKED_STRING || type() == VALUE_IS_OWNED_STRING;
+    return type_ == VariantType::LinkedString ||
+           type_ == VariantType::OwnedString;
   }
   size_t nesting(const ResourceManager* resources) const {
     auto collection = asCollection();
@@ -2431,153 +2460,210 @@ class VariantData {
       return;
     var->removeMember(key, resources);
   }
-  void reset() {
-    flags_ = VALUE_IS_NULL;
+  void reset() {  // TODO: remove
+    type_ = VariantType::Null;
   }
   void setBoolean(bool value) {
-    setType(VALUE_IS_BOOLEAN);
+    ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
+    type_ = VariantType::Boolean;
     content_.asBoolean = value;
   }
-  void setBoolean(bool value, ResourceManager* resources) {
-    release(resources);
-    setBoolean(value);
-  }
-  void setFloat(JsonFloat value) {
-    setType(VALUE_IS_FLOAT);
+  template <typename T>
+  enable_if_t<sizeof(T) == 4, bool> setFloat(T value, ResourceManager*) {
+    ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
+    type_ = VariantType::Float;
     content_.asFloat = value;
-  }
-  void setFloat(JsonFloat value, ResourceManager* resources) {
-    release(resources);
-    setFloat(value);
+    return true;
   }
   template <typename T>
-  enable_if_t<is_signed<T>::value> setInteger(T value) {
-    setType(VALUE_IS_SIGNED_INTEGER);
-    content_.asSignedInteger = value;
-  }
+  enable_if_t<sizeof(T) == 8, bool> setFloat(T value, ResourceManager*);
   template <typename T>
-  enable_if_t<is_unsigned<T>::value> setInteger(T value) {
-    setType(VALUE_IS_UNSIGNED_INTEGER);
-    content_.asUnsignedInteger = static_cast<JsonUInt>(value);
-  }
+  enable_if_t<is_signed<T>::value, bool> setInteger(T value,
+                                                    ResourceManager* resources);
   template <typename T>
-  void setInteger(T value, ResourceManager* resources) {
-    release(resources);
-    setInteger(value);
-  }
-  void setNull() {
-    setType(VALUE_IS_NULL);
-  }
-  void setNull(ResourceManager* resources) {
-    release(resources);
-    setNull();
-  }
-  static void setNull(VariantData* var, ResourceManager* resources) {
-    if (!var)
-      return;
-    var->setNull(resources);
-  }
+  enable_if_t<is_unsigned<T>::value, bool> setInteger(
+      T value, ResourceManager* resources);
   void setRawString(StringNode* s) {
+    ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
     ARDUINOJSON_ASSERT(s);
-    setType(VALUE_IS_RAW_STRING);
+    type_ = VariantType::RawString;
     content_.asOwnedString = s;
   }
   template <typename T>
-  void setRawString(SerializedValue<T> value, ResourceManager* resources) {
-    release(resources);
-    auto dup = resources->saveString(adaptString(value.data(), value.size()));
-    if (dup)
-      setRawString(dup);
-    else
-      setNull();
-  }
+  void setRawString(SerializedValue<T> value, ResourceManager* resources);
   template <typename T>
   static void setRawString(VariantData* var, SerializedValue<T> value,
                            ResourceManager* resources) {
     if (!var)
       return;
+    var->clear(resources);
     var->setRawString(value, resources);
   }
   template <typename TAdaptedString>
-  void setString(TAdaptedString value, ResourceManager* resources) {
-    setNull(resources);
-    if (value.isNull())
-      return;
-    if (value.isLinked()) {
-      setLinkedString(value.data());
-      return;
-    }
-    auto dup = resources->saveString(value);
-    if (dup)
-      setOwnedString(dup);
+  bool setString(TAdaptedString value, ResourceManager* resources);
+  bool setString(StringNode* s, ResourceManager*) {
+    setOwnedString(s);
+    return true;
   }
   template <typename TAdaptedString>
   static void setString(VariantData* var, TAdaptedString value,
                         ResourceManager* resources) {
     if (!var)
       return;
+    var->clear(resources);
     var->setString(value, resources);
   }
   void setLinkedString(const char* s) {
+    ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
     ARDUINOJSON_ASSERT(s);
-    setType(VALUE_IS_LINKED_STRING);
+    type_ = VariantType::LinkedString;
     content_.asLinkedString = s;
   }
   void setOwnedString(StringNode* s) {
+    ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
     ARDUINOJSON_ASSERT(s);
-    setType(VALUE_IS_OWNED_STRING);
+    type_ = VariantType::OwnedString;
     content_.asOwnedString = s;
   }
   size_t size(const ResourceManager* resources) const {
-    return isCollection() ? content_.asCollection.size(resources) : 0;
+    if (isObject())
+      return content_.asObject.size(resources);
+    if (isArray())
+      return content_.asArray.size(resources);
+    return 0;
   }
   static size_t size(const VariantData* var, const ResourceManager* resources) {
     return var != 0 ? var->size(resources) : 0;
   }
   ArrayData& toArray() {
-    setType(VALUE_IS_ARRAY);
+    ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
+    type_ = VariantType::Array;
     new (&content_.asArray) ArrayData();
     return content_.asArray;
-  }
-  ArrayData& toArray(ResourceManager* resources) {
-    release(resources);
-    return toArray();
   }
   static ArrayData* toArray(VariantData* var, ResourceManager* resources) {
     if (!var)
       return 0;
-    return &var->toArray(resources);
+    var->clear(resources);
+    return &var->toArray();
   }
   ObjectData& toObject() {
-    setType(VALUE_IS_OBJECT);
+    ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
+    type_ = VariantType::Object;
     new (&content_.asObject) ObjectData();
     return content_.asObject;
-  }
-  ObjectData& toObject(ResourceManager* resources) {
-    release(resources);
-    return toObject();
   }
   static ObjectData* toObject(VariantData* var, ResourceManager* resources) {
     if (!var)
       return 0;
-    return &var->toObject(resources);
+    var->clear(resources);
+    return &var->toObject();
   }
-  uint8_t type() const {
-    return flags_ & VALUE_MASK;
+  VariantType type() const {
+    return type_;
   }
- private:
-  void release(ResourceManager* resources) {
-    if (flags_ & OWNED_VALUE_BIT)
-      resources->dereferenceString(content_.asOwnedString->data);
-    auto collection = asCollection();
-    if (collection)
-      collection->clear(resources);
-  }
-  void setType(uint8_t t) {
-    flags_ &= OWNED_KEY_BIT;
-    flags_ |= t;
+  void clear(ResourceManager* resources);
+  static void clear(VariantData* var, ResourceManager* resources) {
+    if (!var)
+      return;
+    var->clear(resources);
   }
 };
+class VariantData;
+class VariantWithId;
+class ResourceManager {
+  union SlotData {
+    VariantData variant;
+#if ARDUINOJSON_USE_EXTENSIONS
+    VariantExtension extension;
+#endif
+  };
+ public:
+  constexpr static size_t slotSize = sizeof(SlotData);
+  ResourceManager(Allocator* allocator = DefaultAllocator::instance())
+      : allocator_(allocator), overflowed_(false) {}
+  ~ResourceManager() {
+    stringPool_.clear(allocator_);
+    variantPools_.clear(allocator_);
+  }
+  ResourceManager(const ResourceManager&) = delete;
+  ResourceManager& operator=(const ResourceManager& src) = delete;
+  friend void swap(ResourceManager& a, ResourceManager& b) {
+    swap(a.stringPool_, b.stringPool_);
+    swap(a.variantPools_, b.variantPools_);
+    swap_(a.allocator_, b.allocator_);
+    swap_(a.overflowed_, b.overflowed_);
+  }
+  Allocator* allocator() const {
+    return allocator_;
+  }
+  size_t size() const {
+    return variantPools_.size() + stringPool_.size();
+  }
+  bool overflowed() const {
+    return overflowed_;
+  }
+  Slot<VariantData> allocVariant();
+  void freeVariant(Slot<VariantData> slot);
+  VariantData* getVariant(SlotId id) const;
+#if ARDUINOJSON_USE_EXTENSIONS
+  Slot<VariantExtension> allocExtension();
+  void freeExtension(SlotId slot);
+  VariantExtension* getExtension(SlotId id) const;
+#endif
+  template <typename TAdaptedString>
+  StringNode* saveString(TAdaptedString str) {
+    if (str.isNull())
+      return 0;
+    auto node = stringPool_.add(str, allocator_);
+    if (!node)
+      overflowed_ = true;
+    return node;
+  }
+  void saveString(StringNode* node) {
+    stringPool_.add(node);
+  }
+  template <typename TAdaptedString>
+  StringNode* getString(const TAdaptedString& str) const {
+    return stringPool_.get(str);
+  }
+  StringNode* createString(size_t length) {
+    auto node = StringNode::create(length, allocator_);
+    if (!node)
+      overflowed_ = true;
+    return node;
+  }
+  StringNode* resizeString(StringNode* node, size_t length) {
+    node = StringNode::resize(node, length, allocator_);
+    if (!node)
+      overflowed_ = true;
+    return node;
+  }
+  void destroyString(StringNode* node) {
+    StringNode::destroy(node, allocator_);
+  }
+  void dereferenceString(const char* s) {
+    stringPool_.dereference(s, allocator_);
+  }
+  void clear() {
+    variantPools_.clear(allocator_);
+    overflowed_ = false;
+    stringPool_.clear(allocator_);
+  }
+  void shrinkToFit() {
+    variantPools_.shrinkToFit(allocator_);
+  }
+ private:
+  Allocator* allocator_;
+  bool overflowed_;
+  StringPool stringPool_;
+  MemoryPoolList<SlotData> variantPools_;
+};
+template <typename T, typename Enable = void>
+struct IsString : false_type {};
+template <typename T>
+struct IsString<T, void_t<typename StringAdapter<T>::AdaptedString>>
+    : true_type {};
 ARDUINOJSON_END_PRIVATE_NAMESPACE
 ARDUINOJSON_BEGIN_PUBLIC_NAMESPACE
 class JsonArray;
@@ -2925,18 +3011,21 @@ class JsonVariantConst : public detail::VariantTag,
       return operator[](key.template as<const char*>());
   }
   template <typename TString>
+  ARDUINOJSON_DEPRECATED("use var[key].is<T>() instead")
   detail::enable_if_t<detail::IsString<TString>::value, bool> containsKey(
       const TString& key) const {
     return detail::VariantData::getMember(getData(), detail::adaptString(key),
                                           resources_) != 0;
   }
   template <typename TChar>
+  ARDUINOJSON_DEPRECATED("use obj[\"key\"].is<T>() instead")
   detail::enable_if_t<detail::IsString<TChar*>::value, bool> containsKey(
       TChar* key) const {
     return detail::VariantData::getMember(getData(), detail::adaptString(key),
                                           resources_) != 0;
   }
   template <typename TVariant>
+  ARDUINOJSON_DEPRECATED("use var[key].is<T>() instead")
   detail::enable_if_t<detail::IsVariant<TVariant>::value, bool> containsKey(
       const TVariant& key) const {
     return containsKey(key.template as<const char*>());
@@ -2968,7 +3057,7 @@ class VariantRefBase : public VariantTag {
   friend class VariantAttorney;
  public:
   void clear() const {
-    VariantData::setNull(getOrCreateData(), getResourceManager());
+    VariantData::clear(getOrCreateData(), getResourceManager());
   }
   bool isNull() const {
     return VariantData::isNull(getData());
@@ -3042,11 +3131,14 @@ class VariantRefBase : public VariantTag {
   }
   ElementProxy<TDerived> operator[](size_t index) const;
   template <typename TString>
+  ARDUINOJSON_DEPRECATED("use obj[key].is<T>() instead")
   enable_if_t<IsString<TString>::value, bool> containsKey(
       const TString& key) const;
   template <typename TChar>
+  ARDUINOJSON_DEPRECATED("use obj[\"key\"].is<T>() instead")
   enable_if_t<IsString<TChar*>::value, bool> containsKey(TChar* key) const;
   template <typename TVariant>
+  ARDUINOJSON_DEPRECATED("use obj[key].is<T>() instead")
   enable_if_t<IsVariant<TVariant>::value, bool> containsKey(
       const TVariant& key) const;
   template <typename TString>
@@ -3498,42 +3590,42 @@ class JsonArray : public detail::VariantOperators<JsonArray> {
 class JsonPair {
  public:
   JsonPair(detail::ObjectData::iterator iterator,
-           detail::ResourceManager* resources)
-      : iterator_(iterator), resources_(resources) {}
+           detail::ResourceManager* resources) {
+    if (!iterator.done()) {
+      key_ = iterator->asString();
+      iterator.next(resources);
+      value_ = JsonVariant(iterator.data(), resources);
+    }
+  }
   JsonString key() const {
-    if (!iterator_.done())
-      return JsonString(iterator_.key(), iterator_.ownsKey()
-                                             ? JsonString::Copied
-                                             : JsonString::Linked);
-    else
-      return JsonString();
+    return key_;
   }
   JsonVariant value() {
-    return JsonVariant(iterator_.data(), resources_);
+    return value_;
   }
  private:
-  detail::ObjectData::iterator iterator_;
-  detail::ResourceManager* resources_;
+  JsonString key_;
+  JsonVariant value_;
 };
 class JsonPairConst {
  public:
   JsonPairConst(detail::ObjectData::iterator iterator,
-                const detail::ResourceManager* resources)
-      : iterator_(iterator), resources_(resources) {}
+                const detail::ResourceManager* resources) {
+    if (!iterator.done()) {
+      key_ = iterator->asString();
+      iterator.next(resources);
+      value_ = JsonVariantConst(iterator.data(), resources);
+    }
+  }
   JsonString key() const {
-    if (!iterator_.done())
-      return JsonString(iterator_.key(), iterator_.ownsKey()
-                                             ? JsonString::Copied
-                                             : JsonString::Linked);
-    else
-      return JsonString();
+    return key_;
   }
   JsonVariantConst value() const {
-    return JsonVariantConst(iterator_.data(), resources_);
+    return value_;
   }
  private:
-  detail::ObjectData::iterator iterator_;
-  const detail::ResourceManager* resources_;
+  JsonString key_;
+  JsonVariantConst value_;
 };
 class JsonObjectIterator {
   friend class JsonObject;
@@ -3555,7 +3647,8 @@ class JsonObjectIterator {
     return iterator_ != other.iterator_;
   }
   JsonObjectIterator& operator++() {
-    iterator_.next(resources_);
+    iterator_.next(resources_);  // key
+    iterator_.next(resources_);  // value
     return *this;
   }
  private:
@@ -3582,7 +3675,8 @@ class JsonObjectConstIterator {
     return iterator_ != other.iterator_;
   }
   JsonObjectConstIterator& operator++() {
-    iterator_.next(resources_);
+    iterator_.next(resources_);  // key
+    iterator_.next(resources_);  // value
     return *this;
   }
  private:
@@ -3622,17 +3716,20 @@ class JsonObjectConst : public detail::VariantOperators<JsonObjectConst> {
     return iterator();
   }
   template <typename TString>
+  ARDUINOJSON_DEPRECATED("use obj[key].is<T>() instead")
   detail::enable_if_t<detail::IsString<TString>::value, bool> containsKey(
       const TString& key) const {
     return detail::ObjectData::getMember(data_, detail::adaptString(key),
                                          resources_) != 0;
   }
   template <typename TChar>
+  ARDUINOJSON_DEPRECATED("use obj[\"key\"].is<T>() instead")
   bool containsKey(TChar* key) const {
     return detail::ObjectData::getMember(data_, detail::adaptString(key),
                                          resources_) != 0;
   }
   template <typename TVariant>
+  ARDUINOJSON_DEPRECATED("use obj[key].is<T>() instead")
   detail::enable_if_t<detail::IsVariant<TVariant>::value, bool> containsKey(
       const TVariant& key) const {
     return containsKey(key.template as<const char*>());
@@ -3828,18 +3925,21 @@ class JsonObject : public detail::VariantOperators<JsonObject> {
                                      resources_);
   }
   template <typename TString>
+  ARDUINOJSON_DEPRECATED("use obj[key].is<T>() instead")
   detail::enable_if_t<detail::IsString<TString>::value, bool> containsKey(
       const TString& key) const {
     return detail::ObjectData::getMember(data_, detail::adaptString(key),
                                          resources_) != 0;
   }
   template <typename TChar>
+  ARDUINOJSON_DEPRECATED("use obj[\"key\"].is<T>() instead")
   detail::enable_if_t<detail::IsString<TChar*>::value, bool> containsKey(
       TChar* key) const {
     return detail::ObjectData::getMember(data_, detail::adaptString(key),
                                          resources_) != 0;
   }
   template <typename TVariant>
+  ARDUINOJSON_DEPRECATED("use obj[key].is<T>() instead")
   detail::enable_if_t<detail::IsVariant<TVariant>::value, bool> containsKey(
       const TVariant& key) const {
     return containsKey(key.template as<const char*>());
@@ -3965,15 +4065,18 @@ class JsonDocument : public detail::VariantOperators<const JsonDocument&> {
     return getVariant().template to<T>();
   }
   template <typename TChar>
+  ARDUINOJSON_DEPRECATED("use doc[\"key\"].is<T>() instead")
   bool containsKey(TChar* key) const {
     return data_.getMember(detail::adaptString(key), &resources_) != 0;
   }
   template <typename TString>
+  ARDUINOJSON_DEPRECATED("use doc[key].is<T>() instead")
   detail::enable_if_t<detail::IsString<TString>::value, bool> containsKey(
       const TString& key) const {
     return data_.getMember(detail::adaptString(key), &resources_) != 0;
   }
   template <typename TVariant>
+  ARDUINOJSON_DEPRECATED("use doc[key].is<T>() instead")
   detail::enable_if_t<detail::IsVariant<TVariant>::value, bool> containsKey(
       const TVariant& key) const {
     return containsKey(key.template as<const char*>());
@@ -4177,7 +4280,7 @@ typename TVisitor::result_type accept(JsonVariantConst variant,
     return visit.visit(nullptr);
   auto resources = VariantAttorney::getResourceManager(variant);
   VisitorAdapter<TVisitor> adapter(visit, resources);
-  return data->accept(adapter);
+  return data->accept(adapter, resources);
 }
 struct ComparerBase : JsonVariantVisitor<CompareResult> {};
 template <typename T, typename Enable = void>
@@ -4209,19 +4312,18 @@ struct Comparer<
     : ComparerBase {
   T rhs;
   explicit Comparer(T value) : rhs(value) {}
-  CompareResult visit(JsonFloat lhs) {
+  template <typename U>
+  enable_if_t<is_floating_point<U>::value || is_integral<U>::value,
+              CompareResult>
+  visit(const U& lhs) {
     return arithmeticCompare(lhs, rhs);
   }
-  CompareResult visit(JsonInteger lhs) {
-    return arithmeticCompare(lhs, rhs);
+  template <typename U>
+  enable_if_t<!is_floating_point<U>::value && !is_integral<U>::value,
+              CompareResult>
+  visit(const U& lhs) {
+    return ComparerBase::visit(lhs);
   }
-  CompareResult visit(JsonUInt lhs) {
-    return arithmeticCompare(lhs, rhs);
-  }
-  CompareResult visit(bool lhs) {
-    return visit(static_cast<JsonUInt>(lhs));
-  }
-  using ComparerBase::visit;
 };
 struct NullComparer : ComparerBase {
   CompareResult visit(nullptr_t) {
@@ -4344,6 +4446,13 @@ inline ArrayData::iterator ArrayData::at(
   }
   return it;
 }
+inline VariantData* ArrayData::addElement(ResourceManager* resources) {
+  auto slot = resources->allocVariant();
+  if (!slot)
+    return nullptr;
+  CollectionData::appendOne(slot, resources);
+  return slot.ptr();
+}
 inline VariantData* ArrayData::getOrAddElement(size_t index,
                                                ResourceManager* resources) {
   auto it = createIterator(resources);
@@ -4372,16 +4481,19 @@ inline void ArrayData::removeElement(size_t index, ResourceManager* resources) {
 template <typename T>
 inline bool ArrayData::addValue(T&& value, ResourceManager* resources) {
   ARDUINOJSON_ASSERT(resources != nullptr);
-  auto slot = resources->allocSlot();
+  auto slot = resources->allocVariant();
   if (!slot)
     return false;
-  JsonVariant variant(slot->data(), resources);
+  JsonVariant variant(slot.ptr(), resources);
   if (!variant.set(detail::forward<T>(value))) {
-    resources->freeSlot(slot);
+    resources->freeVariant(slot);
     return false;
   }
-  addSlot(slot, resources);
+  CollectionData::appendOne(slot, resources);
   return true;
+}
+constexpr size_t sizeofArray(size_t n) {
+  return n * ResourceManager::slotSize;
 }
 ARDUINOJSON_END_PRIVATE_NAMESPACE
 ARDUINOJSON_BEGIN_PUBLIC_NAMESPACE
@@ -4491,86 +4603,70 @@ inline T* addPadding(T* p) {
   size_t address = addPadding(reinterpret_cast<size_t>(p));
   return reinterpret_cast<T*>(address);
 }
-inline CollectionIterator::CollectionIterator(VariantSlot* slot, SlotId slotId)
+inline CollectionIterator::CollectionIterator(VariantData* slot, SlotId slotId)
     : slot_(slot), currentId_(slotId) {
   nextId_ = slot_ ? slot_->next() : NULL_SLOT;
 }
-inline const char* CollectionIterator::key() const {
-  ARDUINOJSON_ASSERT(slot_ != nullptr);
-  return slot_->key();
-}
-inline void CollectionIterator::setKey(const char* s) {
-  ARDUINOJSON_ASSERT(slot_ != nullptr);
-  ARDUINOJSON_ASSERT(s != nullptr);
-  return slot_->setKey(s);
-}
-inline void CollectionIterator::setKey(StringNode* s) {
-  ARDUINOJSON_ASSERT(slot_ != nullptr);
-  ARDUINOJSON_ASSERT(s != nullptr);
-  return slot_->setKey(s);
-}
-inline bool CollectionIterator::ownsKey() const {
-  ARDUINOJSON_ASSERT(slot_ != nullptr);
-  return slot_->ownsKey();
-}
 inline void CollectionIterator::next(const ResourceManager* resources) {
   ARDUINOJSON_ASSERT(currentId_ != NULL_SLOT);
-  slot_ = resources->getSlot(nextId_);
+  slot_ = resources->getVariant(nextId_);
   currentId_ = nextId_;
   if (slot_)
     nextId_ = slot_->next();
 }
-inline CollectionData::iterator CollectionData::addSlot(
-    ResourceManager* resources) {
-  auto slot = resources->allocSlot();
-  if (!slot)
-    return {};
+inline CollectionData::iterator CollectionData::createIterator(
+    const ResourceManager* resources) const {
+  return iterator(resources->getVariant(head_), head_);
+}
+inline void CollectionData::appendOne(Slot<VariantData> slot,
+                                      const ResourceManager* resources) {
   if (tail_ != NULL_SLOT) {
-    auto tail = resources->getSlot(tail_);
+    auto tail = resources->getVariant(tail_);
     tail->setNext(slot.id());
     tail_ = slot.id();
   } else {
     head_ = slot.id();
     tail_ = slot.id();
   }
-  return iterator(slot, slot.id());
 }
-inline void CollectionData::addSlot(SlotWithId slot,
-                                    ResourceManager* resources) {
+inline void CollectionData::appendPair(Slot<VariantData> key,
+                                       Slot<VariantData> value,
+                                       const ResourceManager* resources) {
+  key->setNext(value.id());
   if (tail_ != NULL_SLOT) {
-    auto tail = resources->getSlot(tail_);
-    tail->setNext(slot.id());
-    tail_ = slot.id();
+    auto tail = resources->getVariant(tail_);
+    tail->setNext(key.id());
+    tail_ = value.id();
   } else {
-    head_ = slot.id();
-    tail_ = slot.id();
+    head_ = key.id();
+    tail_ = value.id();
   }
 }
 inline void CollectionData::clear(ResourceManager* resources) {
   auto next = head_;
   while (next != NULL_SLOT) {
     auto currId = next;
-    auto slot = resources->getSlot(next);
+    auto slot = resources->getVariant(next);
     next = slot->next();
-    resources->freeSlot(SlotWithId(slot, currId));
+    resources->freeVariant({slot, currId});
   }
   head_ = NULL_SLOT;
   tail_ = NULL_SLOT;
 }
-inline SlotWithId CollectionData::getPreviousSlot(
-    VariantSlot* target, const ResourceManager* resources) const {
-  auto prev = SlotWithId();
+inline Slot<VariantData> CollectionData::getPreviousSlot(
+    VariantData* target, const ResourceManager* resources) const {
+  auto prev = Slot<VariantData>();
   auto currentId = head_;
   while (currentId != NULL_SLOT) {
-    auto currentSlot = resources->getSlot(currentId);
+    auto currentSlot = resources->getVariant(currentId);
     if (currentSlot == target)
-      return prev;
-    prev = SlotWithId(currentSlot, currentId);
+      break;
+    prev = Slot<VariantData>(currentSlot, currentId);
     currentId = currentSlot->next();
   }
-  return SlotWithId();
+  return prev;
 }
-inline void CollectionData::remove(iterator it, ResourceManager* resources) {
+inline void CollectionData::removeOne(iterator it, ResourceManager* resources) {
   if (it.done())
     return;
   auto curr = it.slot_;
@@ -4582,7 +4678,18 @@ inline void CollectionData::remove(iterator it, ResourceManager* resources) {
     head_ = next;
   if (next == NULL_SLOT)
     tail_ = prev.id();
-  resources->freeSlot({it.slot_, it.currentId_});
+  resources->freeVariant({it.slot_, it.currentId_});
+}
+inline void CollectionData::removePair(ObjectData::iterator it,
+                                       ResourceManager* resources) {
+  if (it.done())
+    return;
+  auto keySlot = it.slot_;
+  auto valueId = it.nextId_;
+  auto valueSlot = resources->getVariant(valueId);
+  keySlot->setNext(valueSlot->next());
+  resources->freeVariant({valueSlot, valueId});
+  removeOne(it, resources);
 }
 inline size_t CollectionData::nesting(const ResourceManager* resources) const {
   size_t maxChildNesting = 0;
@@ -4599,81 +4706,53 @@ inline size_t CollectionData::size(const ResourceManager* resources) const {
     count++;
   return count;
 }
-inline void ResourceManager::freeSlot(SlotWithId slot) {
-  if (slot->ownsKey())
-    dereferenceString(slot->key());
-  slot->data()->setNull(this);
-  variantPools_.freeSlot(slot);
-}
-inline void VariantPool::create(SlotCount cap, Allocator* allocator) {
-  ARDUINOJSON_ASSERT(cap > 0);
-  slots_ =
-      reinterpret_cast<VariantSlot*>(allocator->allocate(slotsToBytes(cap)));
-  capacity_ = slots_ ? cap : 0;
-  usage_ = 0;
-}
-inline void VariantPool::destroy(Allocator* allocator) {
-  if (slots_)
-    allocator->deallocate(slots_);
-  slots_ = nullptr;
-  capacity_ = 0;
-  usage_ = 0;
-}
-inline void VariantPool::shrinkToFit(Allocator* allocator) {
-  auto newSlots = reinterpret_cast<VariantSlot*>(
-      allocator->reallocate(slots_, slotsToBytes(usage_)));
-  if (newSlots) {
-    slots_ = newSlots;
-    capacity_ = usage_;
+inline Slot<VariantData> ResourceManager::allocVariant() {
+  auto p = variantPools_.allocSlot(allocator_);
+  if (!p) {
+    overflowed_ = true;
+    return {};
   }
+  return {new (&p->variant) VariantData, p.id()};
 }
-inline SlotWithId VariantPool::allocSlot() {
-  if (!slots_)
+inline void ResourceManager::freeVariant(Slot<VariantData> variant) {
+  variant->clear(this);
+  variantPools_.freeSlot({alias_cast<SlotData*>(variant.ptr()), variant.id()});
+}
+inline VariantData* ResourceManager::getVariant(SlotId id) const {
+  return reinterpret_cast<VariantData*>(variantPools_.getSlot(id));
+}
+#if ARDUINOJSON_USE_EXTENSIONS
+inline Slot<VariantExtension> ResourceManager::allocExtension() {
+  auto p = variantPools_.allocSlot(allocator_);
+  if (!p) {
+    overflowed_ = true;
     return {};
-  if (usage_ >= capacity_)
-    return {};
-  auto index = usage_++;
-  auto slot = &slots_[index];
-  return {new (slot) VariantSlot, SlotId(index)};
+  }
+  return {&p->extension, p.id()};
 }
-inline VariantSlot* VariantPool::getSlot(SlotId id) const {
-  ARDUINOJSON_ASSERT(id < usage_);
-  return &slots_[id];
+inline void ResourceManager::freeExtension(SlotId id) {
+  auto p = getExtension(id);
+  variantPools_.freeSlot({reinterpret_cast<SlotData*>(p), id});
 }
-inline SlotCount VariantPool::usage() const {
-  return usage_;
+inline VariantExtension* ResourceManager::getExtension(SlotId id) const {
+  return &variantPools_.getSlot(id)->extension;
 }
-inline void VariantPool::clear() {
-  usage_ = 0;
-}
-inline SlotCount VariantPool::bytesToSlots(size_t n) {
-  return static_cast<SlotCount>(n / sizeof(VariantSlot));
-}
-inline size_t VariantPool::slotsToBytes(SlotCount n) {
-  return n * sizeof(VariantSlot);
-}
-inline SlotWithId VariantPoolList::allocFromFreeList() {
-  ARDUINOJSON_ASSERT(freeList_ != NULL_SLOT);
-  auto id = freeList_;
-  auto slot = getSlot(freeList_);
-  freeList_ = slot->next();
-  return {new (slot) VariantSlot, id};
-}
-inline void VariantPoolList::freeSlot(SlotWithId slot) {
-  slot->setNext(freeList_);
-  freeList_ = slot.id();
-}
+#endif
 template <typename TAdaptedString>
 inline VariantData* ObjectData::getMember(
     TAdaptedString key, const ResourceManager* resources) const {
-  return findKey(key, resources).data();
+  auto it = findKey(key, resources);
+  if (it.done())
+    return nullptr;
+  it.next(resources);
+  return it.data();
 }
 template <typename TAdaptedString>
 VariantData* ObjectData::getOrAddMember(TAdaptedString key,
                                         ResourceManager* resources) {
-  auto it = findKey(key, resources);
-  if (!it.done())
-    return it.data();
+  auto data = getMember(key, resources);
+  if (data)
+    return data;
   return addMember(key, resources);
 }
 template <typename TAdaptedString>
@@ -4681,9 +4760,11 @@ inline ObjectData::iterator ObjectData::findKey(
     TAdaptedString key, const ResourceManager* resources) const {
   if (key.isNull())
     return iterator();
+  bool isKey = true;
   for (auto it = createIterator(resources); !it.done(); it.next(resources)) {
-    if (stringEquals(key, adaptString(it.key())))
+    if (isKey && stringEquals(key, adaptString(it->asString())))
       return it;
+    isKey = !isKey;
   }
   return iterator();
 }
@@ -4691,6 +4772,23 @@ template <typename TAdaptedString>
 inline void ObjectData::removeMember(TAdaptedString key,
                                      ResourceManager* resources) {
   remove(findKey(key, resources), resources);
+}
+template <typename TAdaptedString>
+inline VariantData* ObjectData::addMember(TAdaptedString key,
+                                          ResourceManager* resources) {
+  auto keySlot = resources->allocVariant();
+  if (!keySlot)
+    return nullptr;
+  auto valueSlot = resources->allocVariant();
+  if (!valueSlot)
+    return nullptr;
+  if (!keySlot->setString(key, resources))
+    return nullptr;
+  CollectionData::appendPair(keySlot, valueSlot, resources);
+  return valueSlot.ptr();
+}
+constexpr size_t sizeofObject(size_t n) {
+  return 2 * n * ResourceManager::slotSize;
 }
 class EscapeSequence {
  public:
@@ -4712,68 +4810,72 @@ class EscapeSequence {
     }
   }
  private:
-  static const char* escapeTable(bool excludeSolidus) {
-    return &"//\"\"\\\\b\bf\fn\nr\rt\t"[excludeSolidus ? 2 : 0];
+  static const char* escapeTable(bool isSerializing) {
+    return &"//''\"\"\\\\b\bf\fn\nr\rt\t"[isSerializing ? 4 : 0];
   }
 };
-template <typename TFloat>
 struct FloatParts {
   uint32_t integral;
   uint32_t decimal;
   int16_t exponent;
   int8_t decimalPlaces;
-  FloatParts(TFloat value) {
-    uint32_t maxDecimalPart = sizeof(TFloat) >= 8 ? 1000000000 : 1000000;
-    decimalPlaces = sizeof(TFloat) >= 8 ? 9 : 6;
-    exponent = normalize(value);
-    integral = uint32_t(value);
-    for (uint32_t tmp = integral; tmp >= 10; tmp /= 10) {
-      maxDecimalPart /= 10;
-      decimalPlaces--;
-    }
-    TFloat remainder = (value - TFloat(integral)) * TFloat(maxDecimalPart);
-    decimal = uint32_t(remainder);
-    remainder = remainder - TFloat(decimal);
-    decimal += uint32_t(remainder * 2);
-    if (decimal >= maxDecimalPart) {
-      decimal = 0;
-      integral++;
-      if (exponent && integral >= 10) {
-        exponent++;
-        integral = 1;
-      }
-    }
-    while (decimal % 10 == 0 && decimalPlaces > 0) {
-      decimal /= 10;
-      decimalPlaces--;
-    }
-  }
-  static int16_t normalize(TFloat& value) {
-    typedef FloatTraits<TFloat> traits;
-    int16_t powersOf10 = 0;
-    int8_t index = sizeof(TFloat) == 8 ? 8 : 5;
-    int bit = 1 << index;
-    if (value >= ARDUINOJSON_POSITIVE_EXPONENTIATION_THRESHOLD) {
-      for (; index >= 0; index--) {
-        if (value >= traits::positiveBinaryPowersOfTen()[index]) {
-          value *= traits::negativeBinaryPowersOfTen()[index];
-          powersOf10 = int16_t(powersOf10 + bit);
-        }
-        bit >>= 1;
-      }
-    }
-    if (value > 0 && value <= ARDUINOJSON_NEGATIVE_EXPONENTIATION_THRESHOLD) {
-      for (; index >= 0; index--) {
-        if (value < traits::negativeBinaryPowersOfTen()[index] * 10) {
-          value *= traits::positiveBinaryPowersOfTen()[index];
-          powersOf10 = int16_t(powersOf10 - bit);
-        }
-        bit >>= 1;
-      }
-    }
-    return powersOf10;
-  }
 };
+template <typename TFloat>
+inline int16_t normalize(TFloat& value) {
+  typedef FloatTraits<TFloat> traits;
+  int16_t powersOf10 = 0;
+  int8_t index = sizeof(TFloat) == 8 ? 8 : 5;
+  int bit = 1 << index;
+  if (value >= ARDUINOJSON_POSITIVE_EXPONENTIATION_THRESHOLD) {
+    for (; index >= 0; index--) {
+      if (value >= traits::positiveBinaryPowersOfTen()[index]) {
+        value *= traits::negativeBinaryPowersOfTen()[index];
+        powersOf10 = int16_t(powersOf10 + bit);
+      }
+      bit >>= 1;
+    }
+  }
+  if (value > 0 && value <= ARDUINOJSON_NEGATIVE_EXPONENTIATION_THRESHOLD) {
+    for (; index >= 0; index--) {
+      if (value < traits::negativeBinaryPowersOfTen()[index] * 10) {
+        value *= traits::positiveBinaryPowersOfTen()[index];
+        powersOf10 = int16_t(powersOf10 - bit);
+      }
+      bit >>= 1;
+    }
+  }
+  return powersOf10;
+}
+constexpr uint32_t pow10(int exponent) {
+  return (exponent == 0) ? 1 : 10 * pow10(exponent - 1);
+}
+inline FloatParts decomposeFloat(JsonFloat value, int8_t decimalPlaces) {
+  uint32_t maxDecimalPart = pow10(decimalPlaces);
+  int16_t exponent = normalize(value);
+  uint32_t integral = uint32_t(value);
+  for (uint32_t tmp = integral; tmp >= 10; tmp /= 10) {
+    maxDecimalPart /= 10;
+    decimalPlaces--;
+  }
+  JsonFloat remainder =
+      (value - JsonFloat(integral)) * JsonFloat(maxDecimalPart);
+  uint32_t decimal = uint32_t(remainder);
+  remainder = remainder - JsonFloat(decimal);
+  decimal += uint32_t(remainder * 2);
+  if (decimal >= maxDecimalPart) {
+    decimal = 0;
+    integral++;
+    if (exponent && integral >= 10) {
+      exponent++;
+      integral = 1;
+    }
+  }
+  while (decimal % 10 == 0 && decimalPlaces > 0) {
+    decimal /= 10;
+    decimalPlaces--;
+  }
+  return {integral, decimal, exponent, decimalPlaces};
+}
 template <typename TWriter>
 class CountingDecorator {
  public:
@@ -4832,6 +4934,9 @@ class TextFormatter {
   }
   template <typename T>
   void writeFloat(T value) {
+    writeFloat(JsonFloat(value), sizeof(T) >= 8 ? 9 : 6);
+  }
+  void writeFloat(JsonFloat value, int8_t decimalPlaces) {
     if (isnan(value))
       return writeRaw(ARDUINOJSON_ENABLE_NAN ? "NaN" : "null");
 #if ARDUINOJSON_ENABLE_INFINITY
@@ -4849,7 +4954,7 @@ class TextFormatter {
       value = -value;
     }
 #endif
-    FloatParts<T> parts(value);
+    auto parts = decomposeFloat(value, decimalPlaces);
     writeInteger(parts.integral);
     if (parts.decimalPlaces)
       writeDecimals(parts.decimal, parts.decimalPlaces);
@@ -4924,9 +5029,10 @@ class DummyWriter {
 template <template <typename> class TSerializer>
 size_t measure(ArduinoJson::JsonVariantConst source) {
   DummyWriter dp;
-  TSerializer<DummyWriter> serializer(
-      dp, VariantAttorney::getResourceManager(source));
-  return VariantData::accept(VariantAttorney::getData(source), serializer);
+  auto data = VariantAttorney::getData(source);
+  auto resources = VariantAttorney::getResourceManager(source);
+  TSerializer<DummyWriter> serializer(dp, resources);
+  return VariantData::accept(data, resources, serializer);
 }
 template <typename TDestination, typename Enable = void>
 class Writer {
@@ -5072,9 +5178,10 @@ ARDUINOJSON_END_PRIVATE_NAMESPACE
 ARDUINOJSON_BEGIN_PRIVATE_NAMESPACE
 template <template <typename> class TSerializer, typename TWriter>
 size_t doSerialize(ArduinoJson::JsonVariantConst source, TWriter writer) {
-  TSerializer<TWriter> serializer(writer,
-                                  VariantAttorney::getResourceManager(source));
-  return VariantData::accept(VariantAttorney::getData(source), serializer);
+  auto data = VariantAttorney::getData(source);
+  auto resources = VariantAttorney::getResourceManager(source);
+  TSerializer<TWriter> serializer(writer, resources);
+  return VariantData::accept(data, resources, serializer);
 }
 template <template <typename> class TSerializer, typename TDestination>
 size_t serialize(ArduinoJson::JsonVariantConst source,
@@ -5112,8 +5219,8 @@ class JsonSerializer : public VariantDataVisitor<size_t> {
     write('[');
     auto slotId = array.head();
     while (slotId != NULL_SLOT) {
-      auto slot = resources_->getSlot(slotId);
-      slot->data()->accept(*this);
+      auto slot = resources_->getVariant(slotId);
+      slot->accept(*this, resources_);
       slotId = slot->next();
       if (slotId != NULL_SLOT)
         write(',');
@@ -5124,19 +5231,20 @@ class JsonSerializer : public VariantDataVisitor<size_t> {
   size_t visit(const ObjectData& object) {
     write('{');
     auto slotId = object.head();
+    bool isKey = true;
     while (slotId != NULL_SLOT) {
-      auto slot = resources_->getSlot(slotId);
-      formatter_.writeString(slot->key());
-      write(':');
-      slot->data()->accept(*this);
+      auto slot = resources_->getVariant(slotId);
+      slot->accept(*this, resources_);
       slotId = slot->next();
       if (slotId != NULL_SLOT)
-        write(',');
+        write(isKey ? ':' : ',');
+      isKey = !isKey;
     }
     write('}');
     return bytesWritten();
   }
-  size_t visit(JsonFloat value) {
+  template <typename T>
+  enable_if_t<is_floating_point<T>::value, size_t> visit(T value) {
     formatter_.writeFloat(value);
     return bytesWritten();
   }
@@ -5186,7 +5294,8 @@ class JsonSerializer : public VariantDataVisitor<size_t> {
 ARDUINOJSON_END_PRIVATE_NAMESPACE
 ARDUINOJSON_BEGIN_PUBLIC_NAMESPACE
 template <typename TDestination>
-size_t serializeJson(JsonVariantConst source, TDestination& destination) {
+detail::enable_if_t<!detail::is_pointer<TDestination>::value, size_t>
+serializeJson(JsonVariantConst source, TDestination& destination) {
   using namespace detail;
   return serialize<JsonSerializer>(source, destination);
 }
@@ -5307,17 +5416,20 @@ struct Converter<T, detail::enable_if_t<detail::is_integral<T>::value &&
     auto data = getData(dst);
     if (!data)
       return false;
-    data->setInteger(src, getResourceManager(dst));
-    return true;
+    auto resources = getResourceManager(dst);
+    data->clear(resources);
+    return data->setInteger(src, resources);
   }
   static T fromJson(JsonVariantConst src) {
     ARDUINOJSON_ASSERT_INTEGER_TYPE_IS_SUPPORTED(T);
     auto data = getData(src);
-    return data ? data->template asIntegral<T>() : T();
+    auto resources = getResourceManager(src);
+    return data ? data->template asIntegral<T>(resources) : T();
   }
   static bool checkJson(JsonVariantConst src) {
     auto data = getData(src);
-    return data && data->template isInteger<T>();
+    auto resources = getResourceManager(src);
+    return data && data->template isInteger<T>(resources);
   }
 };
 template <typename T>
@@ -5328,11 +5440,14 @@ struct Converter<T, detail::enable_if_t<detail::is_enum<T>::value>>
   }
   static T fromJson(JsonVariantConst src) {
     auto data = getData(src);
-    return data ? static_cast<T>(data->template asIntegral<int>()) : T();
+    auto resources = getResourceManager(src);
+    return data ? static_cast<T>(data->template asIntegral<int>(resources))
+                : T();
   }
   static bool checkJson(JsonVariantConst src) {
     auto data = getData(src);
-    return data && data->template isInteger<int>();
+    auto resources = getResourceManager(src);
+    return data && data->template isInteger<int>(resources);
   }
 };
 template <>
@@ -5341,12 +5456,15 @@ struct Converter<bool> : private detail::VariantAttorney {
     auto data = getData(dst);
     if (!data)
       return false;
-    data->setBoolean(src, getResourceManager(dst));
+    auto resources = getResourceManager(dst);
+    data->clear(resources);
+    data->setBoolean(src);
     return true;
   }
   static bool fromJson(JsonVariantConst src) {
     auto data = getData(src);
-    return data ? data->asBoolean() : false;
+    auto resources = getResourceManager(src);
+    return data ? data->asBoolean(resources) : false;
   }
   static bool checkJson(JsonVariantConst src) {
     auto data = getData(src);
@@ -5360,12 +5478,14 @@ struct Converter<T, detail::enable_if_t<detail::is_floating_point<T>::value>>
     auto data = getData(dst);
     if (!data)
       return false;
-    data->setFloat(static_cast<JsonFloat>(src), getResourceManager(dst));
-    return true;
+    auto resources = getResourceManager(dst);
+    data->clear(resources);
+    return data->setFloat(src, resources);
   }
   static T fromJson(JsonVariantConst src) {
     auto data = getData(src);
-    return data ? data->template asFloat<T>() : 0;
+    auto resources = getResourceManager(src);
+    return data ? data->template asFloat<T>(resources) : 0;
   }
   static bool checkJson(JsonVariantConst src) {
     auto data = getData(src);
@@ -5420,7 +5540,7 @@ struct Converter<SerializedValue<T>> : private detail::VariantAttorney {
 template <>
 struct Converter<detail::nullptr_t> : private detail::VariantAttorney {
   static void toJson(detail::nullptr_t, JsonVariant dst) {
-    detail::VariantData::setNull(getData(dst), getResourceManager(dst));
+    detail::VariantData::clear(getData(dst), getResourceManager(dst));
   }
   static detail::nullptr_t fromJson(JsonVariantConst) {
     return nullptr;
@@ -5465,12 +5585,11 @@ inline void convertToJson(const ::Printable& src, JsonVariant dst) {
   auto data = detail::VariantAttorney::getData(dst);
   if (!resources || !data)
     return;
+  data->clear(resources);
   detail::StringBuilderPrint print(resources);
   src.printTo(print);
-  if (print.overflowed()) {
-    data->setNull();
+  if (print.overflowed())
     return;
-  }
   data->setOwnedString(print.save());
 }
 #endif
@@ -5598,6 +5717,117 @@ inline bool copyVariant(JsonVariant dst, JsonVariantConst src) {
     return false;
   JsonVariantCopier copier(dst);
   return accept(src, copier);
+}
+template <typename T>
+inline void VariantData::setRawString(SerializedValue<T> value,
+                                      ResourceManager* resources) {
+  ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
+  auto dup = resources->saveString(adaptString(value.data(), value.size()));
+  if (dup)
+    setRawString(dup);
+}
+template <typename TAdaptedString>
+inline bool VariantData::setString(TAdaptedString value,
+                                   ResourceManager* resources) {
+  ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
+  if (value.isNull())
+    return false;
+  if (value.isLinked()) {
+    setLinkedString(value.data());
+    return true;
+  }
+  auto dup = resources->saveString(value);
+  if (dup) {
+    setOwnedString(dup);
+    return true;
+  }
+  return false;
+}
+inline void VariantData::clear(ResourceManager* resources) {
+  if (type_ & VariantTypeBits::OwnedStringBit)
+    resources->dereferenceString(content_.asOwnedString->data);
+#if ARDUINOJSON_USE_EXTENSIONS
+  if (type_ & VariantTypeBits::ExtensionBit)
+    resources->freeExtension(content_.asSlotId);
+#endif
+  auto collection = asCollection();
+  if (collection)
+    collection->clear(resources);
+  type_ = VariantType::Null;
+}
+#if ARDUINOJSON_USE_EXTENSIONS
+inline const VariantExtension* VariantData::getExtension(
+    const ResourceManager* resources) const {
+  return type_ & VariantTypeBits::ExtensionBit
+             ? resources->getExtension(content_.asSlotId)
+             : nullptr;
+}
+#endif
+template <typename T>
+enable_if_t<sizeof(T) == 8, bool> VariantData::setFloat(
+    T value, ResourceManager* resources) {
+  ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
+  (void)resources;                                 // silence warning
+  float valueAsFloat = static_cast<float>(value);
+#if ARDUINOJSON_USE_DOUBLE
+  if (value == valueAsFloat) {
+    type_ = VariantType::Float;
+    content_.asFloat = valueAsFloat;
+  } else {
+    auto extension = resources->allocExtension();
+    if (!extension)
+      return false;
+    type_ = VariantType::Double;
+    content_.asSlotId = extension.id();
+    extension->asDouble = value;
+  }
+#else
+  type_ = VariantType::Float;
+  content_.asFloat = valueAsFloat;
+#endif
+  return true;
+}
+template <typename T>
+enable_if_t<is_signed<T>::value, bool> VariantData::setInteger(
+    T value, ResourceManager* resources) {
+  ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
+  (void)resources;                                 // silence warning
+  if (canConvertNumber<int32_t>(value)) {
+    type_ = VariantType::Int32;
+    content_.asInt32 = static_cast<int32_t>(value);
+  }
+#if ARDUINOJSON_USE_LONG_LONG
+  else {
+    auto extension = resources->allocExtension();
+    if (!extension)
+      return false;
+    type_ = VariantType::Int64;
+    content_.asSlotId = extension.id();
+    extension->asInt64 = value;
+  }
+#endif
+  return true;
+}
+template <typename T>
+enable_if_t<is_unsigned<T>::value, bool> VariantData::setInteger(
+    T value, ResourceManager* resources) {
+  ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
+  (void)resources;                                 // silence warning
+  if (canConvertNumber<uint32_t>(value)) {
+    type_ = VariantType::Uint32;
+    content_.asUint32 = static_cast<uint32_t>(value);
+  }
+#if ARDUINOJSON_USE_LONG_LONG
+  else {
+    auto extension = resources->allocExtension();
+    if (!extension)
+      return false;
+    type_ = VariantType::Uint64;
+    content_.asSlotId = extension.id();
+    extension->asUint64 = value;
+  }
+#endif
+  return true;
 }
 template <typename TDerived>
 inline JsonVariant VariantRefBase<TDerived>::add() const {
@@ -5740,7 +5970,7 @@ enable_if_t<is_same<T, JsonVariant>::value, JsonVariant>
 VariantRefBase<TDerived>::to() const {
   auto data = getOrCreateData();
   auto resources = getResourceManager();
-  detail::VariantData::setNull(data, resources);
+  detail::VariantData::clear(data, resources);
   return JsonVariant(data, resources);
 }
 ARDUINOJSON_END_PRIVATE_NAMESPACE
@@ -6266,7 +6496,81 @@ inline bool issign(char c) {
 }
 template <typename A, typename B>
 using largest_type = conditional_t<(sizeof(A) > sizeof(B)), A, B>;
-inline bool parseNumber(const char* s, VariantData& result) {
+enum class NumberType : uint8_t {
+  Invalid,
+  Float,
+  SignedInteger,
+  UnsignedInteger,
+#if ARDUINOJSON_USE_DOUBLE
+  Double,
+#endif
+};
+union NumberValue {
+  NumberValue() {}
+  NumberValue(float x) : asFloat(x) {}
+  NumberValue(JsonInteger x) : asSignedInteger(x) {}
+  NumberValue(JsonUInt x) : asUnsignedInteger(x) {}
+#if ARDUINOJSON_USE_DOUBLE
+  NumberValue(double x) : asDouble(x) {}
+#endif
+  JsonInteger asSignedInteger;
+  JsonUInt asUnsignedInteger;
+  float asFloat;
+#if ARDUINOJSON_USE_DOUBLE
+  double asDouble;
+#endif
+};
+class Number {
+  NumberType type_;
+  NumberValue value_;
+ public:
+  Number() : type_(NumberType::Invalid) {}
+  Number(float value) : type_(NumberType::Float), value_(value) {}
+  Number(JsonInteger value) : type_(NumberType::SignedInteger), value_(value) {}
+  Number(JsonUInt value) : type_(NumberType::UnsignedInteger), value_(value) {}
+#if ARDUINOJSON_USE_DOUBLE
+  Number(double value) : type_(NumberType::Double), value_(value) {}
+#endif
+  template <typename T>
+  T convertTo() const {
+    switch (type_) {
+      case NumberType::Float:
+        return convertNumber<T>(value_.asFloat);
+      case NumberType::SignedInteger:
+        return convertNumber<T>(value_.asSignedInteger);
+      case NumberType::UnsignedInteger:
+        return convertNumber<T>(value_.asUnsignedInteger);
+#if ARDUINOJSON_USE_DOUBLE
+      case NumberType::Double:
+        return convertNumber<T>(value_.asDouble);
+#endif
+      default:
+        return T();
+    }
+  }
+  NumberType type() const {
+    return type_;
+  }
+  JsonInteger asSignedInteger() const {
+    ARDUINOJSON_ASSERT(type_ == NumberType::SignedInteger);
+    return value_.asSignedInteger;
+  }
+  JsonUInt asUnsignedInteger() const {
+    ARDUINOJSON_ASSERT(type_ == NumberType::UnsignedInteger);
+    return value_.asUnsignedInteger;
+  }
+  float asFloat() const {
+    ARDUINOJSON_ASSERT(type_ == NumberType::Float);
+    return value_.asFloat;
+  }
+#if ARDUINOJSON_USE_DOUBLE
+  double asDouble() const {
+    ARDUINOJSON_ASSERT(type_ == NumberType::Double);
+    return value_.asDouble;
+  }
+#endif
+};
+inline Number parseNumber(const char* s) {
   typedef FloatTraits<JsonFloat> traits;
   typedef largest_type<traits::mantissa_type, JsonUInt> mantissa_t;
   typedef traits::exponent_type exponent_t;
@@ -6283,18 +6587,16 @@ inline bool parseNumber(const char* s, VariantData& result) {
   }
 #if ARDUINOJSON_ENABLE_NAN
   if (*s == 'n' || *s == 'N') {
-    result.setFloat(traits::nan());
-    return true;
+    return Number(traits::nan());
   }
 #endif
 #if ARDUINOJSON_ENABLE_INFINITY
   if (*s == 'i' || *s == 'I') {
-    result.setFloat(is_negative ? -traits::inf() : traits::inf());
-    return true;
+    return Number(is_negative ? -traits::inf() : traits::inf());
   }
 #endif
   if (!isdigit(*s) && *s != '.')
-    return false;
+    return Number();
   mantissa_t mantissa = 0;
   exponent_t exponent_offset = 0;
   const mantissa_t maxUint = JsonUInt(-1);
@@ -6313,12 +6615,10 @@ inline bool parseNumber(const char* s, VariantData& result) {
       const mantissa_t sintMantissaMax = mantissa_t(1)
                                          << (sizeof(JsonInteger) * 8 - 1);
       if (mantissa <= sintMantissaMax) {
-        result.setInteger(JsonInteger(~mantissa + 1));
-        return true;
+        return Number(JsonInteger(~mantissa + 1));
       }
     } else {
-      result.setInteger(JsonUInt(mantissa));
-      return true;
+      return Number(JsonUInt(mantissa));
     }
   }
   while (mantissa > traits::mantissa_max) {
@@ -6353,10 +6653,9 @@ inline bool parseNumber(const char* s, VariantData& result) {
       exponent = exponent * 10 + (*s - '0');
       if (exponent + exponent_offset > traits::exponent_max) {
         if (negative_exponent)
-          result.setFloat(is_negative ? -0.0f : 0.0f);
+          return Number(is_negative ? -0.0f : 0.0f);
         else
-          result.setFloat(is_negative ? -traits::inf() : traits::inf());
-        return true;
+          return Number(is_negative ? -traits::inf() : traits::inf());
       }
       s++;
     }
@@ -6365,17 +6664,24 @@ inline bool parseNumber(const char* s, VariantData& result) {
   }
   exponent += exponent_offset;
   if (*s != '\0')
-    return false;
-  JsonFloat final_result =
-      make_float(static_cast<JsonFloat>(mantissa), exponent);
-  result.setFloat(is_negative ? -final_result : final_result);
-  return true;
+    return Number();
+#if ARDUINOJSON_USE_DOUBLE
+  bool isDouble = exponent < -FloatTraits<float>::exponent_max ||
+                  exponent > FloatTraits<float>::exponent_max ||
+                  mantissa > FloatTraits<float>::mantissa_max;
+  if (isDouble) {
+    auto final_result = make_float(double(mantissa), exponent);
+    return Number(is_negative ? -final_result : final_result);
+  } else
+#endif
+  {
+    auto final_result = make_float(float(mantissa), exponent);
+    return Number(is_negative ? -final_result : final_result);
+  }
 }
 template <typename T>
 inline T parseNumber(const char* s) {
-  VariantData value;
-  parseNumber(s, value);
-  return Converter<T>::fromJson(JsonVariantConst(&value, nullptr));
+  return parseNumber(s).convertTo<T>();
 }
 template <typename TReader>
 class JsonDeserializer {
@@ -6564,7 +6870,7 @@ class JsonDeserializer {
           if (!member)
             return DeserializationError::NoMemory;
         } else {
-          member->setNull(resources_);
+          member->clear(resources_);
         }
         err = parseVariant(*member, memberFilter, nestingLimit.decrement());
         if (err)
@@ -6739,9 +7045,33 @@ class JsonDeserializer {
       c = current();
     }
     buffer_[n] = 0;
-    if (!parseNumber(buffer_, result))
-      return DeserializationError::InvalidInput;
-    return DeserializationError::Ok;
+    auto number = parseNumber(buffer_);
+    switch (number.type()) {
+      case NumberType::UnsignedInteger:
+        if (result.setInteger(number.asUnsignedInteger(), resources_))
+          return DeserializationError::Ok;
+        else
+          return DeserializationError::NoMemory;
+      case NumberType::SignedInteger:
+        if (result.setInteger(number.asSignedInteger(), resources_))
+          return DeserializationError::Ok;
+        else
+          return DeserializationError::NoMemory;
+      case NumberType::Float:
+        if (result.setFloat(number.asFloat(), resources_))
+          return DeserializationError::Ok;
+        else
+          return DeserializationError::NoMemory;
+#if ARDUINOJSON_USE_DOUBLE
+      case NumberType::Double:
+        if (result.setFloat(number.asDouble(), resources_))
+          return DeserializationError::Ok;
+        else
+          return DeserializationError::NoMemory;
+#endif
+      default:
+        return DeserializationError::InvalidInput;
+    }
   }
   DeserializationError::Code skipNumericValue() {
     char c = current();
@@ -6893,7 +7223,7 @@ class PrettyJsonSerializer : public JsonSerializer<TWriter> {
       nesting_++;
       while (!it.done()) {
         indent();
-        it->accept(*this);
+        it->accept(*this, base::resources_);
         it.next(base::resources_);
         base::write(it.done() ? "\r\n" : ",\r\n");
       }
@@ -6910,13 +7240,17 @@ class PrettyJsonSerializer : public JsonSerializer<TWriter> {
     if (!it.done()) {
       base::write("{\r\n");
       nesting_++;
+      bool isKey = true;
       while (!it.done()) {
-        indent();
-        base::visit(it.key());
-        base::write(": ");
-        it->accept(*this);
+        if (isKey)
+          indent();
+        it->accept(*this, base::resources_);
         it.next(base::resources_);
-        base::write(it.done() ? "\r\n" : ",\r\n");
+        if (isKey)
+          base::write(": ");
+        else
+          base::write(it.done() ? "\r\n" : ",\r\n");
+        isKey = !isKey;
       }
       nesting_--;
       indent();
@@ -6937,7 +7271,8 @@ class PrettyJsonSerializer : public JsonSerializer<TWriter> {
 ARDUINOJSON_END_PRIVATE_NAMESPACE
 ARDUINOJSON_BEGIN_PUBLIC_NAMESPACE
 template <typename TDestination>
-size_t serializeJsonPretty(JsonVariantConst source, TDestination& destination) {
+detail::enable_if_t<!detail::is_pointer<TDestination>::value, size_t>
+serializeJsonPretty(JsonVariantConst source, TDestination& destination) {
   using namespace ArduinoJson::detail;
   return serialize<PrettyJsonSerializer>(source, destination);
 }
@@ -6971,6 +7306,7 @@ struct Converter<MsgPackBinary> : private detail::VariantAttorney {
     if (!data)
       return;
     auto resources = getResourceManager(dst);
+    data->clear(resources);
     if (src.data()) {
       size_t headerSize = src.size() >= 0x10000 ? 5
                           : src.size() >= 0x100 ? 3
@@ -7004,7 +7340,6 @@ struct Converter<MsgPackBinary> : private detail::VariantAttorney {
         return;
       }
     }
-    data->setNull();
   }
   static MsgPackBinary fromJson(JsonVariantConst src) {
     auto data = getData(src);
@@ -7178,7 +7513,7 @@ class MsgPackDeserializer {
     }
     if (code <= 0x7f || code >= 0xe0) {  // fixint
       if (allowValue)
-        variant->setInteger(static_cast<int8_t>(code));
+        variant->setInteger(static_cast<int8_t>(code), resources_);
       return DeserializationError::Ok;
     }
     uint8_t sizeBytes = 0;
@@ -7289,12 +7624,15 @@ class MsgPackDeserializer {
       unsignedValue = (unsignedValue << 8) | buffer[i];
     if (isSigned) {
       auto truncatedValue = static_cast<JsonInteger>(signedValue);
-      if (truncatedValue == signedValue)
-        variant->setInteger(truncatedValue);
+      if (truncatedValue == signedValue) {
+        if (!variant->setInteger(truncatedValue, resources_))
+          return DeserializationError::NoMemory;
+      }
     } else {
       auto truncatedValue = static_cast<JsonUInt>(unsignedValue);
       if (truncatedValue == unsignedValue)
-        variant->setInteger(truncatedValue);
+        if (!variant->setInteger(truncatedValue, resources_))
+          return DeserializationError::NoMemory;
     }
     return DeserializationError::Ok;
   }
@@ -7307,7 +7645,7 @@ class MsgPackDeserializer {
     if (err)
       return err;
     fixEndianness(value);
-    variant->setFloat(value);
+    variant->setFloat(value, resources_);
     return DeserializationError::Ok;
   }
   template <typename T>
@@ -7319,8 +7657,10 @@ class MsgPackDeserializer {
     if (err)
       return err;
     fixEndianness(value);
-    variant->setFloat(value);
-    return DeserializationError::Ok;
+    if (variant->setFloat(value, resources_))
+      return DeserializationError::Ok;
+    else
+      return DeserializationError::NoMemory;
   }
   template <typename T>
   enable_if_t<sizeof(T) == 4, DeserializationError::Code> readDouble(
@@ -7334,7 +7674,7 @@ class MsgPackDeserializer {
       return err;
     doubleToFloat(i, o);
     fixEndianness(value);
-    variant->setFloat(value);
+    variant->setFloat(value, resources_);
     return DeserializationError::Ok;
   }
   DeserializationError::Code readString(VariantData* variant, size_t n) {
@@ -7506,6 +7846,7 @@ struct Converter<MsgPackExtension> : private detail::VariantAttorney {
     if (!data)
       return;
     auto resources = getResourceManager(dst);
+    data->clear(resources);
     if (src.data()) {
       uint8_t format, sizeBytes;
       if (src.size() >= 0x10000) {
@@ -7546,7 +7887,6 @@ struct Converter<MsgPackExtension> : private detail::VariantAttorney {
         return;
       }
     }
-    data->setNull();
   }
   static MsgPackExtension fromJson(JsonVariantConst src) {
     auto data = getData(src);
@@ -7622,8 +7962,8 @@ class MsgPackSerializer : public VariantDataVisitor<size_t> {
     }
     auto slotId = array.head();
     while (slotId != NULL_SLOT) {
-      auto slot = resources_->getSlot(slotId);
-      slot->data()->accept(*this);
+      auto slot = resources_->getVariant(slotId);
+      slot->accept(*this, resources_);
       slotId = slot->next();
     }
     return bytesWritten();
@@ -7641,9 +7981,8 @@ class MsgPackSerializer : public VariantDataVisitor<size_t> {
     }
     auto slotId = object.head();
     while (slotId != NULL_SLOT) {
-      auto slot = resources_->getSlot(slotId);
-      visit(slot->key());
-      slot->data()->accept(*this);
+      auto slot = resources_->getVariant(slotId);
+      slot->accept(*this, resources_);
       slotId = slot->next();
     }
     return bytesWritten();
@@ -7758,7 +8097,8 @@ class MsgPackSerializer : public VariantDataVisitor<size_t> {
 ARDUINOJSON_END_PRIVATE_NAMESPACE
 ARDUINOJSON_BEGIN_PUBLIC_NAMESPACE
 template <typename TDestination>
-inline size_t serializeMsgPack(JsonVariantConst source, TDestination& output) {
+detail::enable_if_t<!detail::is_pointer<TDestination>::value, size_t>
+serializeMsgPack(JsonVariantConst source, TDestination& output) {
   using namespace ArduinoJson::detail;
   return serialize<MsgPackSerializer>(source, output);
 }

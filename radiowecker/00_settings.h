@@ -31,26 +31,27 @@ uint8_t actStation = 0;          // Index der aktuellen Station in der Liste, ve
 uint8_t bright = 25;             // Helligkeit in Prozent. 0 bedeutet, dass der LDR die Helligkeit regelt
 
 // Weitere globale Variablen
-uint32_t lastchange = 0;     // Zeitpunkt der letzten Auswahländerung
-uint8_t snoozeWait = 0;      // Verbleibende Minuten für den Schlummermodus
-uint16_t alarmtime = 0;      // Nächste relevante Alarmzeit
-uint8_t alarmday = 8;        // Wochentag für den nächsten relevanten Alarm oder 8 bedeutet Alarm deaktiviert
-char title[64];              // Zeichenarray zur Speicherung der Metadaten-Nachricht
-bool newTitle = false;       // Flag zum Signalisieren eines neuen Titels
-uint32_t tick = 0;           // Letzter Wert des Tick-Counters zur Auslösung zeitgesteuerter Ereignisse
-uint32_t discon = 0;         // Tick-Counter-Wert zur Berechnung der Zeit der Trennung
-uint16_t minutes;            // Aktuelle Anzahl der Minuten seit Mitternacht
-uint8_t weekday;             // Aktueller Wochentag
-struct tm ti;                // Zeitstruktur mit der aktuellen Zeit
-int16_t lastldr;             // Letzter Wert vom LDR-Sensor zur Erkennung von Änderungen
-uint32_t start_conf;         // Zeitpunkt des Betretens des Konfigurationsbildschirms
-boolean connected;           // Flag zum Signalisieren einer aktiven Verbindung
-boolean radio = false;       // Flag zum Signalisieren der Radiowiedergabe
-boolean clockmode = true;    // Flag zum Signalisieren, dass die Uhrzeit auf dem Bildschirm angezeigt wird
-boolean configpage = false;  // Flag zum Signalisieren, dass die Konfigurationsseite angezeigt wird
-boolean radiopage = false;   // Flag zum Signalisieren, dass die Radioauswahlseite angezeigt wird
-boolean alarmpage = false;   // Flag zum Signalisieren, dass die Alarm-Einstellseite angezeigt wird
-
+uint32_t lastchange = 0;       // Zeitpunkt der letzten Auswahländerung
+uint32_t snoozeTimeEnd = 0;    // Zeitpunkt zum Beenden des Schlummermodus
+uint16_t alarmtime = 0;        // Nächste relevante Alarmzeit
+uint8_t alarmday = 8;          // Wochentag für den nächsten relevanten Alarm oder 8 bedeutet Alarm deaktiviert
+char title[64];                // Zeichenarray zur Speicherung der Metadaten-Nachricht
+bool newTitle = false;         // Flag zum Signalisieren eines neuen Titels
+uint32_t tick = 0;             // Letzter Wert des Tick-Counters zur Auslösung zeitgesteuerter Ereignisse
+uint32_t discon = 0;           // Tick-Counter-Wert zur Berechnung der Zeit der Trennung
+uint16_t minutes;              // Aktuelle Anzahl der Minuten seit Mitternacht
+uint8_t weekday;               // Aktueller Wochentag
+struct tm ti;                  // Zeitstruktur mit der aktuellen Zeit
+int16_t lastldr;               // Letzter Wert vom LDR-Sensor zur Erkennung von Änderungen
+uint32_t start_conf;           // Zeitpunkt des Betretens des Konfigurationsbildschirms
+boolean connected;             // Flag zum Signalisieren einer aktiven Verbindung
+boolean radio = false;         // Flag zum Signalisieren der Radiowiedergabe
+boolean clockmode = true;      // Flag zum Signalisieren, dass die Uhrzeit auf dem Bildschirm angezeigt wird
+boolean configpage = false;    // Flag zum Signalisieren, dass die Konfigurationsseite angezeigt wird
+boolean radiopage = false;     // Flag zum Signalisieren, dass die Radioauswahlseite angezeigt wird
+boolean alarmpage = false;     // Flag zum Signalisieren, dass die Alarm-Einstellseite angezeigt wird
+unsigned long lastUpdate = 0;  // Variable, um die letzte Anzeigeaktualisierung zu verfolgen
+uint16_t lastLedb = 0;         // Globale Variable, um den zuletzt eingestellten Helligkeitswert zu speichern
 // Definitionen für die Textausrichtung
 #define ALIGNLEFT 0    // Textausrichtung: linksbündig
 #define ALIGNCENTER 1  // Textausrichtung: zentriert

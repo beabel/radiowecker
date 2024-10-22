@@ -44,7 +44,7 @@ void DrawFooterButtons_Power_Sleep_Alarm() {
   tft.drawBitmap(0, 176, knopf_sym[0], 64, 64, color_temp, COLOR_KNOEPFE_BG);
 
   // Sleep Button
-  if (snoozeWait != 0) {          // Wenn der Schlummermodus aktiv ist
+  if (snoozeTimeEnd != 0) {       // Wenn der Schlummermodus aktiv ist
     color_temp = ILI9341_ORANGE;  // Setze Farbe für aktiven Schlummermodus
   } else {
     color_temp = COLOR_KNOEPFE;  // Setze Standardfarbe für inaktiven Zustand
@@ -364,20 +364,11 @@ void setSnoozeTime(uint16_t value) {
   displayMessage(231, 96, 80, 20, txt, ALIGNRIGHT, false, ILI9341_BLACK, ILI9341_LIGHTGREY, 1);
 }
 
-// Passt die Hintergrundbeleuchtung des Displays basierend auf dem Prozentsatz an
-// Wenn der Prozentsatz 0 ist, wird die Helligkeit des Displays alle 10 Sekunden neu eingestellt,
-// indem der Wert vom lichtabhängigen Widerstand (LDR) gelesen wird.
-// Ansonsten wird die Helligkeit direkt aus dem Prozentsatz berechnet und auf den Bereich von 0 bis 255 skaliert.
 void setBGLight(uint8_t prct) {
   uint16_t ledb;  // Variable für die Helligkeit der LED
 
   // Wenn der Prozentsatz 0 ist, lese die Umgebungshelligkeit vom LDR (Lichtabhängiger Widerstand)
   if (prct == 0) {
-    // Dank an René Herzmann für den Hinweis
-    /*
-    Bei Verwendung des LDR (Slider-Helligkeit auf „0“) begann das Display zu flackern.
-    Daher wird die Helligkeit des Displays nur alle 10 Sekunden neu eingestellt.
-    */
     static unsigned long prevMillis = -20000;   // Zeitstempel der letzten Helligkeitsmessung
     if (millis() - prevMillis < 10000) return;  // Warte 10 Sekunden, bevor die Helligkeit erneut gemessen wird
     prevMillis = millis();                      // Aktualisiere den Zeitstempel
@@ -394,11 +385,15 @@ void setBGLight(uint8_t prct) {
   // Wenn LED_ON auf 0 gesetzt ist, invertiere die Helligkeit
   if (LED_ON == 0) ledb = 255 - ledb;
 
-  // Debug-Ausgabe der Helligkeit
-  Serial.printf("percent = %i LED = %i\n", prct, ledb);
+  // Nur dann die Helligkeit setzen, wenn sich der Wert geändert hat
+  if (ledb != lastLedb) {
+    // Debug-Ausgabe der Helligkeit
+    Serial.printf("percent = %i LED = %i\n", prct, ledb);
 
-  // Setze die Helligkeit der Hintergrundbeleuchtung
-  analogWrite(TFT_LED, ledb);
+    // Setze die Helligkeit der Hintergrundbeleuchtung
+    analogWrite(TFT_LED, ledb);
+    lastLedb = ledb;  // Speichere den neuen Helligkeitswert
+  }
 }
 
 // Wählt eine Station aus der Liste der Stationen basierend auf der x-Position des Touch-Ereignisses aus
@@ -446,9 +441,9 @@ void selectStation(uint16_t x) {
 void toggleRadio(boolean off) {
   if (off) {
     // Wenn 'off' wahr ist, stoppe das Radio
-    stopPlaying();   // Stoppe den aktuellen Stream
-    snoozeWait = 0;  // Setze die Schlummerzeit zurück
-    radio = false;   // Setze den Radio-Status auf 'aus'
+    stopPlaying();      // Stoppe den aktuellen Stream
+    snoozeTimeEnd = 0;  // Schalte die Schlummerzeit aus
+    radio = false;      // Setze den Radio-Status auf 'aus'
     //setGain(0);  // (Optional) Setze die Lautstärke auf 0 (auskommentiert)
   } else {
     // Wenn 'off' falsch ist, schalte das Radio ein
@@ -493,10 +488,19 @@ void toggleAlarm() {
 // stoppt die Wiedergabe des Radios, indem die Funktion 'toggleRadio(false)' aufgerufen wird,
 // und wechselt anschließend in den Uhr-Modus, indem 'clockmode' auf true gesetzt und die Uhr-Anzeige angezeigt wird.
 void startSnooze() {
-  snoozeWait = snoozeTime;  // Setzt die Schlummerzeit auf den aktuellen Wert von snoozeTime
-  toggleRadio(false);       // Schaltet das Radio aus (stoppt die Wiedergabe)
-  clockmode = true;         // Setzt den Modus auf Uhr
-  showClock();              // Zeigt die Uhr-Anzeige an
+  struct tm ti;
+  if (getLocalTime(&ti)) {
+    // Berechne die exakte Zeit zum Ende des Schlummermodus in Minuten seit Mitternacht
+    int currentMinutes = ti.tm_hour * 60 + ti.tm_min;
+    // Berechne die verbleibenden Millisekunden bis zum Ende des Schlummermodus
+    snoozeTimeEnd = millis() + (snoozeTime * 60000);  // Schlummerzeit relativ zur aktuellen Zeit
+  } else {
+    // Falls keine Zeit verfügbar, fallback auf millis()
+    snoozeTimeEnd = millis() + snoozeTime * 60000;  // Setze die Schlummerzeit basierend auf millis()
+  }
+  toggleRadio(false);                             // Schaltet das Radio aus (stoppt die Wiedergabe)
+  clockmode = true;                               // Setzt den Modus auf Uhr
+  showClock();                                    // Zeigt die Uhr-Anzeige an
 }
 
 // Setzt die ausgewählte Station als aktive Station, speichert diesen Wert und versucht, die URL der aktuellen Station zu starten.
@@ -641,6 +645,8 @@ void updateTime(boolean redraw) {
     // Formatierung des Datums als "Wochentag Tag. Monat Jahr"
     sprintf(tim, "%s %i. %s %i", days[ti.tm_wday], ti.tm_mday, months[ti.tm_mon], ti.tm_year + 1900);
 
+    tick = millis() - ti.tm_sec * 1000;  // Berechnung der Systemzeit vom Startpunkt der aktuellen Minute
+
     // Überprüft, ob die Anzeige neu gezeichnet werden soll oder sich das Datum geändert hat.
     // Wenn ja, wird die Datumszeile neu gezeichnet.
     if (redraw || (strcmp(tim, lastdate) != 0)) {
@@ -650,7 +656,7 @@ void updateTime(boolean redraw) {
 
     uint8_t z;                                 // Variable zur Speicherung des Ziffernwerts
     strftime(tim, sizeof(tim), "%H:%M", &ti);  // Formatiert die aktuelle Zeit als "HH:MM"
-    Serial.printf("Zeit = %s\n", tim);         // Gibt die aktuelle Zeit an die serielle Konsole aus
+    
 
     // Durchläuft den Zeit-String, um jede Ziffer zu überprüfen.
     // Wenn `redraw` true ist oder sich eine Ziffer geändert hat, wird diese Ziffer neu gezeichnet.
@@ -661,10 +667,11 @@ void updateTime(boolean redraw) {
       if ((z < 11) && (redraw || (tim[i] != lasttime[i]))) {
         // Zeichnet die Ziffern auf dem Display. Die Ziffern-Bilder werden durch `ziffern[z]` bereitgestellt.
         tft.drawBitmap(30 + i * 55, 18, ziffern[z], 50, 70, COLOR_TIME, COLOR_BG);
+        drawHeaderInfos();      // Zeichnet Symbole und Text im Header
+        Serial.printf("Zeit = %s\n", tim);         // Gibt die aktuelle Zeit an die serielle Konsole aus
       }
     }
 
-    drawHeaderInfos();      // Zeichnet Symbole und Text im Header
     strcpy(lasttime, tim);  // Speichert die neue Zeit in `lasttime`
   }
 }
@@ -707,8 +714,8 @@ void drawWifiInfo() {
 void drawSnoozeInfo() {
   uint16_t color_snooze;  // Variable zur Speicherung der Farbe für das Einschlafsymbol
 
-  // Überprüfen, ob die Schlummerfunktion aktiv ist (snoozeWait != 0)
-  if (snoozeWait != 0) {
+  // Überprüfen, ob die Schlummerfunktion aktiv ist (snoozeTimeEnd != 0)
+  if (snoozeTimeEnd != 0) {
     color_snooze = COLOR_SLEEP_SYMBOL;  // Farbe für das aktive Einschlafsymbol
   } else {
     color_snooze = COLOR_BG;  // Hintergrundfarbe für das nicht aktive Einschlafsymbol
@@ -727,7 +734,6 @@ void displayClear() {
 
 // Zeigt Datum und Uhrzeit an der vorgesehenen Position an
 void displayDateTime() {
-  Serial.println("Show Time");  // Debug-Ausgabe für den Beginn der Zeitdarstellung
   updateTime(false);            // Aktualisiert die Zeit ohne komplettes Neuzeichnen
 }
 
