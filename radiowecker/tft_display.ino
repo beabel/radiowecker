@@ -484,23 +484,23 @@ void toggleAlarm() {
   showClock();       // Zeige die Uhr-Anzeige an
 }
 
-// Startet die Schlummerfunktion. Setzt die Schlummerzeit auf den aktuellen Wert von 'snoozeTime',
-// stoppt die Wiedergabe des Radios, indem die Funktion 'toggleRadio(false)' aufgerufen wird,
-// und wechselt anschließend in den Uhr-Modus, indem 'clockmode' auf true gesetzt und die Uhr-Anzeige angezeigt wird.
+// Startet die Schlummerfunktion.
+// Berechnet die Zeit zum Ende des Schlummermodus basierend auf der aktuellen Uhrzeit oder alternativ mit 'millis()', falls die Zeit nicht verfügbar ist.
+// Setzt den Modus auf Uhr, stoppt die Radio-Wiedergabe und zeigt die Uhr-Anzeige an.
 void startSnooze() {
   struct tm ti;
   if (getLocalTime(&ti)) {
-    // Berechne die exakte Zeit zum Ende des Schlummermodus in Minuten seit Mitternacht
+    // Berechne die aktuelle Zeit in Minuten seit Mitternacht
     int currentMinutes = ti.tm_hour * 60 + ti.tm_min;
-    // Berechne die verbleibenden Millisekunden bis zum Ende des Schlummermodus
-    snoozeTimeEnd = millis() + (snoozeTime * 60000);  // Schlummerzeit relativ zur aktuellen Zeit
+    // Setzt die Zeit für das Ende des Schlummermodus relativ zur aktuellen Zeit in Millisekunden
+    snoozeTimeEnd = millis() + (snoozeTime * 60000);
   } else {
-    // Falls keine Zeit verfügbar, fallback auf millis()
-    snoozeTimeEnd = millis() + snoozeTime * 60000;  // Setze die Schlummerzeit basierend auf millis()
+    // Fallback: Setzt die Schlummerzeit basierend auf millis(), falls keine Zeit verfügbar ist
+    snoozeTimeEnd = millis() + snoozeTime * 60000;
   }
-  toggleRadio(false);                             // Schaltet das Radio aus (stoppt die Wiedergabe)
-  clockmode = true;                               // Setzt den Modus auf Uhr
-  showClock();                                    // Zeigt die Uhr-Anzeige an
+  toggleRadio(false);   // Schaltet das Radio aus
+  clockmode = true;     // Wechselt in den Uhr-Modus
+  showClock();          // Zeigt die Uhr-Anzeige an
 }
 
 // Setzt die ausgewählte Station als aktive Station, speichert diesen Wert und versucht, die URL der aktuellen Station zu starten.
