@@ -3,6 +3,7 @@
 #include "knoepfe.h"            // Grafikdaten für Buttons
 #include "symbole.h"            // Grafikdaten für Symbole
 #include "num_64_44.h"          // Grafikdaten für Favoriten-Buttons
+#include "weather.h"
 
 // Struktur zur Speicherung der Alarmkonfiguration
 typedef struct {
@@ -669,6 +670,16 @@ void updateTime(boolean redraw) {
         tft.drawBitmap(30 + i * 55, 18, ziffern[z], 50, 70, COLOR_TIME, COLOR_BG);
         drawHeaderInfos();      // Zeichnet Symbole und Text im Header
         Serial.printf("Zeit = %s\n", tim);         // Gibt die aktuelle Zeit an die serielle Konsole aus
+        // Zeige Metadaten an, wenn das Radio aktiv ist und wir im Uhrmodus sind
+        if (!radio && clockmode) {
+        // Wetterdaten abrufen
+        String weatherData = getWeatherData(LATITUDE, LONGITUDE, TIME_ZONE_IANA);  // Wetterdaten von API abrufen
+
+        // Wetterdaten anzeigen (zunächst nur seriell)
+        displayWeather(weatherData);  // Funktion zur Anzeige der Wetterdaten
+        }        
+
+
       }
     }
 

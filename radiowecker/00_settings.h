@@ -72,3 +72,8 @@ uint16_t lastLedb = 0;         // Globale Variable, um den zuletzt eingestellten
 // OTA-Konfiguration
 #define OTA_HOSTNAME "radiowecker"   // Definiert den Hostnamen für OTA Update
 #define OTA_PASSWORD "weckerupdate"  // Definiert das Passwort für OTA Update
+
+// Definiere Latitude, Longitude und Zeitzone
+const float LATITUDE = 52.520645;
+const float LONGITUDE = 13.409779;
+const String TIME_ZONE_IANA = "Europe/Berlin";  // Zeitzone dynamisch setzen
