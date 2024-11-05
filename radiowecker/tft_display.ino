@@ -3,7 +3,7 @@
 #include "knoepfe.h"            // Grafikdaten für Buttons
 #include "symbole.h"            // Grafikdaten für Symbole
 #include "num_64_44.h"          // Grafikdaten für Favoriten-Buttons
-#include "weather.h"
+
 
 // Struktur zur Speicherung der Alarmkonfiguration
 typedef struct {
@@ -499,9 +499,9 @@ void startSnooze() {
     // Fallback: Setzt die Schlummerzeit basierend auf millis(), falls keine Zeit verfügbar ist
     snoozeTimeEnd = millis() + snoozeTime * 60000;
   }
-  toggleRadio(false);   // Schaltet das Radio aus
-  clockmode = true;     // Wechselt in den Uhr-Modus
-  showClock();          // Zeigt die Uhr-Anzeige an
+  toggleRadio(false);  // Schaltet das Radio aus
+  clockmode = true;    // Wechselt in den Uhr-Modus
+  showClock();         // Zeigt die Uhr-Anzeige an
 }
 
 // Setzt die ausgewählte Station als aktive Station, speichert diesen Wert und versucht, die URL der aktuellen Station zu starten.
@@ -637,55 +637,39 @@ void textInBox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text,
 void updateTime(boolean redraw) {
   char tim[40];  // Temporäres Array für die Zeit- und Datumsdarstellung
 
-  // Diese Variablen sind statisch, um ihren Wert zwischen den Aufrufen zu behalten.
   static char lastdate[40] = "";
   static char lasttime[10] = "";
 
-  // Holt die lokale Zeit und speichert sie in der Struktur `ti`.
+  // Prüfe, ob getLocalTime erfolgreich die aktuelle Zeit geholt hat
   if (getLocalTime(&ti)) {
-    // Formatierung des Datums als "Wochentag Tag. Monat Jahr"
+    // Formatiere Datum: "Wochentag Tag. Monat Jahr"
     sprintf(tim, "%s %i. %s %i", days[ti.tm_wday], ti.tm_mday, months[ti.tm_mon], ti.tm_year + 1900);
 
-    tick = millis() - ti.tm_sec * 1000;  // Berechnung der Systemzeit vom Startpunkt der aktuellen Minute
-
-    // Überprüft, ob die Anzeige neu gezeichnet werden soll oder sich das Datum geändert hat.
-    // Wenn ja, wird die Datumszeile neu gezeichnet.
+    // Zeichne das Datum, wenn es sich geändert hat oder die Anzeige neu gezeichnet werden soll
     if (redraw || (strcmp(tim, lastdate) != 0)) {
-      strcpy(lastdate, tim);                                                       // Speichert das neue Datum in `lastdate`
-      textInBox(0, 90, 320, 25, tim, ALIGNCENTER, true, COLOR_DATE, COLOR_BG, 1);  // Zeichnet das Datum
+      strcpy(lastdate, tim);
+      textInBox(0, 90, 320, 25, tim, ALIGNCENTER, true, COLOR_DATE, COLOR_BG, 1);
     }
 
-    uint8_t z;                                 // Variable zur Speicherung des Ziffernwerts
-    strftime(tim, sizeof(tim), "%H:%M", &ti);  // Formatiert die aktuelle Zeit als "HH:MM"
-    
+    uint8_t z;
+    // Formatiere die Uhrzeit: "HH:MM"
+    strftime(tim, sizeof(tim), "%H:%M", &ti);
 
-    // Durchläuft den Zeit-String, um jede Ziffer zu überprüfen.
-    // Wenn `redraw` true ist oder sich eine Ziffer geändert hat, wird diese Ziffer neu gezeichnet.
+    // Zeichne nur die Ziffern, die sich geändert haben
     for (uint8_t i = 0; i < 5; i++) {
-      // Überprüft, ob die aktuelle Position im Zeit-String eine Trennstelle (":") ist.
-      // Setzt `z` auf 10 für den Trennstrich oder auf die numerische Ziffer.
       z = (i == 2) ? 10 : tim[i] - '0';
       if ((z < 11) && (redraw || (tim[i] != lasttime[i]))) {
-        // Zeichnet die Ziffern auf dem Display. Die Ziffern-Bilder werden durch `ziffern[z]` bereitgestellt.
         tft.drawBitmap(30 + i * 55, 18, ziffern[z], 50, 70, COLOR_TIME, COLOR_BG);
-        drawHeaderInfos();      // Zeichnet Symbole und Text im Header
-        Serial.printf("Zeit = %s\n", tim);         // Gibt die aktuelle Zeit an die serielle Konsole aus
-        // Zeige Metadaten an, wenn das Radio aktiv ist und wir im Uhrmodus sind
-        if (!radio && clockmode) {
-        // Wetterdaten abrufen
-        String weatherData = getWeatherData(LATITUDE, LONGITUDE, TIME_ZONE_IANA);  // Wetterdaten von API abrufen
-
-        // Wetterdaten anzeigen (zunächst nur seriell)
-        displayWeather(weatherData);  // Funktion zur Anzeige der Wetterdaten
-        }        
-
-
+        drawHeaderInfos();  // Zeichne Symbole und Text im Header
+        Serial.printf("Zeit = %s\n", tim);
       }
     }
 
-    strcpy(lasttime, tim);  // Speichert die neue Zeit in `lasttime`
+    strcpy(lasttime, tim);
+
   }
 }
+
 
 // Zeichnet die Informationen im Header des Displays, einschließlich Wifi-Informationen, Einschlafsymbol und nächste Alarmzeit.
 void drawHeaderInfos() {
@@ -745,7 +729,7 @@ void displayClear() {
 
 // Zeigt Datum und Uhrzeit an der vorgesehenen Position an
 void displayDateTime() {
-  updateTime(false);            // Aktualisiert die Zeit ohne komplettes Neuzeichnen
+  updateTime(false);  // Aktualisiert die Zeit ohne komplettes Neuzeichnen
 }
 
 // Zeigt den Fortschritt eines Software-Updates als Balken und Prozentsatz an

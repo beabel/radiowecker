@@ -135,6 +135,24 @@ void setAccessData() {
     pref.putString("ntp", ntp);
   }
 
+  // Speichere die Timezone, wenn vorhanden
+  if (server.hasArg("TIME_ZONE_IANA")) {
+    TIME_ZONE_IANA = server.arg("TIME_ZONE_IANA");
+    pref.putString("TIME_ZONE_IANA", TIME_ZONE_IANA);
+  }
+
+// Speichere die Latitude, wenn sie vorhanden ist
+if (server.hasArg("LATITUDE")) {
+  LATITUDE = server.arg("LATITUDE").toFloat();
+  pref.putFloat("LATITUDE", LATITUDE);
+}
+
+// Speichere die Longitude, wenn sie vorhanden ist
+if (server.hasArg("LONGITUDE")) {
+  LONGITUDE = server.arg("LONGITUDE").toFloat();
+  pref.putFloat("LONGITUDE", LONGITUDE);
+}
+
   // Antworte mit "OK"
   server.send(200, "text/plain", "OK");
 }
@@ -143,11 +161,12 @@ void setAccessData() {
 // Sendet Zugangsdaten als Textnachricht
 void getAccessData() {
   // Erstelle eine Nachricht mit den Zugangsdaten, getrennt durch Zeilenumbrüche
-  String msg = String(ssid) + "\n" + String(pkey) + "\n" + String(ntp);
+  String msg = String(ssid) + "\n" + String(pkey) + "\n" + String(ntp) + "\n" + String(TIME_ZONE_IANA) + "\n" + String(LATITUDE, 6) + "\n" + String(LONGITUDE, 6);
 
   // Antworte mit den Zugangsdaten
   server.send(200, "text/plain", msg);
 }
+
 
 // Bearbeitet AJAX-Befehle für "/cmd/getalarms"
 // Sendet die Alarmzeiten und die Wochentage für zwei Alarme als Textnachricht

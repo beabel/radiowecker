@@ -3,7 +3,7 @@
 #include "00_pin_settings.h"  //Einstellungen der genutzten Pins
 #include "00_settings.h"      //einstellungen
 #include "00_texte.h"         //Strings
-
+#include "weather.h"
 //predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
 
@@ -78,6 +78,10 @@ void setup() {
   if (pref.isKey("ssid")) ssid = pref.getString("ssid");  // SSID für WLAN-Verbindung
   if (pref.isKey("pkey")) pkey = pref.getString("pkey");  // Passkey für WLAN-Verbindung
   if (pref.isKey("ntp")) ntp = pref.getString("ntp");     // NTP-Server-URL für die Zeitabgleich
+  if (pref.isKey("TIME_ZONE_IANA")) TIME_ZONE_IANA = pref.getString("TIME_ZONE_IANA");  // Zeitzone abrufen
+  if (pref.isKey("LATITUDE")) LATITUDE = pref.getFloat("LATITUDE");   // Latitude für die Wetterdaten
+  if (pref.isKey("LONGITUDE")) LONGITUDE = pref.getFloat("LONGITUDE");  // Longitude für die Wetterdaten
+
 
   curGain = 50;                                              // Standardwert für Lautstärke
   if (pref.isKey("gain")) curGain = pref.getUShort("gain");  // Abrufen des Lautstärkewerts
@@ -230,7 +234,14 @@ void loop() {
     }
   }
 
-
+  // Wetterdaten beim ersten Durchlauf sofort abrufen (wenn lastWeatherUpdate == 0) oder alle 60 Sekunden
+  if (millis() - lastWeatherUpdate > weatherUpdateInterval || lastWeatherUpdate == 0) {
+    if (!radio && clockmode) {
+      String weatherData = getWeatherData(LATITUDE, LONGITUDE, TIME_ZONE_IANA);
+      displayWeather(weatherData);
+    }
+    lastWeatherUpdate = millis();  // Zeitstempel für das nächste Update
+  }
 
   // Zeitgesteuertes Ereignis: Update der Anzeige alle 1 Sekunde
   if ((millis() - lastUpdate) > 1000) {
