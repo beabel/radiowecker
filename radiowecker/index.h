@@ -15,6 +15,9 @@ const char MAIN_page[] PROGMEM = R"=====(
 <script>
 $(document).ready(function() {
   $("#tabs").tabs();
+  $( "#accordion" ).accordion({
+    heightStyle: "content"
+  });
   //Standard Stuff
   getAll();
   $("#btn_save").click(saveSSID);
@@ -162,6 +165,9 @@ function getSSID() {
             $("#ssid_input").val(parts[0]);
             $("#pkey_input").val(parts[1]);
             $("#ntp_input").val(parts[2]);
+            $("#TIME_ZONE_IANA_input").val(parts[3]);
+            $("#LATITUDE_input").val(parts[4]);   // Latitude hinzufügen
+            $("#LONGITUDE_input").val(parts[5]);  // Longitude hinzufügen
         }
     });
 }
@@ -189,14 +195,21 @@ function getAlarms() {
 }
 
 function saveSSID() {
-  $.ajax({
-      type:"GET",
-      url:"/cmd/setaccess",
-      data:{"ssid":$("#ssid_input").val(),"pkey":$("#pkey_input").val(),"ntp":$("#ntp_input").val()},
-      success: function(data){
-          alert(data);
-      }
-  });
+    $.ajax({
+        type:"GET",
+        url:"/cmd/setaccess",
+        data:{
+          "ssid": $("#ssid_input").val(),
+          "pkey": $("#pkey_input").val(),
+          "ntp": $("#ntp_input").val(),
+          "TIME_ZONE_IANA": $("#TIME_ZONE_IANA_input").val(),
+          "LATITUDE": $("#LATITUDE_input").val(),    // Latitude hinzufügen
+          "LONGITUDE": $("#LONGITUDE_input").val()   // Longitude hinzufügen
+        },
+        success: function(data){
+            alert(data);
+        }
+    });
 }
 
 function setAlarms() {
@@ -589,7 +602,7 @@ input {
         <li><a href="#player"><i class="fa fa-music"></i></a></li>    
         <li><a href="#wecker"><i class="fa fa-clock"></i></a></li>
         <li><a href="#radio"><i class="fas fa-list-ol"></i></a></li>   
-        <li><a href="#wlan"><i class="fa fa-wifi"></i></a></li>
+        <li><a href="#wlan"><i class="fa fa-gears"></i></a></li>
         <li><a href="#info"><i class="fas fa-question"></i></a></li>        
     </ul>
     <div id="player">
@@ -754,18 +767,49 @@ input {
       </div>
     </div>         
     <div id="wlan">
-      <label>SSID:
-        <input id="ssid_input" />
-      </label>
-      <br />
-      <label>PKEY:
-        <input id="pkey_input" type="password"/>
-      </label>
-      <br />
-      <label>NTP:
-        <input id="ntp_input" />
-      </label>
-      <br />
+      <div id="accordion">
+        <h3><i class="fa fa-wifi"></i> Wlan</h3>
+        <div>
+          <p>
+            <label>SSID:
+              <input id="ssid_input" />
+            </label>
+            <br />
+            <label>PKEY:
+              <input id="pkey_input" type="password"/>
+            </label>
+            <br />
+          </p>
+        </div>
+        <h3><i class="fa fa-business-time"></i> NTP</h3>
+        <div>
+          <p>
+            <label>NTP:
+              <input id="ntp_input" />
+            </label>
+            <br />
+          </p>
+        </div>
+        <h3><i class="fa fa-umbrella"></i> Wetter</h3>
+        <div>
+          <p>
+            <!-- ################# Wetter -------------- -->
+            <label>TIME_ZONE_IANA:
+              <input id="TIME_ZONE_IANA_input" name="TIME_ZONE_IANA" />
+            </label>
+            <br />
+            <label>Latitude:
+              <input id="LATITUDE_input" name="LATITUDE" type="number" step="0.000001" min="-90" max="90" />
+            </label>
+            <br />
+            <label>Longitude:
+              <input id="LONGITUDE_input" name="LONGITUDE" type="number" step="0.000001" min="-180" max="180" />
+            </label>
+            <br />
+          </p>
+        </div>
+      </div>
+      <hr />      
       <div align="center">
         <button id="btn_save" type="button">Speichern</button>
         <button id="btn_reset" type="button">Neustart</button>

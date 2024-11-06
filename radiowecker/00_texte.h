@@ -21,4 +21,12 @@ const char* const PROGMEM days[] = { "Sonntag", "Montag", "Dienstag", "Mittwoch"
 const char* const PROGMEM days_short[] = { "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" };
 const char* PROGMEM months[] = { "Jan.", "Feb.", "März", "April", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez." };
 
+#define TXT_NOW "Jetzt"
+#define TXT_TODAY "Heute"
+#define TXT_TOMMORROW "Morgen"
+
+#define TXT_TEMP "Temp:"
+#define TXT_FEELS "wie:"
+#define TXT_MIN "Min"
+#define TXT_MAX "Max"
 #endif  // TEXTE_H

@@ -72,3 +72,11 @@ uint16_t lastLedb = 0;         // Globale Variable, um den zuletzt eingestellten
 // OTA-Konfiguration
 #define OTA_HOSTNAME "radiowecker"   // Definiert den Hostnamen für OTA Update
 #define OTA_PASSWORD "weckerupdate"  // Definiert das Passwort für OTA Update
+//############## WETTER ##############################################################
+// Globale Variable, um den Zeitpunkt des letzten Wetterupdates zu speichern
+unsigned long lastWeatherUpdate = 0;
+const unsigned long weatherUpdateInterval = 60000;  // 60 Sekunden
+// Definiere Latitude, Longitude und Zeitzone
+float LATITUDE = 52.520645;
+float LONGITUDE = 13.409779;
+String TIME_ZONE_IANA = "Europe/Berlin";  // Zeitzone dynamisch setzen

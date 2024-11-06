@@ -3,6 +3,7 @@
 #include "knoepfe.h"            // Grafikdaten für Buttons
 #include "symbole.h"            // Grafikdaten für Symbole
 #include "num_64_44.h"          // Grafikdaten für Favoriten-Buttons
+#include "weather_icons.h"      // Grafikdaten für Wetter Icons
 
 // Struktur zur Speicherung der Alarmkonfiguration
 typedef struct {
@@ -484,23 +485,23 @@ void toggleAlarm() {
   showClock();       // Zeige die Uhr-Anzeige an
 }
 
-// Startet die Schlummerfunktion. Setzt die Schlummerzeit auf den aktuellen Wert von 'snoozeTime',
-// stoppt die Wiedergabe des Radios, indem die Funktion 'toggleRadio(false)' aufgerufen wird,
-// und wechselt anschließend in den Uhr-Modus, indem 'clockmode' auf true gesetzt und die Uhr-Anzeige angezeigt wird.
+// Startet die Schlummerfunktion.
+// Berechnet die Zeit zum Ende des Schlummermodus basierend auf der aktuellen Uhrzeit oder alternativ mit 'millis()', falls die Zeit nicht verfügbar ist.
+// Setzt den Modus auf Uhr, stoppt die Radio-Wiedergabe und zeigt die Uhr-Anzeige an.
 void startSnooze() {
   struct tm ti;
   if (getLocalTime(&ti)) {
-    // Berechne die exakte Zeit zum Ende des Schlummermodus in Minuten seit Mitternacht
+    // Berechne die aktuelle Zeit in Minuten seit Mitternacht
     int currentMinutes = ti.tm_hour * 60 + ti.tm_min;
-    // Berechne die verbleibenden Millisekunden bis zum Ende des Schlummermodus
-    snoozeTimeEnd = millis() + (snoozeTime * 60000);  // Schlummerzeit relativ zur aktuellen Zeit
+    // Setzt die Zeit für das Ende des Schlummermodus relativ zur aktuellen Zeit in Millisekunden
+    snoozeTimeEnd = millis() + (snoozeTime * 60000);
   } else {
-    // Falls keine Zeit verfügbar, fallback auf millis()
-    snoozeTimeEnd = millis() + snoozeTime * 60000;  // Setze die Schlummerzeit basierend auf millis()
+    // Fallback: Setzt die Schlummerzeit basierend auf millis(), falls keine Zeit verfügbar ist
+    snoozeTimeEnd = millis() + snoozeTime * 60000;
   }
-  toggleRadio(false);                             // Schaltet das Radio aus (stoppt die Wiedergabe)
-  clockmode = true;                               // Setzt den Modus auf Uhr
-  showClock();                                    // Zeigt die Uhr-Anzeige an
+  toggleRadio(false);  // Schaltet das Radio aus
+  clockmode = true;    // Wechselt in den Uhr-Modus
+  showClock();         // Zeigt die Uhr-Anzeige an
 }
 
 // Setzt die ausgewählte Station als aktive Station, speichert diesen Wert und versucht, die URL der aktuellen Station zu starten.
@@ -636,45 +637,39 @@ void textInBox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text,
 void updateTime(boolean redraw) {
   char tim[40];  // Temporäres Array für die Zeit- und Datumsdarstellung
 
-  // Diese Variablen sind statisch, um ihren Wert zwischen den Aufrufen zu behalten.
   static char lastdate[40] = "";
   static char lasttime[10] = "";
 
-  // Holt die lokale Zeit und speichert sie in der Struktur `ti`.
+  // Prüfe, ob getLocalTime erfolgreich die aktuelle Zeit geholt hat
   if (getLocalTime(&ti)) {
-    // Formatierung des Datums als "Wochentag Tag. Monat Jahr"
+    // Formatiere Datum: "Wochentag Tag. Monat Jahr"
     sprintf(tim, "%s %i. %s %i", days[ti.tm_wday], ti.tm_mday, months[ti.tm_mon], ti.tm_year + 1900);
 
-    tick = millis() - ti.tm_sec * 1000;  // Berechnung der Systemzeit vom Startpunkt der aktuellen Minute
-
-    // Überprüft, ob die Anzeige neu gezeichnet werden soll oder sich das Datum geändert hat.
-    // Wenn ja, wird die Datumszeile neu gezeichnet.
+    // Zeichne das Datum, wenn es sich geändert hat oder die Anzeige neu gezeichnet werden soll
     if (redraw || (strcmp(tim, lastdate) != 0)) {
-      strcpy(lastdate, tim);                                                       // Speichert das neue Datum in `lastdate`
-      textInBox(0, 90, 320, 25, tim, ALIGNCENTER, true, COLOR_DATE, COLOR_BG, 1);  // Zeichnet das Datum
+      strcpy(lastdate, tim);
+      textInBox(0, 90, 320, 25, tim, ALIGNCENTER, true, COLOR_DATE, COLOR_BG, 1);
     }
 
-    uint8_t z;                                 // Variable zur Speicherung des Ziffernwerts
-    strftime(tim, sizeof(tim), "%H:%M", &ti);  // Formatiert die aktuelle Zeit als "HH:MM"
-    
+    uint8_t z;
+    // Formatiere die Uhrzeit: "HH:MM"
+    strftime(tim, sizeof(tim), "%H:%M", &ti);
 
-    // Durchläuft den Zeit-String, um jede Ziffer zu überprüfen.
-    // Wenn `redraw` true ist oder sich eine Ziffer geändert hat, wird diese Ziffer neu gezeichnet.
+    // Zeichne nur die Ziffern, die sich geändert haben
     for (uint8_t i = 0; i < 5; i++) {
-      // Überprüft, ob die aktuelle Position im Zeit-String eine Trennstelle (":") ist.
-      // Setzt `z` auf 10 für den Trennstrich oder auf die numerische Ziffer.
       z = (i == 2) ? 10 : tim[i] - '0';
       if ((z < 11) && (redraw || (tim[i] != lasttime[i]))) {
-        // Zeichnet die Ziffern auf dem Display. Die Ziffern-Bilder werden durch `ziffern[z]` bereitgestellt.
         tft.drawBitmap(30 + i * 55, 18, ziffern[z], 50, 70, COLOR_TIME, COLOR_BG);
-        drawHeaderInfos();      // Zeichnet Symbole und Text im Header
-        Serial.printf("Zeit = %s\n", tim);         // Gibt die aktuelle Zeit an die serielle Konsole aus
+        drawHeaderInfos();  // Zeichne Symbole und Text im Header
+        Serial.printf("Zeit = %s\n", tim);
       }
     }
 
-    strcpy(lasttime, tim);  // Speichert die neue Zeit in `lasttime`
+    strcpy(lasttime, tim);
+
   }
 }
+
 
 // Zeichnet die Informationen im Header des Displays, einschließlich Wifi-Informationen, Einschlafsymbol und nächste Alarmzeit.
 void drawHeaderInfos() {
@@ -734,7 +729,7 @@ void displayClear() {
 
 // Zeigt Datum und Uhrzeit an der vorgesehenen Position an
 void displayDateTime() {
-  updateTime(false);            // Aktualisiert die Zeit ohne komplettes Neuzeichnen
+  updateTime(false);  // Aktualisiert die Zeit ohne komplettes Neuzeichnen
 }
 
 // Zeigt den Fortschritt eines Software-Updates als Balken und Prozentsatz an
@@ -1312,4 +1307,110 @@ void FavoriteButtons() {
       }
     }
   }
+}
+
+// Funktion zum Zeichnen des Icons basierend auf dem Wettercode
+// Die Funktion nimmt die x- und y-Koordinaten zur flexiblen Positionierung entgegen
+void drawWeatherIcon(int weather_code, int x, int y) {
+    // Ruft die Funktion getWeatherIcon auf, um den passenden Icon-Index zu ermitteln
+    int iconIndex = getWeatherIcon(weather_code);
+    
+    // Überprüft, ob ein gültiger Icon-Index zurückgegeben wurde (kein -1)
+    if (iconIndex >= 0) { 
+        // Zeichnet das Icon auf dem TFT-Display an den gegebenen Koordinaten (x, y)
+        // weather_icons[iconIndex] enthält das Bitmap des passenden Icons
+        // 30 und 25 sind die Breite und Höhe des Icons
+        // COLOR_STATION_TITLE und COLOR_STATION_BOX_BG sind die Vordergrund- und Hintergrundfarben
+        tft.drawBitmap(x, y, weather_icons[iconIndex], 30, 25, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+    } else {
+        // Falls der Wettercode ungültig ist, eine Meldung über die serielle Schnittstelle ausgeben
+        Serial.println("Ungültiger Wettercode: " + String(weather_code));
+    }
+}
+
+// Funktion zur Anzeige der Wetterdaten (zunächst auf Serial, später TFT)
+void displayWeather(String weatherData) {
+  if (weatherData == "") {
+    Serial.println("Keine Wetterdaten empfangen.");
+    return;
+  }
+
+  // JSON-Daten parsen
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, weatherData);
+
+  if (error) {
+    Serial.print("Fehler beim Parsen von JSON: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  // Temperaturen und Wettercode für heute, morgen und übermorgen extrahieren
+  float temp_min_today = doc["daily"]["temperature_2m_min"][0];
+  float temp_max_today = doc["daily"]["temperature_2m_max"][0];
+  int weather_code_today = doc["daily"]["weathercode"][0];
+
+  float temp_min_tomorrow = doc["daily"]["temperature_2m_min"][1];
+  float temp_max_tomorrow = doc["daily"]["temperature_2m_max"][1];
+  int weather_code_tomorrow = doc["daily"]["weathercode"][1];
+
+  // Temperaturen und Wettercode aktual Werte extrahieren
+  float temp_current_temp = doc["current"]["temperature_2m"];
+  float temp_feels_like_temp = doc["current"]["apparent_temperature"];
+  int temp_current_weather_code = doc["current"]["weather_code"];
+
+  // Ausgabe auf die serielle Schnittstelle
+  Serial.println("aktuelle Wetterdaten:");
+  Serial.print("aktuelle Temperatur: ");
+  Serial.println(temp_current_temp);
+  Serial.print("gefühlte Temperatur: ");
+  Serial.println(temp_feels_like_temp);
+  Serial.print("aktuelle Wettercode: ");
+  Serial.println(temp_current_weather_code);
+
+  Serial.println("Wetterdaten für heute:");
+  Serial.print("Minimale Temperatur: ");
+  Serial.println(temp_min_today);
+  Serial.print("Maximale Temperatur: ");
+  Serial.println(temp_max_today);
+  Serial.print("Wettercode: ");
+  Serial.println(weather_code_today);
+
+  Serial.println("\nWetterdaten für morgen:");
+
+  Serial.print("Minimale Temperatur: ");
+  Serial.println(temp_min_tomorrow);
+  Serial.print("Maximale Temperatur: ");
+  Serial.println(temp_max_tomorrow);
+  Serial.print("Wettercode: ");
+  Serial.println(weather_code_tomorrow);
+
+  // Anzeige Display
+  tft.fillRect(3, 117, 314, 93, COLOR_STATION_BOX_BG);      // Hintergrund des Radio-Bereichs füllen
+
+  //aktuell
+  tft.drawRect(3, 117, 105, 93, COLOR_STATION_BOX_BORDER);  // Rahmen zeichnen  
+  displayMessage(9, 126, 60, 25, TXT_NOW, ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+  drawWeatherIcon(temp_current_weather_code, 72, 126); 
+  String message = String(TXT_TEMP) + " " + String((int)temp_current_temp) + " C";
+  displayMessage(9, 153, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+  message = String(TXT_FEELS) + " " + String((int)temp_feels_like_temp) + " C";
+  displayMessage(9, 179, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);  
+  //heute
+  tft.drawRect(108, 117, 105, 93, COLOR_STATION_BOX_BORDER);  // Rahmen zeichnen 
+  displayMessage(114, 126, 60, 25, TXT_TODAY, ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG); 
+  drawWeatherIcon(weather_code_today, 177, 126);
+  message = String(TXT_MIN) + " " + String((int)temp_min_today) + " C";
+  displayMessage(114, 153, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+  message = String(TXT_MAX) + " " + String((int)temp_max_today) + " C";
+  displayMessage(114, 179, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG); 
+  //morgen
+  tft.drawRect(212, 117, 105, 93, COLOR_STATION_BOX_BORDER);  // Rahmen zeichnen   
+  displayMessage(219, 126, 60, 25, TXT_TOMMORROW, ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+  drawWeatherIcon(weather_code_tomorrow, 282, 126);
+  message = String(TXT_MIN) + " " + String((int)temp_min_tomorrow) + " C";
+  displayMessage(219, 153, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+  message = String(TXT_MAX) + " " + String((int)temp_max_tomorrow) + " C";
+  displayMessage(219, 179, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);   
+
 }
