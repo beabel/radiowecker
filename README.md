@@ -79,9 +79,9 @@ Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges S
 
 ![Main Screen](screenshot/result.jpg?raw=true "Hauptbildschirm")
 
-![Radio Screen](screenshot/radio.jpg?raw=true "Radiobildschirm")
-
 ![Wetter Anzeige](screenshot/wetter.jpg?raw=true "Wetter Anzeige")
+
+![Radio Screen](screenshot/radio.jpg?raw=true "Radiobildschirm")
 
 ![Setting Screen](screenshot/settings.jpg?raw=true "Einstellungen")
 
