@@ -68,73 +68,20 @@ String getWeatherData(float latitude, float longitude, String timezone) {
   return jsonResponse;  // JSON-Daten als String zurückgeben
 }
 
-// Funktion zur Anzeige der Wetterdaten (zunächst auf Serial, später TFT)
-void displayWeather(String weatherData) {
-  if (weatherData == "") {
-    Serial.println("Keine Wetterdaten empfangen.");
-    return;
-  }
-
-  // JSON-Daten parsen
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, weatherData);
-
-  if (error) {
-    Serial.print("Fehler beim Parsen von JSON: ");
-    Serial.println(error.c_str());
-    return;
-  }
-
-  // Temperaturen und Wettercode für heute, morgen und übermorgen extrahieren
-  float temp_min_today = doc["daily"]["temperature_2m_min"][0];
-  float temp_max_today = doc["daily"]["temperature_2m_max"][0];
-  int weather_code_today = doc["daily"]["weathercode"][0];
-
-  float temp_min_tomorrow = doc["daily"]["temperature_2m_min"][1];
-  float temp_max_tomorrow = doc["daily"]["temperature_2m_max"][1];
-  int weather_code_tomorrow = doc["daily"]["weathercode"][1];
-
-  float temp_min_day_after = doc["daily"]["temperature_2m_min"][2];
-  float temp_max_day_after = doc["daily"]["temperature_2m_max"][2];
-  int weather_code_day_after = doc["daily"]["weathercode"][2];
-
-  // Temperaturen und Wettercode aktual Werte extrahieren
-  float temp_current_temp = doc["current"]["temperature_2m"];
-  float temp_feels_like_temp = doc["current"]["apparent_temperature"];
-  int temp_current_weather_code = doc["current"]["weather_code"];
-
-  // Ausgabe auf die serielle Schnittstelle
-  Serial.println("aktuelle Wetterdaten:");
-  Serial.print("aktuelle Temperatur: ");
-  Serial.println(temp_current_temp);
-  Serial.print("gefühlte Temperatur: ");
-  Serial.println(temp_feels_like_temp);
-  Serial.print("aktuelle Wettercode: ");
-  Serial.println(temp_current_weather_code);
-
-  Serial.println("Wetterdaten für heute:");
-  Serial.print("Minimale Temperatur: ");
-  Serial.println(temp_min_today);
-  Serial.print("Maximale Temperatur: ");
-  Serial.println(temp_max_today);
-  Serial.print("Wettercode: ");
-  Serial.println(weather_code_today);
-
-  Serial.println("\nWetterdaten für morgen:");
-  Serial.print("Minimale Temperatur: ");
-  Serial.println(temp_min_tomorrow);
-  Serial.print("Maximale Temperatur: ");
-  Serial.println(temp_max_tomorrow);
-  Serial.print("Wettercode: ");
-  Serial.println(weather_code_tomorrow);
-
-  Serial.println("\nWetterdaten für übermorgen:");
-  Serial.print("Minimale Temperatur: ");
-  Serial.println(temp_min_day_after);
-  Serial.print("Maximale Temperatur: ");
-  Serial.println(temp_max_day_after);
-  Serial.print("Wettercode: ");
-  Serial.println(weather_code_day_after);
-
-  // Hier später die Daten auf dem TFT anzeigen
+// Funktion zur Rückgabe des passenden Icon-Indexes basierend auf dem Wettercode
+int getWeatherIcon(int weather_code) {
+    // Überprüfe die Wettercodes und gebe den entsprechenden Icon-Index zurück
+    if (weather_code == 0) return 0;
+    else if (weather_code == 45 || weather_code == 48) return 1;
+    else if (weather_code == 1) return 2;
+    else if (weather_code == 2) return 3;
+    else if (weather_code == 3) return 4;
+    else if (weather_code == 51 || weather_code == 53 || weather_code == 55 || weather_code == 80) return 5;
+    else if (weather_code == 56 || weather_code == 57) return 6;
+    else if (weather_code == 66 || weather_code == 67) return 7;
+    else if (weather_code == 81 || weather_code == 82 || weather_code == 61 || weather_code == 63 || weather_code == 65) return 8;
+    else if (weather_code == 95) return 9;
+    else if (weather_code == 77 || weather_code == 85 || weather_code == 86 || weather_code == 71 || weather_code == 73 || weather_code == 75) return 10;
+    else if (weather_code == 96 || weather_code == 99) return 11;
+    else return -1; // Falls der Wettercode ungültig ist, -1 zurückgeben
 }

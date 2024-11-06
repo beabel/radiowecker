@@ -81,6 +81,8 @@ Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges S
 
 ![Radio Screen](screenshot/radio.jpg?raw=true "Radiobildschirm")
 
+![Wetter Anzeige](screenshot/wetter.jpg?raw=true "Wetter Anzeige")
+
 ![Setting Screen](screenshot/settings.jpg?raw=true "Einstellungen")
 
 ![Alarm Screen](screenshot/alarm.jpg?raw=true "Alarm Einstellungen")

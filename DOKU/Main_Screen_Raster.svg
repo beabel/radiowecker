@@ -7,7 +7,7 @@
    viewBox="0 0 84.666667 63.5"
    version="1.1"
    id="svg1"
-   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
    sodipodi:docname="Main_Screen_Raster.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -25,14 +25,14 @@
      inkscape:document-units="mm"
      showgrid="true"
      inkscape:zoom="2.8970539"
-     inkscape:cx="148.25406"
+     inkscape:cx="148.08147"
      inkscape:cy="140.31496"
      inkscape:window-width="1920"
      inkscape:window-height="1009"
      inkscape:window-x="-8"
-     inkscape:window-y="-8"
+     inkscape:window-y="521"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g10">
+     inkscape:current-layer="layer4">
     <inkscape:grid
        id="grid1"
        units="px"
@@ -93,7 +93,9 @@
        inkscape:label="Lautstärke_Slider" />
     <g
        id="g7"
-       inkscape:label="Station">
+       inkscape:label="Station"
+       inkscape:groupmode="layer"
+       style="display:none">
       <rect
          style="fill:#ff0000;stroke-width:1.89023"
          id="rect6"
@@ -118,6 +120,131 @@
          x="1.3229166"
          y="32.279167"
          inkscape:label="showStation" />
+    </g>
+    <g
+       inkscape:groupmode="layer"
+       id="layer4"
+       inkscape:label="Wetter">
+      <rect
+         style="fill:#800080;stroke-width:0.62781"
+         id="rect9-83-85"
+         width="15.875"
+         height="6.6145835"
+         x="2.3812528"
+         y="33.337502"
+         inkscape:label="text" />
+      <rect
+         style="fill:#800080;stroke-width:0.781617"
+         id="rect9-83-85-7"
+         width="24.606251"
+         height="6.6145835"
+         x="2.3812499"
+         y="40.481255"
+         inkscape:label="text" />
+      <rect
+         style="fill:#800080;stroke-width:0.781617"
+         id="rect9-83-85-8"
+         width="24.606251"
+         height="6.6145835"
+         x="2.3812499"
+         y="47.360428"
+         inkscape:label="text" />
+      <rect
+         style="fill:#800080;stroke-width:0.781617"
+         id="rect9-83-85-7-7"
+         width="24.606251"
+         height="6.6145835"
+         x="30.162506"
+         y="40.481251"
+         inkscape:label="text" />
+      <rect
+         style="fill:#800080;stroke-width:0.781617"
+         id="rect9-83-85-8-7"
+         width="24.606251"
+         height="6.6145835"
+         x="30.162506"
+         y="47.360416"
+         inkscape:label="text" />
+      <rect
+         style="fill:#800080;stroke-width:0.781617"
+         id="rect9-83-85-7-8"
+         width="24.606251"
+         height="6.6145835"
+         x="57.943748"
+         y="40.481251"
+         inkscape:label="text" />
+      <rect
+         style="fill:#800080;stroke-width:0.781617"
+         id="rect9-83-85-8-0"
+         width="24.606251"
+         height="6.6145835"
+         x="57.943748"
+         y="47.360416"
+         inkscape:label="text" />
+      <rect
+         style="fill:#800080;stroke-width:0.62781"
+         id="rect9-83-85-5"
+         width="15.875"
+         height="6.6145835"
+         x="30.1625"
+         y="33.337502"
+         inkscape:label="text" />
+      <rect
+         style="fill:#800080;stroke-width:0.62781"
+         id="rect9-83-85-6"
+         width="15.875"
+         height="6.6145835"
+         x="57.943748"
+         y="33.337498"
+         inkscape:label="text" />
+      <rect
+         style="fill:#800080;stroke-width:0.443929"
+         id="rect9-83"
+         width="7.9375"
+         height="6.6145835"
+         x="19.049999"
+         y="33.337502"
+         inkscape:label="icon" />
+      <rect
+         style="fill:#800080;stroke-width:0.443929"
+         id="rect9-83-5"
+         width="7.9375"
+         height="6.6145835"
+         x="46.831249"
+         y="33.337502"
+         inkscape:label="icon" />
+      <rect
+         style="fill:#800080;stroke-width:0.443929"
+         id="rect9-83-8"
+         width="7.9375"
+         height="6.6145835"
+         x="74.612503"
+         y="33.337502"
+         inkscape:label="icon" />
+      <rect
+         style="fill:none;stroke:#80ccdb;stroke-width:0.808151;stroke-opacity:1"
+         id="rect3-09"
+         width="26.973099"
+         height="23.7981"
+         x="1.1978254"
+         y="31.360327"
+         inkscape:label="bereich" />
+      <rect
+         style="fill:none;stroke:#80ccdb;stroke-width:0.808151;stroke-opacity:1"
+         id="rect3-09-9"
+         width="26.973099"
+         height="23.798101"
+         x="28.979078"
+         y="31.360325"
+         inkscape:label="bereich" />
+      <rect
+         style="fill:none;stroke:#80ccdb;stroke-width:0.808151;stroke-opacity:1"
+         id="rect3-09-6"
+         width="26.973099"
+         height="23.798101"
+         x="56.495743"
+         y="31.360325"
+         inkscape:label="bereich" />
     </g>
     <rect
        style="fill:#000000;stroke-width:0.25759"

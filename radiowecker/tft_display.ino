@@ -3,7 +3,7 @@
 #include "knoepfe.h"            // Grafikdaten für Buttons
 #include "symbole.h"            // Grafikdaten für Symbole
 #include "num_64_44.h"          // Grafikdaten für Favoriten-Buttons
-
+#include "weather_icons.h"      // Grafikdaten für Wetter Icons
 
 // Struktur zur Speicherung der Alarmkonfiguration
 typedef struct {
@@ -1307,4 +1307,110 @@ void FavoriteButtons() {
       }
     }
   }
+}
+
+// Funktion zum Zeichnen des Icons basierend auf dem Wettercode
+// Die Funktion nimmt die x- und y-Koordinaten zur flexiblen Positionierung entgegen
+void drawWeatherIcon(int weather_code, int x, int y) {
+    // Ruft die Funktion getWeatherIcon auf, um den passenden Icon-Index zu ermitteln
+    int iconIndex = getWeatherIcon(weather_code);
+    
+    // Überprüft, ob ein gültiger Icon-Index zurückgegeben wurde (kein -1)
+    if (iconIndex >= 0) { 
+        // Zeichnet das Icon auf dem TFT-Display an den gegebenen Koordinaten (x, y)
+        // weather_icons[iconIndex] enthält das Bitmap des passenden Icons
+        // 30 und 25 sind die Breite und Höhe des Icons
+        // COLOR_STATION_TITLE und COLOR_STATION_BOX_BG sind die Vordergrund- und Hintergrundfarben
+        tft.drawBitmap(x, y, weather_icons[iconIndex], 30, 25, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+    } else {
+        // Falls der Wettercode ungültig ist, eine Meldung über die serielle Schnittstelle ausgeben
+        Serial.println("Ungültiger Wettercode: " + String(weather_code));
+    }
+}
+
+// Funktion zur Anzeige der Wetterdaten (zunächst auf Serial, später TFT)
+void displayWeather(String weatherData) {
+  if (weatherData == "") {
+    Serial.println("Keine Wetterdaten empfangen.");
+    return;
+  }
+
+  // JSON-Daten parsen
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, weatherData);
+
+  if (error) {
+    Serial.print("Fehler beim Parsen von JSON: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  // Temperaturen und Wettercode für heute, morgen und übermorgen extrahieren
+  float temp_min_today = doc["daily"]["temperature_2m_min"][0];
+  float temp_max_today = doc["daily"]["temperature_2m_max"][0];
+  int weather_code_today = doc["daily"]["weathercode"][0];
+
+  float temp_min_tomorrow = doc["daily"]["temperature_2m_min"][1];
+  float temp_max_tomorrow = doc["daily"]["temperature_2m_max"][1];
+  int weather_code_tomorrow = doc["daily"]["weathercode"][1];
+
+  // Temperaturen und Wettercode aktual Werte extrahieren
+  float temp_current_temp = doc["current"]["temperature_2m"];
+  float temp_feels_like_temp = doc["current"]["apparent_temperature"];
+  int temp_current_weather_code = doc["current"]["weather_code"];
+
+  // Ausgabe auf die serielle Schnittstelle
+  Serial.println("aktuelle Wetterdaten:");
+  Serial.print("aktuelle Temperatur: ");
+  Serial.println(temp_current_temp);
+  Serial.print("gefühlte Temperatur: ");
+  Serial.println(temp_feels_like_temp);
+  Serial.print("aktuelle Wettercode: ");
+  Serial.println(temp_current_weather_code);
+
+  Serial.println("Wetterdaten für heute:");
+  Serial.print("Minimale Temperatur: ");
+  Serial.println(temp_min_today);
+  Serial.print("Maximale Temperatur: ");
+  Serial.println(temp_max_today);
+  Serial.print("Wettercode: ");
+  Serial.println(weather_code_today);
+
+  Serial.println("\nWetterdaten für morgen:");
+
+  Serial.print("Minimale Temperatur: ");
+  Serial.println(temp_min_tomorrow);
+  Serial.print("Maximale Temperatur: ");
+  Serial.println(temp_max_tomorrow);
+  Serial.print("Wettercode: ");
+  Serial.println(weather_code_tomorrow);
+
+  // Anzeige Display
+  tft.fillRect(3, 117, 314, 93, COLOR_STATION_BOX_BG);      // Hintergrund des Radio-Bereichs füllen
+
+  //aktuell
+  tft.drawRect(3, 117, 105, 93, COLOR_STATION_BOX_BORDER);  // Rahmen zeichnen  
+  displayMessage(9, 126, 60, 25, TXT_NOW, ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+  drawWeatherIcon(temp_current_weather_code, 72, 126); 
+  String message = String(TXT_TEMP) + " " + String((int)temp_current_temp) + " C";
+  displayMessage(9, 153, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+  message = String(TXT_FEELS) + " " + String((int)temp_feels_like_temp) + " C";
+  displayMessage(9, 179, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);  
+  //heute
+  tft.drawRect(108, 117, 105, 93, COLOR_STATION_BOX_BORDER);  // Rahmen zeichnen 
+  displayMessage(114, 126, 60, 25, TXT_TODAY, ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG); 
+  drawWeatherIcon(weather_code_today, 177, 126);
+  message = String(TXT_MIN) + " " + String((int)temp_min_today) + " C";
+  displayMessage(114, 153, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+  message = String(TXT_MAX) + " " + String((int)temp_max_today) + " C";
+  displayMessage(114, 179, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG); 
+  //morgen
+  tft.drawRect(212, 117, 105, 93, COLOR_STATION_BOX_BORDER);  // Rahmen zeichnen   
+  displayMessage(219, 126, 60, 25, TXT_TOMMORROW, ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+  drawWeatherIcon(weather_code_tomorrow, 282, 126);
+  message = String(TXT_MIN) + " " + String((int)temp_min_tomorrow) + " C";
+  displayMessage(219, 153, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
+  message = String(TXT_MAX) + " " + String((int)temp_max_tomorrow) + " C";
+  displayMessage(219, 179, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);   
+
 }
