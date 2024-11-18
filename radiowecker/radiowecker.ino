@@ -213,6 +213,7 @@ void loop() {
     displayClear();    // Bildschirm löschen
     // Zeige eine Nachricht an, dass die Verbindung wiederhergestellt wurde
     displayMessage(5, 10, 310, 30, TXT_RECONNECTED, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);
+    reconnected = true;
   }
 
   // Wenn das Radio eingeschaltet ist, hole neue Stream-Daten
@@ -261,8 +262,15 @@ void loop() {
     }
     // Setze die Hintergrundbeleuchtung, wenn die Uhr angezeigt wird
     if (connected && clockmode) {
-      setBGLight(bright);  // Setze die Hintergrundbeleuchtung
-      displayDateTime();   // Zeige Datum und Uhrzeit an
+
+      if(!reconnected){
+        setBGLight(bright);  // Setze die Hintergrundbeleuchtung
+        displayDateTime();   // Zeige Datum und Uhrzeit an ohne komplettes Display neu zu zeichnen
+      }else{
+        showClock();   // Zeige Datum und Uhrzeit mit komplett neu zu zeichnen
+        reconnected = false;
+      }
+
     }
 
     // Wenn ein Alarm aktiviert ist, überprüfe den Tag und die Zeit
