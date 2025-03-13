@@ -45,6 +45,7 @@ struct tm ti;                  // Zeitstruktur mit der aktuellen Zeit
 int16_t lastldr;               // Letzter Wert vom LDR-Sensor zur Erkennung von Änderungen
 uint32_t start_conf;           // Zeitpunkt des Betretens des Konfigurationsbildschirms
 boolean connected;             // Flag zum Signalisieren einer aktiven Verbindung
+boolean reconnected = false;   // Flag zum Signalisieren einer erfolgreichen Wiederverbindung
 boolean radio = false;         // Flag zum Signalisieren der Radiowiedergabe
 boolean clockmode = true;      // Flag zum Signalisieren, dass die Uhrzeit auf dem Bildschirm angezeigt wird
 boolean configpage = false;    // Flag zum Signalisieren, dass die Konfigurationsseite angezeigt wird
