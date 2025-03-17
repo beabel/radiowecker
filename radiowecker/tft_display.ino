@@ -208,6 +208,7 @@ void onTouchClick(TS_Point p) {
     if ((p.y > 44) && (p.y < 132)) {
       HandleFavoriteButtons(p.x, p.y);
       changeStation();
+      toggleRadio(false);
       showClock();
     }
     // Bereich für die Stationenliste (132 bis 175)
