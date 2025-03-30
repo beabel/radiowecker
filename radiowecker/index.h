@@ -841,6 +841,15 @@ input {
       <div id="footer" class="ui-widget">
         <!-- Hier wird der Footer mit Informationen zum GitHub-Repository angezeigt -->
       </div>
+      <hr />
+      <div id="sponsor" class="ui-widget">
+        <div class="ui-state-error ui-corner-all">
+          Sponsor this Project: 
+          <a href="https://buymeacoffee.com/kunigunde" target="_blank"><img width="16" height="16" class="octicon rounded-2 d-block" alt="buy_me_a_coffee" src="https://github.githubassets.com/assets/buy_me_a_coffee-63ed78263f6e.svg"></a>
+          <a href="https://www.paypal.com/paypalme/pleissa" target="_blank"><i class="fa-brands fa-paypal"></i></a>
+          <a href="https://thanks.dev/beabel" target="_blank"><img width="16" height="16" class="octicon rounded-2 d-block" alt="thanks_dev" src="https://github.githubassets.com/assets/thanks_dev-0fe87803d1ed.svg"></a>
+        </div>
+      </div>
     </div>    
 </div>
 </body>

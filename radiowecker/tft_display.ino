@@ -208,6 +208,7 @@ void onTouchClick(TS_Point p) {
     if ((p.y > 44) && (p.y < 132)) {
       HandleFavoriteButtons(p.x, p.y);
       changeStation();
+      toggleRadio(false);
       showClock();
     }
     // Bereich für die Stationenliste (132 bis 175)
@@ -1120,41 +1121,32 @@ void in_de_crementAlarmTimeHH(uint16_t xPos, uint16_t yPos) {
 
 // Inkrementiert oder dekrementiert die Alarm-Minuten in 5-Minuten-Schritten
 void in_de_crementAlarmTimeMM(uint16_t xPos, uint16_t yPos) {
-  uint8_t min1_1, min2_1, min1_2, min2_2;
-  min1_1 = alarmConfig.m_1 / 10;  // Zehnerstelle für Minuten Alarm 1
-  min2_1 = alarmConfig.m_1 % 10;  // Einerstelle für Minuten Alarm 1
-  min1_2 = alarmConfig.m_2 / 10;  // Zehnerstelle für Minuten Alarm 2
-  min2_2 = alarmConfig.m_2 % 10;  // Einerstelle für Minuten Alarm 2
-
+  int8_t currentMinutes;
   // Inkrementierung der Minuten
   if ((xPos > 220) && (xPos < 270)) {
     if ((yPos > 44) && (yPos < 88)) {  // Inkrementierung MM_1
       // Berechne die Minuten in 5-Minuten-Schritten vorwärts
-      uint8_t currentMinutes_1 = min1_1 * 10 + min2_1;
-      if (currentMinutes_1 % 5 == 0) {
-        currentMinutes_1 += 5;  // Füge 5 Minuten hinzu, wenn der aktuelle Wert durch 5 teilbar ist
+      currentMinutes = alarmConfig.m_1;
+      if (currentMinutes % 5 == 0) {
+        currentMinutes += 5;  // Füge 5 Minuten hinzu, wenn der aktuelle Wert durch 5 teilbar ist
       } else {
-        currentMinutes_1 = ((currentMinutes_1 + 4) / 5) * 5;  // Runde auf nächste durch 5 teilbare Zahl
+        currentMinutes = ((currentMinutes + 4) / 5) * 5;  // Runde auf nächste durch 5 teilbare Zahl
       }
-      if (currentMinutes_1 >= 60) currentMinutes_1 -= 60;  // Setze auf 0 Minuten zurück, wenn 60 erreicht wird
+      if (currentMinutes >= 60) currentMinutes = 0;  // Setze auf 0 Minuten zurück, wenn 60 erreicht wird
       // Trenne die Minuten in Zehner- und Einerstelle
-      min1_1 = currentMinutes_1 / 10;
-      min2_1 = currentMinutes_1 % 10;
-      alarmConfig.m_1 = min1_1 * 10 + min2_1;
+      alarmConfig.m_1 = currentMinutes;
     }
     if ((yPos > 132) && (yPos < 176)) {  // Inkrementierung MM_2
       // Berechne die Minuten in 5-Minuten-Schritten vorwärts
-      uint8_t currentMinutes_2 = min1_2 * 10 + min2_2;
-      if (currentMinutes_2 % 5 == 0) {
-        currentMinutes_2 += 5;  // Füge 5 Minuten hinzu, wenn der aktuelle Wert durch 5 teilbar ist
+      int8_t currentMinutes = alarmConfig.m_2;
+      if (currentMinutes % 5 == 0) {
+        currentMinutes += 5;  // Füge 5 Minuten hinzu, wenn der aktuelle Wert durch 5 teilbar ist
       } else {
-        currentMinutes_2 = ((currentMinutes_2 + 4) / 5) * 5;  // Runde auf nächste durch 5 teilbare Zahl
+        currentMinutes = ((currentMinutes + 4) / 5) * 5;  // Runde auf nächste durch 5 teilbare Zahl
       }
-      if (currentMinutes_2 >= 60) currentMinutes_2 -= 60;  // Setze auf 0 Minuten zurück, wenn 60 erreicht wird
+      if (currentMinutes >= 60) currentMinutes = 0;  // Setze auf 0 Minuten zurück, wenn 60 erreicht wird
       // Trenne die Minuten in Zehner- und Einerstelle
-      min1_2 = currentMinutes_2 / 10;
-      min2_2 = currentMinutes_2 % 10;
-      alarmConfig.m_2 = min1_2 * 10 + min2_2;
+      alarmConfig.m_2 = currentMinutes;
     }
   }
 
@@ -1162,31 +1154,27 @@ void in_de_crementAlarmTimeMM(uint16_t xPos, uint16_t yPos) {
   if (xPos > 270) {
     if ((yPos > 44) && (yPos < 88)) {  // Dekrementierung MM_1
       // Berechne die Minuten in 5-Minuten-Schritten rückwärts
-      uint8_t currentMinutes_1 = min1_1 * 10 + min2_1;
-      if (currentMinutes_1 % 5 == 0) {
-        currentMinutes_1 -= 5;  // Subtrahiere 5 Minuten, wenn der aktuelle Wert durch 5 teilbar ist
+      currentMinutes = alarmConfig.m_1;
+      if (currentMinutes % 5 == 0) {
+        currentMinutes -= 5;  // Subtrahiere 5 Minuten, wenn der aktuelle Wert durch 5 teilbar ist
       } else {
-        currentMinutes_1 = ((currentMinutes_1 - 1) / 5) * 5;  // Runde auf vorherige durch 5 teilbare Zahl
+        currentMinutes = ((currentMinutes - 1) / 5) * 5;  // Runde auf vorherige durch 5 teilbare Zahl
       }
-      if (currentMinutes_1 >= 60) currentMinutes_1 -= 60;  // Setze auf 55 Minuten zurück, wenn < 0
+      if (currentMinutes < 0) currentMinutes = 55;  // Setze auf 55 Minuten zurück, wenn < 0
       // Trenne die Minuten in Zehner- und Einerstelle
-      min1_1 = currentMinutes_1 / 10;
-      min2_1 = currentMinutes_1 % 10;
-      alarmConfig.m_1 = min1_1 * 10 + min2_1;
+      alarmConfig.m_1 = currentMinutes;
     }
     if ((yPos > 132) && (yPos < 176)) {  // Dekrementierung MM_2
       // Berechne die Minuten in 5-Minuten-Schritten rückwärts
-      uint8_t currentMinutes_2 = min1_2 * 10 + min2_2;
-      if (currentMinutes_2 % 5 == 0) {
-        currentMinutes_2 -= 5;  // Subtrahiere 5 Minuten, wenn der aktuelle Wert durch 5 teilbar ist
+      currentMinutes = alarmConfig.m_2;
+      if (currentMinutes % 5 == 0) {
+        currentMinutes -= 5;  // Subtrahiere 5 Minuten, wenn der aktuelle Wert durch 5 teilbar ist
       } else {
-        currentMinutes_2 = ((currentMinutes_2 - 1) / 5) * 5;  // Runde auf vorherige durch 5 teilbare Zahl
+        currentMinutes = ((currentMinutes - 1) / 5) * 5;  // Runde auf vorherige durch 5 teilbare Zahl
       }
-      if (currentMinutes_2 >= 60) currentMinutes_2 -= 60;  // Setze auf 55 Minuten zurück, wenn < 0
+      if (currentMinutes < 0) currentMinutes = 55;  // Setze auf 55 Minuten zurück, wenn < 0
       // Trenne die Minuten in Zehner- und Einerstelle
-      min1_2 = currentMinutes_2 / 10;
-      min2_2 = currentMinutes_2 % 10;
-      alarmConfig.m_2 = min1_2 * 10 + min2_2;
+      alarmConfig.m_2 = currentMinutes;
     }
   }
   // Zeigt die aktualisierten Alarmtage und -zeiten an
