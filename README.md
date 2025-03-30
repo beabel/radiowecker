@@ -59,21 +59,21 @@ Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges S
 [https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json](https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json)
 - ESP32 von Espressif Systems
 
-> [!IMPORTANT]
-> maximal die Version 3.0.0 sonst wird der sketch zu groß.
+> [!IMPORTANT]  
+> **Hinweis:** Stelle sicher, dass du **Version 2.0.17** auswählst, da es zu Problemen mit größeren Versionen ab 3.x kommen kann.~~
 
 |Boardverwalter Version|Sketchgröße|
 | ------------- | ------------- |
 |2.0.17|:white_check_mark: 1113105|
-|3.0.0|:white_check_mark: 1288101|
+|3.0.0|:x: 1288101|
 |3.0.5|:x: 1312869|
 
 **Bibliotheken:**
 - [Adafruit_ILI9341 by Adafruit Version 1.6.1](https://github.com/adafruit/Adafruit_ILI9341)
-- [Adafruit_GFX by Adafruit Version 1.11.10](https://github.com/adafruit/Adafruit-GFX-Library)
+- [Adafruit_GFX by Adafruit Version 1.12.00](https://github.com/adafruit/Adafruit-GFX-Library)
 - [XPT2046_Touchscreen by Paul Stoffregen Version 1.4.0](https://github.com/PaulStoffregen/XPT2046_Touchscreen)
 - [Touchevent by Gerald-Lechner Version 1.3.0](https://github.com/GerLech/TouchEvent)
-- [ESP8266Audio by Earle F. Philhower Version 1.9.9](https://github.com/earlephilhower/ESP8266Audio)
+- [ESP8266Audio by Earle F. Philhower Version 2.0.0](https://github.com/earlephilhower/ESP8266Audio)
 
 # Screenshots
 
