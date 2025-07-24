@@ -39,16 +39,16 @@ Nach der Installation sollte **ESP32** unter `Werkzeuge` > `Board` auswählbar s
 
 Um die benötigten Bibliotheken zu installieren, befolge diese Schritte:
 
-### 3.1 Adafruit_ILI9341 by Adafruit (Version 1.6.1)
+### 3.1 Adafruit_ILI9341 by Adafruit (Version 1.6.2)
 
 1. Gehe zu `Sketch` > `Include Library` > `Library Manager`.
 2. Suche nach **Adafruit_ILI9341**.
-3. Wähle die **Version 1.6.1** aus dem Dropdown-Menü und klicke auf **Installieren**.
+3. Wähle die **Version 1.6.2** aus dem Dropdown-Menü und klicke auf **Installieren**.
 
-### 3.2 Adafruit_GFX by Adafruit (Version 1.12.00)
+### 3.2 Adafruit_GFX by Adafruit (Version 1.12.1)
 
 1. Im selben **Library Manager** suche nach **Adafruit_GFX**.
-2. Wähle die **Version 1.12.00** und klicke auf **Installieren**.
+2. Wähle die **Version 1.12.1** und klicke auf **Installieren**.
 
 ### 3.3 XPT2046_Touchscreen by Paul Stoffregen (Version 1.4.0)
 
