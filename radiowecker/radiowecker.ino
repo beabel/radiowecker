@@ -7,56 +7,70 @@
 //predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
 
-// Berechnet das Datum und die Uhrzeit für den nächsten erwarteten Alarm
-// Setzt `alarmtime` auf die Zeit des Tages und `alarmday` auf den Wochentag für den Alarm
-// oder auf 8, wenn kein Alarm vorhanden ist
+// Liest die aktuelle Uhrzeit und berechnet weekday/minutes
+void updateCurrentTime() {
+  if (getLocalTime(&ti)) {
+    weekday = ti.tm_wday;                    // 0=Sonntag ... 6=Samstag
+    minutes = ti.tm_hour * 60 + ti.tm_min;   // Minuten seit Mitternacht
+  }
+}
+
+// Sucht den nächsten gültigen Alarm
 void findNextAlarm() {
   Serial.println("Search next alarm time");
-  int wd;        // Variable für den aktuellen Wochentag
-  uint8_t mask;  // Maske zum Filtern von Wochentagen
 
-  if (getLocalTime(&ti)) {            // Hole das aktuelle Datum und die Uhrzeit
-    wd = weekday;                     // Setze wd auf den aktuellen Wochentag
-    alarmday = 8;                     // Setze alarmday auf 8, was bedeutet, dass kein Alarm vorhanden ist
-    alarmtime = MINUTES_PER_DAY + 1;  // Setze alarmtime auf einen Wert, der höher ist als der maximal mögliche Wert für Minuten pro Tag
+  if (!getLocalTime(&ti)) return; // keine Zeit verfügbar
 
-    mask = 1 << wd;  // Erstelle eine Maske für den aktuellen Wochentag
+  // aktuelle Zeitvariablen aktualisieren
+  updateCurrentTime();
 
-    // Überprüfe, ob die Alarmzeit 1 übereinstimmt und ob der Alarm vor der aktuellen Zeit liegt
-    if (((alarmday1 & mask) != 0) && (alarm1 > minutes)) {
-      alarmtime = alarm1;  // Setze alarmtime auf alarm1
-      alarmday = wd;       // Setze alarmday auf den aktuellen Wochentag
-    }
+  alarmday = 8; // kein Alarm
+  alarmtime = MINUTES_PER_DAY + 1;
 
-    // Überprüfe, ob die Alarmzeit 2 übereinstimmt und ob der Alarm vor alarm1 liegt
-    if (((alarmday2 & mask) != 0) && (alarm2 > minutes) && (alarmtime > alarm2)) {
-      alarmtime = alarm2;  // Setze alarmtime auf alarm2
-      alarmday = wd;       // Setze alarmday auf den aktuellen Wochentag
-    }
-
-    // Wenn kein Alarm gefunden wurde, fahre fort mit der Suche nach dem nächsten Alarm in der kommenden Woche
-    if (alarmday == 8) {  // Wenn alarmday immer noch 8 ist (kein Alarm gefunden)
-      do {
-        wd++;                // Gehe zum nächsten Wochentag
-        if (wd > 7) wd = 0;  // Wenn der Wochentag über 7 hinausgeht, setze ihn auf 0 (Sonntag)
-
-        mask = 1 << wd;  // Erstelle eine neue Maske für den aktuellen Wochentag
-
-        // Überprüfe erneut Alarmzeit 1
-        if ((alarmday1 & mask) != 0) {
-          alarmtime = alarm1;  // Setze alarmtime auf alarm1
-          alarmday = wd;       // Setze alarmday auf den aktuellen Wochentag
+  // Hilfsfunktion: Prüft eine Weckzeit
+  auto checkAlarm = [&](uint8_t daysMask, int alarmMinutes, int currentMinutes, int day) {
+    if (alarmMinutes <= 0) return; // nicht gesetzt
+    if (daysMask & (1 << day)) {   // Tag ist aktiv
+      if (day == weekday) {
+        // Heute nur, wenn Uhrzeit noch in Zukunft
+        if (alarmMinutes > currentMinutes && alarmMinutes < alarmtime) {
+          alarmtime = alarmMinutes;
+          alarmday = day;
         }
-
-        // Überprüfe erneut Alarmzeit 2
-        if (((alarmday2 & mask) != 0) && (alarmtime > alarm2)) {
-          alarmtime = alarm2;  // Setze alarmtime auf alarm2
-          alarmday = wd;       // Setze alarmday auf den aktuellen Wochentag
+      } else {
+        // Kommende Tage → übernehmen, falls kleiner als bisher
+        if (alarmMinutes < alarmtime) {
+          alarmtime = alarmMinutes;
+          alarmday = day;
         }
-
-      } while ((alarmday == 8) && (wd != weekday));  // Wiederhole, bis ein gültiger Alarm gefunden wird oder eine Woche vorbei ist
+      }
     }
-    Serial.printf("Next alarm %i on %i\n", alarmtime, alarmday);  // Gib die nächste Alarmzeit und den Wochentag aus
+  };
+
+  // 1️⃣ Heute prüfen
+  checkAlarm(alarmday1, alarm1, minutes, weekday);
+  checkAlarm(alarmday2, alarm2, minutes, weekday);
+
+  // 2️⃣ Falls nichts gefunden → nächste 7 Tage durchsuchen
+  if (alarmday == 8) {
+    for (int i = 1; i <= 7; i++) {
+      int nextDay = (weekday + i) % 7;
+      alarmtime = MINUTES_PER_DAY + 1; // Reset für Tag
+      checkAlarm(alarmday1, alarm1, -1, nextDay);
+      checkAlarm(alarmday2, alarm2, -1, nextDay);
+      if (alarmday != 8) break; // gefunden
+    }
+  }
+
+  // Ausgabe
+  if (alarmday != 8) {
+    Serial.printf(
+      "Next alarm: %02d:%02d on %s\n",
+      alarmtime / 60, alarmtime % 60,
+      days_short[alarmday]
+    );
+  } else {
+    Serial.println("No alarm found");
   }
 }
 
@@ -276,9 +290,9 @@ void loop() {
     // Wenn ein Alarm aktiviert ist, überprüfe den Tag und die Zeit
     if ((alarmday < 8) && getLocalTime(&ti)) {
       // Wenn der Alarmtag und die Zeit erreicht sind, schalte das Radio ein und berechne die Werte für den nächsten erwarteten Alarm
-      if ((alarmday == weekday) && ((minutes == alarmtime) || (minutes == (alarmtime + 1)))) {
+      if ((alarmday == weekday) && (minutes == alarmtime) && !alarmTriggered) {
         // Test Beeper#####################
-
+        alarmTriggered = true;  // verhindert mehrfaches Auslösen
         // Test Beeper#####################
         toggleRadio(false);  // Schalte das Radio an
         showRadio();         // Zeige Radio-Informationen an
@@ -287,6 +301,11 @@ void loop() {
       }
     }
   }
+
+  // Reset-Flag, wenn Zeit weiterläuft und wir nicht mehr im Alarm-Minutenbereich sind
+if (minutes != alarmtime) {
+    alarmTriggered = false;
+}
 
   // Starte einen Neustart, wenn das Gerät mehr als 5 Minuten getrennt war
   if (!connected && ((millis() - discon) > 300000)) ESP.restart();

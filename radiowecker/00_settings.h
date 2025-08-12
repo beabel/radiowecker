@@ -53,6 +53,7 @@ boolean radiopage = false;     // Flag zum Signalisieren, dass die Radioauswahls
 boolean alarmpage = false;     // Flag zum Signalisieren, dass die Alarm-Einstellseite angezeigt wird
 unsigned long lastUpdate = 0;  // Variable, um die letzte Anzeigeaktualisierung zu verfolgen
 uint16_t lastLedb = 0;         // Globale Variable, um den zuletzt eingestellten Helligkeitswert zu speichern
+bool alarmTriggered = false;
 // Definitionen für die Textausrichtung
 #define ALIGNLEFT 0    // Textausrichtung: linksbündig
 #define ALIGNCENTER 1  // Textausrichtung: zentriert
