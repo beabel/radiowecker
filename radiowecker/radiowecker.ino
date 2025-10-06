@@ -4,6 +4,33 @@
 #include "00_settings.h"      //einstellungen
 #include "00_texte.h"         //Strings
 #include "weather.h"
+
+// ************************************************************
+// ERWEITERUNG: GLOBALE VARIABLEN FÜR TASTER-LOGIK (DYNAMISCH)
+// ************************************************************
+
+// SNOOZE-LOGIK-VARIABLE
+uint16_t snoozeEndTime = 0; 
+
+// VARIABLEN FÜR ALARM-STOP TASTER (GPIO5)
+unsigned long lastStopButtonPressTime = 0;
+int stopButtonState = HIGH;      
+int lastStopButtonState = HIGH; 
+
+// VARIABLEN FÜR SNOOZE TASTER (GPIO6)
+unsigned long lastSnoozeButtonPressTime = 0;
+int snoozeButtonState = HIGH;
+int lastSnoozeButtonState = HIGH; 
+
+// DEKLARATIONEN (Muss vor loop() stehen)
+void handleStopButton();
+void handleSnoozeButton();
+void snoozeAlarm();
+// ************************************************************
+#define CONFIG_ADC_DRIVER_INCLUDED 
+
+
+
 //predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
 
@@ -80,6 +107,9 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Load preferences");  // Debug-Ausgabe: "Lade Einstellungen"
 
+  pinMode(ALARM_STOP_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(SNOOZE_BUTTON_PIN, INPUT_PULLUP);
+
   title[0] = 0;  // Setze das erste Zeichen des Titels auf 0 (leerer Titel)
 
   // Lade die gespeicherten Präferenzen aus dem EEPROM des ESP32
@@ -100,7 +130,7 @@ void setup() {
   curGain = 50;                                              // Standardwert für Lautstärke
   if (pref.isKey("gain")) curGain = pref.getUShort("gain");  // Abrufen des Lautstärkewerts
 
-  snoozeTime = 30;                                                  // Standardwert für Schlummerzeit in Minuten
+  snoozeTime = 10;                                                  // Standardwert für Schlummerzeit in Minuten
   if (pref.isKey("snooze")) snoozeTime = pref.getUShort("snooze");  // Abrufen der Schlummerzeit
 
   bright = 80;                                                  // Standardwert für Helligkeit in Prozent
@@ -188,6 +218,92 @@ void setup() {
   start_conf = 0;  // Setze den Startwert für die Konfiguration
 }
 
+
+// ************************************************************
+// NEUE FUNKTIONEN: SNOOZE UND TASTER-HANDLER
+// ************************************************************
+
+void snoozeAlarm() {
+  Serial.println("Snooze-Funktion aktiviert (10 Min).");
+  
+  // 1. Radio ausschalten
+  toggleRadio(true);
+  
+  // 2. Snooze-Endzeit berechnen: Aktuelle Minuten + 10 Minuten
+  // Die Konstante MINUTES_PER_DAY (1440) wird für den Modulo-Operator verwendet.
+  uint16_t currentMinutes = minutes; 
+  snoozeEndTime = (currentMinutes + snoozeTime) % 1440;
+  
+  // 3. Alarm-Flag zurücksetzen
+  alarmTriggered = false; 
+  
+  Serial.print("Snooze endet um Minute: ");
+  Serial.println(snoozeEndTime);
+}
+
+void handleStopButton() {
+  // Entprell-Logik für Taster GPIO5 (Stop)
+  int reading = digitalRead(ALARM_STOP_BUTTON_PIN);
+
+  if (reading != lastStopButtonState) {
+    lastStopButtonPressTime = millis();
+  }
+
+  if (reading != lastStopButtonState) {
+     Serial.printf("Stop Button: Reading is now %s\n", reading == HIGH ? "HIGH" : "LOW");
+  }
+
+  if ((millis() - lastStopButtonPressTime) > debounceDelay) {
+    if (reading != stopButtonState) {
+      stopButtonState = reading; 
+
+      if (stopButtonState == LOW) { // Taster gedrückt
+        Serial.println("Stop-Taster gedrückt. Beende Alarm/Snooze.");
+        
+        // Stoppt den Alarm, wenn er läuft (alarmTriggered) oder gesnoozed wird (snoozeEndTime > 0)
+        if (alarmTriggered || snoozeEndTime > 0) { 
+          
+          toggleRadio(true);      // Radio stoppen
+          alarmTriggered = false; // Alarm-Flag zurücksetzen
+          snoozeEndTime = 0;      // Snooze-Zeit zurücksetzen
+          
+          showClock(); // Display-Aktualisierung
+        }
+      }
+    }
+  }
+  lastStopButtonState = reading;
+}
+
+void handleSnoozeButton() {
+  // Entprell-Logik für Taster GPIO6 (Snooze)
+  int reading = digitalRead(SNOOZE_BUTTON_PIN);
+
+  if (reading != lastSnoozeButtonState) {
+    lastSnoozeButtonPressTime = millis();
+  }
+
+  if ((millis() - lastSnoozeButtonPressTime) > debounceDelay) {
+    if (reading != snoozeButtonState) {
+      snoozeButtonState = reading;
+
+      if (snoozeButtonState == LOW) { // Taster gedrückt
+        Serial.println("Snooze-Taster gedrückt.");
+        if (alarmTriggered || snoozeEndTime > 0) { 
+            snoozeAlarm(); // Snooze aktivieren (rechnet neue 10 Minuten hinzu)
+        }        
+        // Snooze nur, wenn der Alarm gerade läuft (alarmTriggered)
+        //if (alarmTriggered) { 
+        //    snoozeAlarm();
+        //} 
+      }
+    }
+  }
+  lastSnoozeButtonState = reading;
+}
+// ************************************************************
+
+
 void loop() {
   long rssi = WiFi.RSSI();  // Hole das Signalstärke- (RSSI) Level des WiFi
 
@@ -205,6 +321,10 @@ void loop() {
     showClock();       // Zeige die Uhrzeit an
     clockmode = true;  // Setze den Modus auf Uhr
   }
+
+  // Taster-Logik ausführen (NEU)
+  handleStopButton(); 
+  handleSnoozeButton();
 
   // Zeige Metadaten an, wenn das Radio aktiv ist und wir im Uhrmodus sind
   if (newTitle && radio && clockmode) {
@@ -289,8 +409,24 @@ void loop() {
 
     // Wenn ein Alarm aktiviert ist, überprüfe den Tag und die Zeit
     if ((alarmday < 8) && getLocalTime(&ti)) {
+      
+      // ************************************************************
+      // NEU: SNOOZE-ENDE-PRÜFUNG (Muss VOR dem Haupt-Alarm-Trigger stehen)
+      // ************************************************************
+      // Prüfe, ob die Snooze-Zeit abgelaufen ist und der Alarm manuell neu gestartet werden muss
+      if (snoozeEndTime > 0 && minutes == snoozeEndTime) {
+        Serial.println("Snooze-Zeit abgelaufen. Starte Radio neu.");
+        snoozeEndTime = 0; // Snooze beendet
+        
+        toggleRadio(false); // Radio an
+        alarmTriggered = true; // Alarm-Flag setzen
+        showRadio();
+      }
+      // ************************************************************
+
       // Wenn der Alarmtag und die Zeit erreicht sind, schalte das Radio ein und berechne die Werte für den nächsten erwarteten Alarm
-      if ((alarmday == weekday) && (minutes == alarmtime) && !alarmTriggered) {
+      // ERWEITERT: Starte den Alarm NUR, wenn wir NICHT snoozen (snoozeEndTime == 0).
+      if ((alarmday == weekday) && (minutes == alarmtime) && !alarmTriggered && snoozeEndTime == 0) {
         // Test Beeper#####################
         alarmTriggered = true;  // verhindert mehrfaches Auslösen
         // Test Beeper#####################
@@ -303,9 +439,9 @@ void loop() {
   }
 
   // Reset-Flag, wenn Zeit weiterläuft und wir nicht mehr im Alarm-Minutenbereich sind
-if (minutes != alarmtime) {
-    alarmTriggered = false;
-}
+//if (minutes != alarmtime && snoozeEndTime == 0) { 
+//    alarmTriggered = false;
+//}
 
   // Starte einen Neustart, wenn das Gerät mehr als 5 Minuten getrennt war
   if (!connected && ((millis() - discon) > 300000)) ESP.restart();

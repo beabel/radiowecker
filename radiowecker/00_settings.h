@@ -82,3 +82,7 @@ const unsigned long weatherUpdateInterval = 60000;  // 60 Sekunden
 float LATITUDE = 52.520645;
 float LONGITUDE = 13.409779;
 String TIME_ZONE_IANA = "Europe/Berlin";  // Zeitzone dynamisch setzen
+
+
+// Allgemeine Konstante für das Entprellen der Taster
+const unsigned long debounceDelay = 50; // 50 ms Entprellzeit

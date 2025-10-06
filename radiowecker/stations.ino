@@ -1,12 +1,12 @@
-// Anzahl der Standardstationen in der Liste
+/// Anzahl der Standardstationen in der Liste
 #define DEFAULTSTATIONS 26
 
 // Definition eines Sets getesteter Standardstationen, gespeichert im Flash-Speicher (PROGMEM)
 Station defstations[DEFAULTSTATIONS] PROGMEM = {
-  { "http://stream01.zogl.net:8906/stream", "Radino", 1 },
-  { "http://radio.toggo.de/live/mp3-192/radio.toggo.de/", "Toggo", 1 },
-  { "http://streams.radiobob.de/bob-national/mp3-192/mediaplayer", "BOB", 1 },
-  { "http://stream.laut.fm/hoerspiel", "Hörspiele", 1 },
+  { "http://dispatcher.rndfnk.com/hr/hr1/suedhessen/high", "HR1", 1 },
+  { "http://liveradio.swr.de/sw282p3/swr1rp/play.mp3", "SWR1-RP", 1 },
+  { "http://dispatcher.rndfnk.com/hr/hr1/suedhessen/high", "HR2", 1 },
+  { "http://liveradio.swr.de/sw282p3/swr2/", "SWR2", 1 },
   { "http://stream.laut.fm/jugend_radio", "Jugend", 1 },
   { "http://646.cloudrad.io:8234", "Strobe", 1 },
   { "http://646.cloudrad.io:8276", "Pulse107", 1 },
