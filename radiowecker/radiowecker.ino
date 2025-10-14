@@ -438,11 +438,6 @@ void loop() {
     }
   }
 
-  // Reset-Flag, wenn Zeit weiterläuft und wir nicht mehr im Alarm-Minutenbereich sind
-//if (minutes != alarmtime && snoozeEndTime == 0) { 
-//    alarmTriggered = false;
-//}
-
   // Starte einen Neustart, wenn das Gerät mehr als 5 Minuten getrennt war
   if (!connected && ((millis() - discon) > 300000)) ESP.restart();
 }
