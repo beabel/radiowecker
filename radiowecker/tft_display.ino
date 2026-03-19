@@ -1252,15 +1252,6 @@ void showNextAlarm() {
   }
 }
 
-// Kann verwendet werden, um drei Ganzzahlen in der unteren Zeile des Displays anzuzeigen
-void showDebugInfo(int16_t v1, int16_t v2, int16_t v3) {
-  char txt[100] = "";                                                                      // Textpuffer für die Anzeige
-  if (clockmode) {                                                                         // Nur anzeigen, wenn der Clockmodus aktiv ist
-    sprintf(txt, "Info: v1 = %i, v2 = %i, v3 = %i", v1, v2, v3);                           // Formatierte Debug-Informationen erstellen
-    textInBox(0, 220, 320, 20, txt, ALIGNCENTER, false, ILI9341_WHITE, ILI9341_BLACK, 1);  // Debug-Informationen anzeigen
-  }
-}
-
 // Zeichne den Uhrbildschirm neu
 void showClock() {
   start_conf = 0;            // Setze den Konfigurationsstartzeitpunkt zurück
