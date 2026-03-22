@@ -13,8 +13,6 @@ Dieses Repository ist die **aktuelle Hauptversion** des Radioweckers. Sie basier
 
 Was sich gegenüber den **älteren Releases** (z. B. der **4.x-Linie** wie [v4.0.3](https://github.com/beabel/radiowecker/releases)) unterscheidet — Oberfläche, Bibliotheken, Build, Partition — steht im nächsten Abschnitt.
 
-Zusätzliche deutschsprachige Detaildokumente (IDE, Board, Sketch, Aufbau, Bedienung) liegen im Ordner **[`DOKU/`](DOKU/)**. **`00`–`04`** sind an **v5.0.0** angepasst (u. a. **LVGL**, **ESP32-Arduino-Core** 3.x mit Partition **No FS 4MB**, Bibliotheksstände wie in den Tabellen unten). Screenshots zur Bedienung: Ordner **[`screenshot/`](screenshot/)**, in **[`DOKU/05_Bedienungsanleitung.md`](DOKU/05_Bedienungsanleitung.md)** und **am Ende dieser README** zur Ansicht. **Versionen und Partition** bei Zweifeln mit dieser **README** abgleichen.
-
 ---
 
 ## Änderungen gegenüber der Vorgängerversion
@@ -30,7 +28,7 @@ Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafrui
 | Uhrzeit klassisch als Text/Grafik | **Flip-Uhr** (Ziffern mit Animation); **bei laufendem Stream** werden Updates bewusst **ohne aufwändige Flip-Animation** gesetzt, damit Audio, WLAN und Webserver nicht ausgebremst werden |
 | Senderwechsel u. a. über seitliche Streifen | Sender **Vor/Zurück** als Buttons im **Bereich unter der Uhr / beim Datum**, damit die Uhr frei bleibt |
 
-**TouchEvent** muss **nicht** mehr installiert werden. **XPT2046_Touchscreen** bleibt **erforderlich**.
+**TouchEvent** muss **nicht** mehr installiert werden.
 
 ### Toolchain und Bibliotheken
 
@@ -41,14 +39,11 @@ Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafrui
 | **LVGL** | nicht Bestandteil des alten Stacks | **lvgl 9.5.x** zentral für die UI |
 | **ESP8266Audio** | z. B. 2.0.0 in der alten Liste | **2.4.1** (Referenz; wie immer Earle F. Philhower) |
 | **Adafruit GFX / ILI9341** | Kern der alten Anzeige | weiter installiert; GFX wird von ILI9341 mit eingebunden |
-| **ArduinoJson** | oft als separate Bibliothek | liegt im Sketch als **`ArduinoJson.h`** — **keine** zweite Installation aus dem Bibliotheksverwalter |
 
 ### Flash, Partition und neue Dateien
 
 - **Partition Scheme:** Früher reichte oft das **Default-Layout mit SPIFFS** nicht mehr, sobald Core und Sketch wuchsen. **v5.0.0** setzt auf **„No FS 4MB“**: möglichst **große App-Partition**, kein großes Dateisystem — ausreichend Platz für LVGL, Web- und Audio-Code.  
 - **LVGL-Konfiguration:** Zusätzlich zum Sketch ist **`lv_conf.h`** identisch nach **`libraries/lvgl/src/lv_conf.h`** zu kopieren (siehe Abschnitt unten). Ohne diese Kopie fehlen oft Fonts/Features beim Bau der Library.  
-- **`build_opt.h`** im Sketch: Compiler-Flags für LVGL auf dem ESP32 (u. a. `LV_CONF_INCLUDE_SIMPLE`).  
-- **`lv_font_de_supp_14.c`:** Zusatzfont für **Umlaute/ß** als Fallback zu Montserrat.
 
 ### Sonstiges im Code
 
@@ -94,10 +89,8 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 | **XPT2046_Touchscreen** | 1.4 |
 | **ESP8266Audio** (Earle F. Philhower) | 2.4.1 |
 
-**ArduinoJson:** im Projekt als **`radiowecker/ArduinoJson.h`** enthalten — **nicht** zusätzlich aus dem Bibliotheksverwalter installieren (sonst Doppeldefinitionen).
 
-**Touch:** Weiterhin **XPT2046_Touchscreen** installieren und einbinden (siehe `00_librarys.h` / `tft_display.ino`). **TouchEvent** wird in v5.0.0 **nicht** mehr verwendet.
-
+**Touch:** Weiterhin **XPT2046_Touchscreen** installieren und einbinden (siehe `00_librarys.h` / `tft_display.ino`).
 ---
 
 ## Board-Einstellungen in der Arduino IDE
@@ -118,16 +111,6 @@ LVGL 9, Webserver, Audio und Einstellungen benötigen eine **große App-Partitio
 
 ---
 
-## Projekt auschecken und Sketch öffnen
-
-1. Repository klonen oder ZIP entpacken.  
-2. In der Arduino IDE **Datei → Öffnen** und die Datei **`radiowecker.ino`** öffnen. Sie liegt im **Unterordner `radiowecker/`** direkt unter dem **Repository-Root** (dort, wo `README.md` und `DOKU/` liegen — nicht eine zweite Ebene tiefer).  
-   - Beispiel nach `git clone`: Ordner `radiowecker` → Pfad **`radiowecker/radiowecker/radiowecker.ino`**.  
-   - Beispiel nach ZIP (`radiowecker-main`): **`radiowecker-main/radiowecker/radiowecker.ino`** (entspricht [`DOKU/03_DOKU_Sketch.md`](DOKU/03_DOKU_Sketch.md)).  
-3. **Alle** Dateien in diesem Sketch-Ordner gehören zum Projekt (mehrere `.ino`, `*.h`, `lv_conf.h`, `build_opt.h`, `lv_font_de_supp_14.c`, …). Nicht nur einzelne Dateien kopieren.
-
----
-
 ## LVGL: Pflichtschritt `lv_conf.h`
 
 Die LVGL-Bibliothek wird mit einer zentralen **`lv_conf.h`** gebaut. Dieses Projekt liefert eine passende Datei im Sketch-Ordner. **Zusätzlich** muss **dieselbe Datei** in der installierten LVGL-Library liegen:
@@ -143,13 +126,6 @@ Die LVGL-Bibliothek wird mit einer zentralen **`lv_conf.h`** gebaut. Dieses Proj
 - **macOS / Linux:** `~/Arduino/libraries/lvgl/src/lv_conf.h`
 
 **Wichtig:** Änderst du `lv_conf.h` im Projekt, die Kopie unter `libraries/lvgl/src/` **immer wieder mitüberschreiben**, sonst kompiliert die Library mit alter Konfiguration (fehlende Fonts/Features).
-
-### Weitere LVGL-bezogene Dateien (nur Sketch)
-
-| Datei | Ort |
-|-------|-----|
-| **`build_opt.h`** | nur im Sketch-Ordner `radiowecker/` (wird vom ESP32-Core für Compiler-Flags ausgewertet; **nicht** nach `lvgl` kopieren) |
-| **`lv_font_de_supp_14.c`** | nur im Sketch-Ordner; liefert `lv_font_de_supp_14` für Umlaute/ß als Fallback zu Montserrat |
 
 ### Kurz-Checkliste vor dem ersten Upload
 
@@ -282,3 +258,4 @@ Fotos aus dem Ordner [`screenshot/`](screenshot/). **`display_*`** = TFT (LVGL),
 ---
 
 **Radiowecker · Version 5.0.0**
+
