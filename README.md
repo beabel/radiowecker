@@ -207,4 +207,55 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 
 ---
 
+## Screenshots — so sieht es aus
+
+Fotos aus dem Ordner [`screenshot/`](screenshot/). **`display_*`** = TFT (LVGL), **`webseite_*`** = HTML-Ausgabe im Browser. Ausführliche Einordnung: [`DOKU/05_Bedienungsanleitung.md`](DOKU/05_Bedienungsanleitung.md).
+
+### TFT (Display)
+
+**Startseite, Radio an**
+
+![Startseite Radio an](screenshot/display_startseite_radio_on.jpg)
+
+**Startseite, Radio aus, Wetter**
+
+![Startseite Radio aus, Wetter](screenshot/display_startseite_radio_off_weather_on.jpg)
+
+**Einstellungen**
+
+![Einstellungen](screenshot/display_settingspage.jpg)
+
+**Wecker**
+
+![Wecker](screenshot/display_alarmpage.jpg)
+
+**Favoriten**
+
+![Favoriten](screenshot/display_favoritenseite.jpg)
+
+### Webseite (HTML im Browser)
+
+**Startseite**
+
+![Web Startseite](screenshot/webseite_1_startseite.png)
+
+**Wecker**
+
+![Web Wecker](screenshot/webseite_2_alarmpage.png)
+
+**Radiosender**
+
+![Web Radiosender](screenshot/webseite_3_radiestations.png)
+
+**Einstellungen**
+
+![Web Einstellungen](screenshot/webseite_4_settings.png)
+
+**Info**
+
+![Web Info](screenshot/webseite_5_info.png)
+
+---
+
 **Radiowecker · Version 5.0.0**
+
