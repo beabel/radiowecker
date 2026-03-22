@@ -13,7 +13,7 @@ Dieses Repository ist die **aktuelle Hauptversion** des Radioweckers. Sie basier
 
 Was sich gegenüber den **älteren Releases** (z. B. der **4.x-Linie** wie [v4.0.3](https://github.com/beabel/radiowecker/releases)) unterscheidet — Oberfläche, Bibliotheken, Build, Partition — steht im nächsten Abschnitt.
 
-Zusätzliche deutschsprachige Detaildokumente (IDE, Board, Sketch, Aufbau, Bedienung) liegen im Ordner **[`DOKU/`](DOKU/)**. **`00`–`04`** sind an **v5.0.0** angepasst (u. a. **LVGL**, **ESP32-Arduino-Core** 3.x mit Partition **No FS 4MB**, Bibliotheksstände wie in den Tabellen unten). Screenshots zur Bedienung: Ordner **[`screenshot/`](screenshot/)**, eingebunden in **[`DOKU/05_Bedienungsanleitung.md`](DOKU/05_Bedienungsanleitung.md)**. **Versionen und Partition** bei Zweifeln mit dieser **README** abgleichen.
+Zusätzliche deutschsprachige Detaildokumente (IDE, Board, Sketch, Aufbau, Bedienung) liegen im Ordner **[`DOKU/`](DOKU/)**. **`00`–`04`** sind an **v5.0.0** angepasst (u. a. **LVGL**, **ESP32-Arduino-Core** 3.x mit Partition **No FS 4MB**, Bibliotheksstände wie in den Tabellen unten). Screenshots zur Bedienung: Ordner **[`screenshot/`](screenshot/)**, in **[`DOKU/05_Bedienungsanleitung.md`](DOKU/05_Bedienungsanleitung.md)** und **am Ende dieser README** zur Ansicht. **Versionen und Partition** bei Zweifeln mit dieser **README** abgleichen.
 
 ---
 
@@ -228,6 +228,56 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 
 - **Gerald Lechner** und **AZ-Delivery** für die ursprüngliche Projektidee und Dokumentation.  
 - **Earle F. Philhower** (ESP8266Audio), **LVGL**, **Adafruit**, **Paul Stoffregen** (XPT2046) für die verwendeten Bibliotheken.
+
+---
+
+## Screenshots — so sieht es aus
+
+Fotos aus dem Ordner [`screenshot/`](screenshot/). **`display_*`** = TFT (LVGL), **`webseite_*`** = HTML-Ausgabe im Browser. Ausführliche Einordnung: [`DOKU/05_Bedienungsanleitung.md`](DOKU/05_Bedienungsanleitung.md).
+
+### TFT (Display)
+
+**Startseite, Radio an**
+
+![Startseite Radio an](screenshot/display_startseite_radio_on.jpg)
+
+**Startseite, Radio aus, Wetter**
+
+![Startseite Radio aus, Wetter](screenshot/display_startseite_radio_off_weather_on.jpg)
+
+**Einstellungen**
+
+![Einstellungen](screenshot/display_settingspage.jpg)
+
+**Wecker**
+
+![Wecker](screenshot/display_alarmpage.jpg)
+
+**Favoriten**
+
+![Favoriten](screenshot/display_favoritenseite.jpg)
+
+### Webseite (HTML im Browser)
+
+**Startseite**
+
+![Web Startseite](screenshot/webseite_1_startseite.png)
+
+**Wecker**
+
+![Web Wecker](screenshot/webseite_2_alarmpage.png)
+
+**Radiosender**
+
+![Web Radiosender](screenshot/webseite_3_radiestations.png)
+
+**Einstellungen**
+
+![Web Einstellungen](screenshot/webseite_4_settings.png)
+
+**Info**
+
+![Web Info](screenshot/webseite_5_info.png)
 
 ---
 
