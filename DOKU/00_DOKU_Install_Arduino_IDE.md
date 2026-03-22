@@ -9,7 +9,7 @@ Bevor du die Arduino IDE installierst, stelle sicher, dass du die folgenden Vora
 
 1. **Download der Arduino IDE**
    - Gehe zur offiziellen [Arduino Website](https://www.arduino.cc/en/software).
-   - Wähle die **Windows Installer** Version aus und klicke auf **Download**.
+   - Wähle die **Windows Installer**-Version aus und klicke auf **Download** (für dieses Projekt: **Arduino IDE 2.x**, Referenz **2.3.8** — siehe [`README.md`](../README.md)).
 
 2. **Installation**
    - Öffne die heruntergeladene `.exe`-Datei.

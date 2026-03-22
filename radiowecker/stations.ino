@@ -64,11 +64,11 @@ void restore() {
   char ukey[4];  // Schlüssel für die URL
   char fkey[4];  // Schlüssel für den Aktivierungsstatus
 
+  // Einmalig alle Präferenzen löschen, bevor die Standardliste geschrieben wird
+  sender.clear();
+
   // Schleife über alle möglichen Stationen
   for (uint8_t i = 0; i < STATIONS; i++) {
-    // Lösche die vorherigen Einträge in den Präferenzen
-    sender.clear();
-
     // Erzeuge die Schlüssel für den aktuellen Index
     sprintf(nkey, "n%i", i);
     sprintf(ukey, "u%i", i);

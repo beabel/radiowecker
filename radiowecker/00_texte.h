@@ -19,7 +19,7 @@
 //day and month names
 const char* const PROGMEM days[] = { "Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag" };
 const char* const PROGMEM days_short[] = { "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" };
-const char* PROGMEM months[] = { "Jan.", "Feb.", "März", "April", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez." };
+const char* PROGMEM months[] = { "Jan.", "Feb.", "M\xC3\xA4rz", "April", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez." };
 
 #define TXT_NOW "Jetzt"
 #define TXT_TODAY "Heute"

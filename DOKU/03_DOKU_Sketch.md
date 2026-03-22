@@ -16,16 +16,19 @@ Nachdem alle Vorbereitungen getroffen sind, folgt hier die Anleitung, wie du das
    - Entpacke die ZIP-Datei, indem du mit der rechten Maustaste darauf klickst und **Alle extrahieren...** auswählst oder ein entsprechendes Entpack-Tool verwendest.
    - Der entpackte Ordner sollte denselben Namen wie das Repository haben (z.B. `radiowecker-main`).
 
+**Repository statt ZIP (git clone):** Der Sketch liegt ebenfalls im Unterordner **`radiowecker/`** unter dem Repository-Root — z. B. nach `git clone … radiowecker` die Datei **`radiowecker/radiowecker/radiowecker.ino`**.
+
 ## 2. Sketch in der Arduino IDE öffnen
 
 1. **Sketch öffnen:**
    - Starte die **Arduino IDE**.
    - Gehe zu `Datei` > `Öffnen...`.
-   - Navigiere zu dem entpackten Ordner `radiowecker-main/radiowecker`.
+   - Navigiere in den **Sketch-Unterordner** des Repositories: z. B. `radiowecker-main/radiowecker` (ZIP) bzw. `<Klonordner>/radiowecker` (git).
    - Wähle die Datei `radiowecker.ino` aus und klicke auf **Öffnen**.
 
 2. **Überprüfung des Projekts:**
    - Sobald der Sketch in der Arduino IDE geöffnet ist, überprüfe, ob alle Bibliotheken, die im Sketch verwendet werden, bereits installiert sind (du kannst dies durch Kompilieren des Sketches prüfen, indem du auf das Häkchen-Symbol oben links klickst).
+   - **v5.0.0:** Bibliotheken, Partition **No FS 4MB** und die Kopie von **`lv_conf.h`** nach `libraries/lvgl/src/` sind Voraussetzung — siehe [`01_DOKU_Vorbereitung_ARDUINO_IDE.md`](01_DOKU_Vorbereitung_ARDUINO_IDE.md) und [`README.md`](../README.md).
    - Falls Fehler auftreten, stelle sicher, dass alle benötigten Bibliotheken, die in den vorherigen Schritten installiert wurden, korrekt integriert sind.
 
 ## 3. Sketch hochladen

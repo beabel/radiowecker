@@ -311,7 +311,7 @@ function updateCurrentStatus() {
       //console.log(data);
     },
     error: function () {
-      alert(data);
+      alert("Fehler beim Laden der Daten.");
     },
   });
 }
@@ -427,27 +427,33 @@ function getInfo() {
       // Starte die rekursive Iteration mit dem Hauptobjekt
       iterateObject(data);
 
-      // Berechne den Prozentsatz des freien Heaps
+      // Heap: getFreeHeap = frei, Differenz = belegt (vorher fälschlich „used“ für freeHeap)
       var heapSize = data.ESP_INFO.HEAP.getHeapSize;
       var freeHeap = data.ESP_INFO.HEAP.getFreeHeap;
-      var heapPercentage = (freeHeap / heapSize) * 100;
+      var usedHeap = heapSize - freeHeap;
+      var heapUsedPct = heapSize ? (usedHeap / heapSize) * 100 : 0;
+      var heapFreePct = heapSize ? (freeHeap / heapSize) * 100 : 0;
       $( "#heapprogressbar" ).progressbar({
-        value: heapPercentage
+        value: heapUsedPct
       });
-      // Aktualisiere den Text
-      $("#heapBarText").text(freeHeap + "(" + heapPercentage.toFixed(2) + "%) used from " + heapSize); 
+      var heapTxt = "Belegt: " + usedHeap + " B (" + heapUsedPct.toFixed(2) + "%) · Frei: " + freeHeap + " B (" + heapFreePct.toFixed(2) + "%) · Heap gesamt: " + heapSize + " B";
+      var maxAlloc = data.ESP_INFO.HEAP.getMaxAllocHeap;
+      if (typeof maxAlloc === "number") {
+        heapTxt += " · max. Block: " + maxAlloc + " B";
+      }
+      $("#heapBarText").text(heapTxt);
 
-      // Berechne den tatsächlich verwendeten Platz für den Sketch
-      var usedSketchSpace = data.ESP_INFO.SKETCH.getSketchSize;//1112544
-      var SketchSpace = data.ESP_INFO.SKETCH.getFreeSketchSpace;//1310720
-
-      // Berechne den Prozentsatz des verwendeten Sketch-Speichers
-      var sketchPercentage = (usedSketchSpace / SketchSpace) * 100;
+      /* Partition: getSketchSize = aktuelle Firmware, getFreeSketchSpace = noch frei in der Slot-Partition */
+      var usedSketch = data.ESP_INFO.SKETCH.getSketchSize;
+      var freeSketch = data.ESP_INFO.SKETCH.getFreeSketchSpace;
+      var totalSketch = usedSketch + freeSketch;
+      var sketchUsedPct = totalSketch ? (usedSketch / totalSketch) * 100 : 0;
       $( "#sketchprogressbar" ).progressbar({
-        value: sketchPercentage
+        value: sketchUsedPct
       });
-      // Aktualisiere den Text 
-      $("#sketchBarText").text("Der Sketch verwendet " + usedSketchSpace + " Bytes (" + sketchPercentage.toFixed(2) + "%). Das Maximum sind " + SketchSpace + " Bytes."); 
+      $("#sketchBarText").text(
+        "Firmware: " + usedSketch + " B (" + sketchUsedPct.toFixed(2) + "%) von " + totalSketch + " B · frei für nächstes Update: " + freeSketch + " B"
+      );
 
       checkForUpdate(data.radioversion);                
     },

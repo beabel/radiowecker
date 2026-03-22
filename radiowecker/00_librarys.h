@@ -2,11 +2,12 @@
 #include <WiFi.h>
 #include <ArduinoOTA.h>
 
-// TFT & Touchscreen Bibliotheken
-#include <Adafruit_GFX.h>         // Basisbibliothek für Grafikanzeige
-#include <Adafruit_ILI9341.h>     // Treiberbibliothek für das ILI9341 TFT-Display
-#include <XPT2046_Touchscreen.h>  // Treiberbibliothek für das XPT2046 Touchscreen
-#include <TouchEvent.h>           // Bibliothek zur Analyse von Touchscreen-Ereignissen
+// TFT, Touch & LVGL 9.x — lv_conf.h zuerst laden (setzt LV_CONF_H), dann lvgl.h
+#define LV_CONF_INCLUDE_SIMPLE
+#include "lv_conf.h"
+#include <lvgl.h>
+#include <Adafruit_ILI9341.h>
+#include <XPT2046_Touchscreen.h>
 
 // ESP32 Bibliothek zum Speichern von Einstellungen im Flash-Speicher
 #include <Preferences.h>

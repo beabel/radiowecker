@@ -3,9 +3,6 @@
 // Pin für den Lichtsensor (LDR)
 #define LDR 36
 
-// Pin für den Buzzer auf dem originalen Az-Delivery TouchMod
-#define BEEPER 21
-
 // Audio-Pins
 #define LRCLK 25  // Left-Right Clock für die Audioausgabe
 #define BCLK 26   // Bit Clock für die Audioausgabe

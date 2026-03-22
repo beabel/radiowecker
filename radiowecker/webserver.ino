@@ -50,8 +50,9 @@ void webserver_loop() {
 // Bearbeitet Anfragen an die Wurzel-URL ("/") des Webservers
 void handleRoot() {
   if (connected) {
-    // Wenn verbunden, sende die Hauptseite
-    server.send(200, "text/html", MAIN_page);
+    /* PROGMEM-HTML per send_P: send() baut ein RAM-String aus dem ganzen Dokument
+       (Arduino-ESP32 WebServer) — bei großer index.h + wenig Heap: leere/kaputte Seite. */
+    server.send_P(200, PSTR("text/html"), MAIN_page);
   } else {
     // Wenn nicht verbunden, sende die Konfigurationsseite
     // Parameter werden als Argumente im HTML-Request übergeben
@@ -79,8 +80,7 @@ void handleRoot() {
       ESP.restart();
     }
 
-    // Sende die Konfigurationsseite an den Client
-    server.send(200, "text/html", CONFIG_page);
+    server.send_P(200, PSTR("text/html"), CONFIG_page);
   }
 }
 
@@ -213,7 +213,6 @@ uint16_t stringToMinutes(String val) {
 // Verarbeitet den AJAX-Befehl /cmd/setalarms zum Setzen der Alarmzeiten
 void setAlarms() {
   char txt[10];
-  uint8_t b;
 
   // Debug-Ausgabe: Beginn des Setzens der Alarme
   Serial.println("Set alarms start");
@@ -260,9 +259,9 @@ void setAlarms() {
   // Debug-Ausgabe der Wochentags-Flags
   Serial.printf("days1 %x days2 %x\n", alarmday1, alarmday2);
 
-  // Finde den nächsten Alarm und zeige ihn an, falls der Clock-Modus aktiv ist
+  // Nächster Alarm berechnen; Kopfzeile nur aktualisieren, wenn Startseite sichtbar ist
   findNextAlarm();
-  if (clockmode) showNextAlarm();
+  if (startpage) showNextAlarm();
 
   // Sende eine Bestätigung als Antwort
   server.send(200, "text/plain", "OK");
@@ -431,68 +430,18 @@ void startSleep() {
 
 // Verarbeitet den AJAX-Befehl /cmd/beforeStation, um zur vorherigen "aktiven" Station zu wechseln
 void beforeStation() {
-  // Zähle die Anzahl der Versuche, um Endlosschleifen zu vermeiden
-  int attempts = 0;
-  // Schleife, um die vorherige aktive Station zu finden
-  do {
-    // Verringert die aktuelle Station um eins
-    curStation -= 1;
-    // Wenn die aktuelle Station kleiner als 0 wird, setze sie auf die letzte Station
-    if (curStation < 0) {
-      curStation = STATIONS - 1;
-    }
-    // Erhöhe den Versuchszähler
-    attempts++;
-    // Wenn alle Stationen durchlaufen wurden und keine aktive gefunden wurde
-    if (attempts >= STATIONS) {
-      // Optional: Setze auf die letzte Station zurück (auch wenn sie deaktiviert ist)
-      curStation = STATIONS - 1;
-      // Debug-Ausgabe, dass keine aktive Station gefunden wurde
-      Serial.println("Keine aktive Station gefunden."); 
-      // Antwortet mit einer Fehlermeldung
-      server.send(200, "text/plain", "Keine aktive Station verfügbar.");
-      return;  // Beende die Funktion
-    }
-  } while (!stationlist[curStation].enabled);
-  // Ändert die Station und zeigt die neue Station an
-  changeStation();
-  // Debug-Ausgabe der aktuellen Station
-  Serial.println(curStation); 
-  // Antwortet mit "OK"
-  server.send(200, "text/plain", "OK");
+  if (station_navigate_prev())
+    server.send(200, "text/plain", "OK");
+  else
+    server.send(200, "text/plain", "Keine aktive Station verfügbar.");
 }
 
 // Verarbeitet den AJAX-Befehl /cmd/nextStation, um zur nächsten "aktiven" Station zu wechseln
 void nextStation() {
-  // Zähle die Anzahl der Versuche, um Endlosschleifen zu vermeiden
-  int attempts = 0;
-  // Schleife, um die nächste aktive Station zu finden
-  do {
-    // Erhöht die aktuelle Station um eins
-    curStation += 1; 
-    // Wenn die aktuelle Station den Maximalwert überschreitet, setze sie auf die erste Station
-    if (curStation >= STATIONS) {
-      curStation = 0;
-    }
-    // Erhöhe den Versuchszähler
-    attempts++;
-    // Wenn alle Stationen durchlaufen wurden und keine aktive gefunden wurde
-    if (attempts >= STATIONS) {
-      // Optional: Setze auf die erste Station zurück (auch wenn sie deaktiviert ist)
-      curStation = 0;
-      // Debug-Ausgabe, dass keine aktive Station gefunden wurde
-      Serial.println("Keine aktive Station gefunden.");
-      // Antwortet mit einer Fehlermeldung
-      server.send(200, "text/plain", "Keine aktive Station verfügbar.");
-      return;  // Beende die Funktion
-    }
-  } while (!stationlist[curStation].enabled);
-  // Ändert die Station und zeigt die neue Station an
-  changeStation();
-  // Debug-Ausgabe der aktuellen Station
-  Serial.println(curStation);
-  // Antwortet mit "OK"
-  server.send(200, "text/plain", "OK");
+  if (station_navigate_next())
+    server.send(200, "text/plain", "OK");
+  else
+    server.send(200, "text/plain", "Keine aktive Station verfügbar.");
 }
 
 // AJAX-Befehl /cmd/getCurrentStatus
@@ -509,8 +458,8 @@ void getCurrentStatus() {
   uint8_t h, m;
   char txt[50] = "";
 
-  // Erstellen eines JSON-Dokuments für die Antwort
-  StaticJsonDocument<200> jsonDoc;
+  /* Größer: lange UTF-8-Strings (Sender + Titel) */
+  StaticJsonDocument<512> jsonDoc;
 
   // Lautstärke des Radios
   jsonDoc["gain"] = curGain;
@@ -551,12 +500,10 @@ void getCurrentStatus() {
   // Status des Sleeptimers
   jsonDoc["Sleep"] = snoozeTimeEnd != 0 ? 1 : 0;
 
-  // Konvertieren des JSON-Dokuments in einen String
   String response;
   serializeJson(jsonDoc, response);
 
-  // Senden der JSON-Antwort an den Client
-  server.send(200, "application/json", response);
+  server.send(200, "application/json; charset=utf-8", response);
 }
 
 //################ Info Tab
@@ -566,11 +513,11 @@ void getCurrentStatus() {
 // - Die installierte Version des Radios
 // - Informationen zum aktuellen ESP8266/ESP32-Chip, einschließlich:
 //   - Heap-Größe und freier Heap-Speicher
-//   - Sketch-Größe und freier Sketch-Speicher
+//   - Sketch-Größe und freier Platz in der App-Partition (Summe = Partitionsgröße)
 //   - Chip-Modell
 void getInfo() {
   // Erstellen eines JSON-Dokuments für die Antwort
-  StaticJsonDocument<300> jsonDoc;
+  StaticJsonDocument<384> jsonDoc;
 
   // Installierte Radio-Version
   jsonDoc["radioversion"] = RADIOVERSION;
@@ -582,6 +529,9 @@ void getInfo() {
   JsonObject HEAP = ESP_INFO.createNestedObject("HEAP");
   HEAP["getHeapSize"] = ESP.getHeapSize();  // Gesamte Heap-Größe
   HEAP["getFreeHeap"] = ESP.getFreeHeap();  // Freier Heap-Speicher
+#if defined(ESP32)
+  HEAP["getMaxAllocHeap"] = ESP.getMaxAllocHeap(); /* größter zusammenhängender Block (malloc/TCP) */
+#endif
 
   // SKETCH-Informationen
   JsonObject SKETCH = ESP_INFO.createNestedObject("SKETCH");
