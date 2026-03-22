@@ -257,5 +257,11 @@ Fotos aus dem Ordner [`screenshot/`](screenshot/). **`display_*`** = TFT (LVGL),
 
 ---
 
+[![DJ Perry](https://github.com/user-attachments/assets/d750acc2-be60-44ec-8f23-0b9f69b249b6)](https://www.pulse107.com) 
+[![Pulse 107](https://github.com/user-attachments/assets/02919e84-bc1d-4336-82cd-6e2b9bc36ce8)](https://www.pulse107.com/pulse-107) 
+[![Strobe Radio](https://github.com/user-attachments/assets/a911f569-5a28-416c-8ecd-8053fa2392ae)](https://www.pulse107.com/the-strobe-radio)
+
+---
+
 **Radiowecker · Version 5.0.0**
 
