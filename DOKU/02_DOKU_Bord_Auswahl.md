@@ -10,6 +10,18 @@ Nachdem alle Vorbereitungen abgeschlossen sind, folgt die Anleitung zur Auswahl 
 
    Dies ist das Standard-Board, das für die meisten ESP32-Entwicklungsboards verwendet wird.
 
+### 1.1 Wichtige Board-Optionen (Firmware v5.0.0)
+
+Unter **Werkzeuge** zusätzlich prüfen (siehe auch [`README.md`](../README.md)):
+
+| Option | Empfehlung |
+|--------|------------|
+| **Flash Size** | *4 MB* (wenn dein Chip 4 MB Flash hat) |
+| **Partition Scheme** | **No FS 4MB** — große App-Partition für LVGL, Webserver und Audio |
+| **PSRAM** | Nur *Enabled*, wenn das Board **physikalisch PSRAM** hat |
+
+Ohne **No FS 4MB** (oder gleichwertig) reicht der Platz für den Sketch oft nicht; es kann zu Link- oder Laufzeitfehlern kommen. Nach Wechsel des Partitionsschemas ggf. einmal **„Erase All Flash Before Sketch Upload“** aktivieren und neu flashen.
+
 ## 2. Den richtigen Port herausfinden
 
 Um den richtigen COM-Port zu finden, an dem dein ESP32-Board angeschlossen ist, folge diesen Schritten:

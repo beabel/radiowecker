@@ -34,6 +34,8 @@ boolean initWiFi(String ssid, String pkey) {
       Serial.print(TXT_IP_ADDRESS);    // Debug-Ausgabe der IP-Adresse
       Serial.println(WiFi.localIP());  // Gibt die lokale IP-Adresse auf der Konsole aus
       connected = true;                // Setzt den Verbindungsstatus auf true
+      // WiFi-Stromsparen kann I2S-/Stream-Timing stören (stille oder ruckelige Wiedergabe).
+      WiFi.setSleep(false);
     }
   }
 

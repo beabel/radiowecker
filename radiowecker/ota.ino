@@ -1,3 +1,6 @@
+void ota_ui_begin(const char *title);
+void ota_ui_set_sub(const char *sub);
+
 // Variable zur Verfolgung des Fortschritts der OTA-Aktualisierung
 uint32_t oldprc;
 
@@ -19,25 +22,16 @@ void setup_ota() {
 
 // Callback-Funktion, die aufgerufen wird, wenn die OTA-Aktualisierung beginnt
 void ota_onStart() {
-  displayClear();   // Löscht das Display
-  setBGLight(100);  // Setzt die Hintergrundbeleuchtung auf 100% Helligkeit
-  oldprc = 0;       // Setzt den alten Fortschrittswert zurück
-  String type;
-  // Bestimme den Typ der Aktualisierung (Sketch oder Dateisystem)
-  if (ArduinoOTA.getCommand() == U_FLASH)
-    type = "sketch";      // Programm-Aktualisierung
-  else                    // U_SPIFFS
-    type = "filesystem";  // Dateisystem-Aktualisierung
-
-  // Zeige eine Nachricht auf dem Display an, dass das Sketch aktualisiert wird
-  displayMessage(5, 10, 310, 30, "Updating Sketch", ALIGNCENTER, true, ILI9341_YELLOW, ILI9341_BLACK, 1);
-  showProgress(0);  // Zeigt den Fortschritt (beginnend bei 0%)
+  displayClear();
+  setBGLight(100);
+  oldprc = 0;
+  ota_ui_begin("Updating Sketch");
+  showProgress(0);
 }
 
 // Callback-Funktion, die aufgerufen wird, wenn die OTA-Aktualisierung endet
 void ota_onEnd() {
-  // Zeigt eine Nachricht auf dem Display an, dass die Aktualisierung abgeschlossen ist
-  displayMessage(5, 120, 310, 30, "Done", ALIGNLEFT, true, ILI9341_GREEN, ILI9341_BLACK, 1);
+  ota_ui_set_sub("Done");
 }
 
 // Callback-Funktion, die aufgerufen wird, um den Fortschritt der OTA-Aktualisierung anzuzeigen
@@ -63,6 +57,6 @@ void ota_onError(ota_error_t error) {
   else if (error == OTA_RECEIVE_ERROR) sprintf(err, "Error[%u] Receive Failed", error);
   else if (error == OTA_END_ERROR) sprintf(err, "Error[%u] End Failed", error);
 
-  // Zeige die Fehlermeldung auf dem Display an
-  displayMessage(5, 200, 310, 30, err, ALIGNLEFT, false, ILI9341_RED);
+  ota_ui_begin("OTA Fehler");
+  ota_ui_set_sub(err);
 }

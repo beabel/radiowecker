@@ -1,1404 +1,1918 @@
-#include "fonts.h"              // Header für Schriftarten
-#include "tft_color_setting.h"  // Header für TFT-Farbkonstanten
-#include "knoepfe.h"            // Grafikdaten für Buttons
-#include "symbole.h"            // Grafikdaten für Symbole
-#include "num_64_44.h"          // Grafikdaten für Favoriten-Buttons
-#include "weather_icons.h"      // Grafikdaten für Wetter Icons
+#include "tft_color_setting.h"
+#include "ArduinoJson.h"
 
-// Struktur zur Speicherung der Alarmkonfiguration
+class AudioGenerator;
+extern AudioGenerator *decoder;
+
+extern "C" const lv_font_t lv_font_de_supp_14;
+
+void showStartPage(void);
+void showFavoritenPage(void);
+void showSettingsPage(void);
+void showAlarmPage(void);
+void changeStation(void);
+void toggleRadio(boolean off);
+void startSnooze(void);
+void safeAlarmTime(void);
+void showAlarms_Day_and_Time(void);
+
+// --- Alarm-Edit (wie zuvor) ---
 typedef struct {
-  uint8_t alarmday_1 = 0B00111110;  // Gültige Wochentage für Alarm 1 (Beispiel 00111110 bedeutet Montag bis Freitag)
-  uint8_t h_1;                      // Alarmstunde für Alarm 1
-  uint8_t m_1;                      // Alarmminute für Alarm 1
-  uint8_t alarmday_2 = 0B00111110;  // Gültige Wochentage für Alarm 2 (Beispiel 00111110 bedeutet Montag bis Freitag)
-  uint8_t h_2;                      // Alarmstunde für Alarm 2
-  uint8_t m_2;                      // Alarmminute für Alarm 2
+  uint8_t alarmday_1 = 0B00111110;
+  uint8_t h_1;
+  uint8_t m_1;
+  uint8_t alarmday_2 = 0B00111110;
+  uint8_t h_2;
+  uint8_t m_2;
 } AlarmEdit;
 
-AlarmEdit alarmConfig;  // Instanz der Alarmkonfiguration
+AlarmEdit alarmConfig;
 
-// Instanz des Displaytreibers
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
-// Instanz des Touchscreen-Treibers
 XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
-// Instanz zur Handhabung von Touch-Ereignissen
-TouchEvent tevent(touch);
 
-// Prototyp der Funktion zum Anzeigen des Schiebereglers
-void showSlider(uint16_t y, float value, uint16_t vmax, uint16_t bgColor = ILI9341_LIGHTGREY, uint16_t lineColor = ILI9341_BLACK);
+/* Partialspeicher: 11 Zeilen statt 14 spart ~2 KiB .bss (ESP32 DRAM-Grenze) */
+static lv_color_t buf1[320 * 11];
+static lv_display_t *lv_disp_main;
 
-// Zeichnet die Footer-Buttons für Power, Sleep und Alarm auf dem Display
-// Die Buttons werden je nach ihrem aktuellen Status in unterschiedlichen Farben dargestellt.
-// - Power-Button: Grün, wenn das Radio läuft; Standardfarbe, wenn nicht.
-// - Sleep-Button: Orange, wenn der Schlummermodus aktiv ist; Standardfarbe, wenn nicht.
-// - Alarm-Button: Standardfarbe für aktiven Alarm; Rot für deaktivierten Alarm.
-void DrawFooterButtons_Power_Sleep_Alarm() {
-  uint16_t color_temp;  // Variable zum Speichern der aktuellen Farbe
+static lv_obj_t *scr_clock;
+static lv_obj_t *scr_radio;
+static lv_obj_t *scr_config;
+static lv_obj_t *scr_alarm;
+static lv_obj_t *scr_msg;
+static lv_obj_t *scr_ota;
 
-  // Power Button
-  if (radio) {                   // Wenn das Radio läuft
-    color_temp = ILI9341_GREEN;  // Setze Farbe für aktiven Zustand
+static lv_obj_t *lbl_date;
+static lv_obj_t *flip_time_bar;
+static lv_obj_t *flip_cell[4];
+static lv_obj_t *flip_lbl[4];
+static lv_obj_t *flip_colon;
+
+/* Flip-Clock: Ziffer klappt per transform_scale_y (256 = 100 %, 0 = „zu“) */
+#ifndef FLIP_CLOCK_ANIM_MS
+#define FLIP_CLOCK_ANIM_MS 140
+#endif
+static char s_flip_last[4];
+static char s_flip_pending[4];
+static bool s_flip_ready;
+
+static void flip_apply_scale_y(void *var, int32_t v) {
+  lv_obj_t *o = (lv_obj_t *)var;
+  if (!o) return;
+  lv_obj_set_style_transform_scale_y(o, v, LV_PART_MAIN);
+}
+
+static void flip_grow_done_cb(lv_anim_t *a);
+
+/* Nicht im Anim-completed_cb direkt neue Anims starten / lv_label ändern — Reentrancy → Crash (EXCVADDR 0). */
+static void flip_async_begin_grow(void *ud) {
+  uintptr_t u = (uintptr_t)ud;
+  if (u > 3) return;
+  uint8_t idx = (uint8_t)u;
+  lv_obj_t *lbl = flip_lbl[idx];
+  if (!lbl) return;
+  char s[2] = {s_flip_pending[idx], '\0'};
+  lv_label_set_text(lbl, s);
+  lv_anim_t an;
+  lv_anim_init(&an);
+  lv_anim_set_var(&an, lbl);
+  lv_anim_set_user_data(&an, (void *)u);
+  lv_anim_set_exec_cb(&an, flip_apply_scale_y);
+  lv_anim_set_values(&an, 0, 256);
+  lv_anim_set_time(&an, FLIP_CLOCK_ANIM_MS);
+  lv_anim_set_path_cb(&an, lv_anim_path_ease_out);
+  lv_anim_set_completed_cb(&an, flip_grow_done_cb);
+  lv_anim_start(&an);
+}
+
+static void flip_shrink_done_cb(lv_anim_t *a) {
+  void *ud = lv_anim_get_user_data(a);
+  if (!ud) return;
+  uintptr_t u = (uintptr_t)ud;
+  if (u > 3) return;
+  lv_async_call(flip_async_begin_grow, ud);
+}
+
+static void flip_grow_done_cb(lv_anim_t *a) {
+  void *ud = lv_anim_get_user_data(a);
+  if (!ud) return;
+  uintptr_t u = (uintptr_t)ud;
+  if (u > 3) return;
+  uint8_t idx = (uint8_t)u;
+  s_flip_last[idx] = s_flip_pending[idx];
+}
+
+static void flip_cancel_digit_async(uint8_t idx) {
+  lv_async_call_cancel(flip_async_begin_grow, (void *)(uintptr_t)idx);
+}
+
+static void flip_start_digit_anim(uint8_t idx) {
+  if (idx > 3 || !flip_lbl[idx]) return;
+  flip_cancel_digit_async(idx);
+  lv_anim_delete(flip_lbl[idx], NULL);
+  lv_anim_t an;
+  lv_anim_init(&an);
+  lv_anim_set_var(&an, flip_lbl[idx]);
+  lv_anim_set_user_data(&an, (void *)(uintptr_t)idx);
+  lv_anim_set_exec_cb(&an, flip_apply_scale_y);
+  lv_anim_set_values(&an, 256, 0);
+  lv_anim_set_time(&an, FLIP_CLOCK_ANIM_MS);
+  lv_anim_set_path_cb(&an, lv_anim_path_ease_in);
+  lv_anim_set_completed_cb(&an, flip_shrink_done_cb);
+  lv_anim_start(&an);
+}
+static lv_obj_t *lbl_alarm_hdr;
+static lv_obj_t *lbl_ip;
+static lv_obj_t *lbl_rssi;
+static lv_obj_t *lbl_snooze;
+static lv_obj_t *mid_weather;
+static lv_obj_t *mid_radio;
+static lv_obj_t *lbl_station_big;
+static lv_obj_t *lbl_stream_title;
+static lv_obj_t *sl_clock_vol;
+
+static lv_obj_t *w_lbl_now_t;
+static lv_obj_t *w_lbl_now_f;
+static lv_obj_t *w_lbl_td_min;
+static lv_obj_t *w_lbl_td_max;
+static lv_obj_t *w_lbl_tm_min;
+static lv_obj_t *w_lbl_tm_max;
+
+static lv_obj_t *msg_title;
+static lv_obj_t *msg_line2;
+static lv_obj_t *msg_line3;
+static lv_obj_t *msg_line4;
+static lv_obj_t *msg_line5;
+
+static lv_obj_t *ota_lbl;
+static lv_obj_t *ota_bar;
+static lv_obj_t *ota_sub;
+
+static lv_obj_t *sl_radio_gain;
+static lv_obj_t *sl_cfg_gain;
+static lv_obj_t *sl_cfg_bright;
+static lv_obj_t *sl_cfg_snooze;
+static lv_obj_t *lbl_cfg_gain_val;
+static lv_obj_t *lbl_cfg_bright_val;
+static lv_obj_t *lbl_cfg_snooze_val;
+
+static lv_font_t font_ui_primary;
+static lv_font_t font_clock_time;   /* große Uhr (Ziffern) */
+static lv_font_t font_clock_date;   /* großes Datum inkl. Umlaute (Fallback de_supp) */
+static lv_font_t font_radio_meta;   /* Sender + Streamtitel größer */
+static lv_obj_t *lbl_station_radio;
+static lv_obj_t *lbl_station_cfg;
+
+static lv_obj_t *lbl_al_t1;
+static lv_obj_t *lbl_al_t2;
+static lv_obj_t *al_day_btn[2][7];
+static lv_obj_t *fav_btn[10];
+static lv_obj_t *fav_lbl[10];
+static int fav_map[10];
+static int fav_count;
+
+static bool ui_slider_internal;
+
+static char lastdate[48] = "";
+static char lasttime[8] = "";
+
+#define UI_FOOTER_STATE_SLOTS 4
+static lv_obj_t *g_ft_pwr_btn[UI_FOOTER_STATE_SLOTS];
+static lv_obj_t *g_ft_pwr_lbl[UI_FOOTER_STATE_SLOTS];
+static lv_obj_t *g_ft_snz_btn[UI_FOOTER_STATE_SLOTS];
+static lv_obj_t *g_ft_snz_lbl[UI_FOOTER_STATE_SLOTS];
+static lv_obj_t *g_ft_alm_btn[UI_FOOTER_STATE_SLOTS];
+static lv_obj_t *g_ft_alm_lbl[UI_FOOTER_STATE_SLOTS];
+static uint8_t g_ft_n = 0;
+
+static void ui_footer_icons_reset(void) {
+  g_ft_n = 0;
+}
+
+static void ui_footer_register_state_row(lv_obj_t *bp, lv_obj_t *lp, lv_obj_t *bz, lv_obj_t *lz, lv_obj_t *ba, lv_obj_t *la) {
+  if (g_ft_n >= UI_FOOTER_STATE_SLOTS) return;
+  g_ft_pwr_btn[g_ft_n] = bp;
+  g_ft_pwr_lbl[g_ft_n] = lp;
+  g_ft_snz_btn[g_ft_n] = bz;
+  g_ft_snz_lbl[g_ft_n] = lz;
+  g_ft_alm_btn[g_ft_n] = ba;
+  g_ft_alm_lbl[g_ft_n] = la;
+  g_ft_n++;
+}
+
+static void ui_refresh_footer_icons(void) {
+  const bool alarm_on = (alarmday < 8);
+  const bool snooze_active = (snoozeTimeEnd != 0 && millis() < snoozeTimeEnd);
+  for (uint8_t i = 0; i < g_ft_n; i++) {
+    if (g_ft_pwr_lbl[i]) {
+      lv_label_set_text(g_ft_pwr_lbl[i], radio ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY);
+      if (g_ft_pwr_btn[i])
+        lv_obj_set_style_bg_color(g_ft_pwr_btn[i],
+                                  radio ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
+                                  LV_PART_MAIN);
+    }
+    if (g_ft_snz_lbl[i]) {
+      lv_label_set_text(g_ft_snz_lbl[i], snooze_active ? LV_SYMBOL_REFRESH : "Zz");
+      if (g_ft_snz_btn[i])
+        lv_obj_set_style_bg_color(g_ft_snz_btn[i],
+                                  snooze_active ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
+                                  LV_PART_MAIN);
+    }
+    if (g_ft_alm_lbl[i]) {
+      lv_label_set_text(g_ft_alm_lbl[i], alarm_on ? LV_SYMBOL_BELL : LV_SYMBOL_CLOSE);
+      if (g_ft_alm_btn[i])
+        lv_obj_set_style_bg_color(g_ft_alm_btn[i],
+                                  alarm_on ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
+                                  LV_PART_MAIN);
+    }
+  }
+}
+
+/* Touch: bei falscher Zuordnung nacheinander probieren: TS_SWAP_XY, TS_INVERT_X/Y */
+#ifndef TS_CAL_MIN
+#define TS_CAL_MIN 200
+#endif
+#ifndef TS_CAL_MAX
+#define TS_CAL_MAX 3900
+#endif
+#ifndef TS_SWAP_XY
+#define TS_SWAP_XY 0
+#endif
+#ifndef TS_INVERT_X
+#define TS_INVERT_X 0
+#endif
+#ifndef TS_INVERT_Y
+#define TS_INVERT_Y 0
+#endif
+
+static lv_coord_t ts_last_x;
+static lv_coord_t ts_last_y;
+
+static void ts_map(int16_t rawx, int16_t rawy, lv_coord_t *ox, lv_coord_t *oy) {
+  int16_t rx = rawx, ry = rawy;
+#if TS_SWAP_XY
+  int16_t t = rx;
+  rx = ry;
+  ry = t;
+#endif
+  int x = map(constrain(rx, TS_CAL_MIN, TS_CAL_MAX), TS_CAL_MIN, TS_CAL_MAX, 0, tft.width() - 1);
+  int y = map(constrain(ry, TS_CAL_MIN, TS_CAL_MAX), TS_CAL_MIN, TS_CAL_MAX, 0, tft.height() - 1);
+#if TS_INVERT_X
+  x = tft.width() - 1 - x;
+#endif
+#if TS_INVERT_Y
+  y = tft.height() - 1 - y;
+#endif
+  *ox = (lv_coord_t)x;
+  *oy = (lv_coord_t)y;
+}
+
+static lv_color_t rgb565_to_lv(uint16_t c) {
+  uint8_t r5 = (c >> 11) & 0x1F;
+  uint8_t g6 = (c >> 5) & 0x3F;
+  uint8_t b5 = c & 0x1F;
+  uint8_t r = (r5 << 3) | (r5 >> 2);
+  uint8_t g = (g6 << 2) | (g6 >> 4);
+  uint8_t b = (b5 << 3) | (b5 >> 2);
+  return lv_color_make(r, g, b);
+}
+
+static void disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
+  uint32_t w = (uint32_t)(area->x2 - area->x1 + 1);
+  uint32_t h = (uint32_t)(area->y2 - area->y1 + 1);
+  tft.drawRGBBitmap(area->x1, area->y1, (uint16_t *)px_map, (int16_t)w, (int16_t)h);
+  lv_display_flush_ready(disp);
+}
+
+static uint32_t lvgl_tick_get_cb(void) {
+  return (uint32_t)millis();
+}
+
+static void touch_read(lv_indev_t *indev, lv_indev_data_t *data) {
+  (void)indev;
+  if (touch.touched()) {
+    TS_Point p = touch.getPoint();
+    lv_coord_t x, y;
+    ts_map(p.x, p.y, &x, &y);
+    ts_last_x = x;
+    ts_last_y = y;
+    data->state = LV_INDEV_STATE_PRESSED;
+    data->point.x = x;
+    data->point.y = y;
   } else {
-    color_temp = COLOR_KNOEPFE;  // Setze Standardfarbe für inaktiven Zustand
-  }
-  // Zeichne das Bitmap für den Power-Button
-  tft.drawBitmap(0, 176, knopf_sym[0], 64, 64, color_temp, COLOR_KNOEPFE_BG);
-
-  // Sleep Button
-  if (snoozeTimeEnd != 0) {       // Wenn der Schlummermodus aktiv ist
-    color_temp = ILI9341_ORANGE;  // Setze Farbe für aktiven Schlummermodus
-  } else {
-    color_temp = COLOR_KNOEPFE;  // Setze Standardfarbe für inaktiven Zustand
-  }
-  // Zeichne das Bitmap für den Sleep-Button
-  tft.drawBitmap(64, 176, knopf_sym[1], 64, 64, color_temp, COLOR_KNOEPFE_BG);
-
-  // Alarm Button
-  uint8_t symbol;
-  if (alarmday < 8) {            // Wenn der Wecker aktiv ist
-    color_temp = COLOR_KNOEPFE;  // Setze Standardfarbe für aktiven Wecker
-    symbol = 2;                  // Wähle Symbol für aktiven Wecker
-  } else {                       // Wenn der Wecker deaktiviert ist
-    color_temp = ILI9341_RED;    // Setze Farbe für deaktivierten Wecker
-    symbol = 3;                  // Wähle Symbol für deaktivierten Wecker
-  }
-  // Zeichne das Bitmap für den Alarm-Button
-  tft.drawBitmap(128, 176, knopf_sym[symbol], 64, 64, color_temp, COLOR_KNOEPFE_BG);
-}
-
-// Behandelt die Interaktion mit den Footer-Buttons für Power, Sleep und Alarm
-// Diese Funktion überprüft die x-Koordinate der Berührung, um festzustellen, welcher
-// Button im Footer-Bereich des Displays gedrückt wurde, und führt die entsprechende
-// Aktion aus, wie das Ein- oder Ausschalten des Radios, das Starten des Schlummermodus
-// oder das Ein- oder Ausschalten des Alarms.
-void handleFooterButtons_Power_Sleep_Alarm(int x, int y) {
-  // Überprüfe die x-Koordinate, um den gedrückten Button zu identifizieren
-
-  // Power Button (Position: 0 bis 64)
-  if (x < 64) {
-    toggleRadio(radio);  // Schalte das Radio ein oder aus
-  }
-  // Sleep Button (Position: 64 bis 128)
-  else if ((x > 64) && (x < 128)) {
-    startSnooze();  // Starte den Schlummermodus
-  }
-  // Alarm Button (Position: 128 bis 192)
-  else if ((x > 128) && (x < 192)) {
-    toggleAlarm();  // Schalte den Alarm ein oder aus
+    data->state = LV_INDEV_STATE_RELEASED;
+    data->point.x = ts_last_x;
+    data->point.y = ts_last_y;
   }
 }
 
-// Verarbeitet die Berührung von Favoriten-Tasten auf der Radio-Seite
-// Diese Funktion prüft, welche der Favoriten-Tasten auf dem Bildschirm berührt wurde
-// und setzt die aktuelle Station (`curStation`) auf den entsprechenden Favoriten.
-// Die Funktion nutzt die x- und y-Koordinaten der Berührung, um den Bereich der Favoriten-Tasten
-// zu bestimmen und den Index der aktiven Favoriten aus einem Array von Favoriten-Indizes abzurufen.
-void HandleFavoriteButtons(int xpos, int ypos) {
-  int loopCount = 0;
-  int favoriteIndexes[10];  // Array von 10 Elementen für die Indizes der Favoriten
-
-  // Initialisiere das Array der Favoriten-Indizes
-  for (int i = 0; i < 10; i++) {
-    favoriteIndexes[i] = -1;  // Ein Wert von -1 zeigt an, dass kein Favorit vorhanden ist
-  }
-
-  // Fülle das Array mit den Indizes der aktiven Favoriten
-  for (int i = 0; i < STATIONS && loopCount < 10; i++) {
-    if (stationlist[i].enabled) {
-      favoriteIndexes[loopCount] = i;
-      loopCount++;
-    }
-  }
-
-  // Überprüfe die y-Koordinate, um den Bereich der Favoriten-Tasten zu bestimmen
-  if (ypos < 88) {  // obere Reihe der Favoriten-Tasten
-    // Überprüfe die x-Koordinate für die spezifischen Favoriten-Tasten
-    if ((xpos < 64) && (favoriteIndexes[0] > -1)) { curStation = favoriteIndexes[0]; }
-    if ((xpos >= 64) && (xpos < 128) && (favoriteIndexes[1] > -1)) { curStation = favoriteIndexes[1]; }
-    if ((xpos >= 128) && (xpos < 192) && (favoriteIndexes[2] > -1)) { curStation = favoriteIndexes[2]; }
-    if ((xpos >= 192) && (xpos < 256) && (favoriteIndexes[3] > -1)) { curStation = favoriteIndexes[3]; }
-    if ((xpos >= 256) && (favoriteIndexes[4] > -1)) { curStation = favoriteIndexes[4]; }
-  } else {  // untere Reihe der Favoriten-Tasten
-    // Überprüfe die x-Koordinate für die spezifischen Favoriten-Tasten
-    if ((xpos < 64) && (favoriteIndexes[5] > -1)) { curStation = favoriteIndexes[5]; }
-    if ((xpos >= 64) && (xpos < 128) && (favoriteIndexes[6] > -1)) { curStation = favoriteIndexes[6]; }
-    if ((xpos >= 128) && (xpos < 192) && (favoriteIndexes[7] > -1)) { curStation = favoriteIndexes[7]; }
-    if ((xpos >= 192) && (xpos < 256) && (favoriteIndexes[8] > -1)) { curStation = favoriteIndexes[8]; }
-    if ((xpos >= 256) && (favoriteIndexes[9] > -1)) { curStation = favoriteIndexes[9]; }
-  }
+void ui_sync_all_gain_sliders(void) {
+  ui_slider_internal = true;
+  if (sl_clock_vol) lv_slider_set_value(sl_clock_vol, constrain((int)curGain, 0, 100), LV_ANIM_OFF);
+  if (sl_radio_gain) lv_slider_set_value(sl_radio_gain, constrain((int)curGain, 0, 100), LV_ANIM_OFF);
+  if (sl_cfg_gain) lv_slider_set_value(sl_cfg_gain, constrain((int)curGain, 0, 100), LV_ANIM_OFF);
+  ui_slider_internal = false;
 }
 
+static void cfg_sync_value_labels(void);
 
-// Transformiert die Touch-Point-Koordinaten entsprechend der aktuellen Rotation des TFT-Displays
-// Diese Funktion wird verwendet, um die Roh-Touch-Koordinaten in die Bildschirmkoordinaten zu konvertieren,
-// basierend auf der Rotation des Displays. Die Koordinaten werden entsprechend angepasst,
-// sodass sie korrekt auf dem Bildschirm angezeigt werden, unabhängig von der Display-Rotation.
-TS_Point transformTouch(TS_Point p) {
-  // Initialisiere pTransformed mit den gleichen Werten wie p
-  TS_Point pTransformed = p;
-
-  // Überprüfe die aktuelle Rotation des TFT-Displays
-  switch (tft.getRotation()) {
-    case 1:
-      // Bei Rotation 1 (90 Grad im Uhrzeigersinn):
-      // X-Koordinate wird umgekehrt und Y-Koordinate wird ebenfalls umgekehrt
-      pTransformed.x = tft.width() - p.x;
-      pTransformed.y = tft.height() - p.y;
-      break;
-    case 3:
-      // Bei Rotation 3 (270 Grad im Uhrzeigersinn):
-      // Keine Änderung erforderlich, da pTransformed bereits p ist
-      break;
-    default:
-      // Standardfall für keine Rotation (0 Grad oder 180 Grad):
-      // Keine Änderung erforderlich
-      break;
-  }
-
-  // Rückgabe der transformierten Koordinaten
-  return pTransformed;
-}
-
-
-// Callback-Funktion für alle Touch-Events
-// Diese Funktion verarbeitet Berührungsereignisse auf dem Touchscreen und führt entsprechende Aktionen
-// basierend auf der aktuellen Seite und der Position des Touch-Events aus.
-void onTouchClick(TS_Point p) {
-  // Zuerst die Touch-Koordinaten transformieren, falls das Display rotiert ist
-  p = transformTouch(p);
-
-  // Wenn sich das System nicht im Konfigurationsmodus befindet, starte die Konfigurationszeit neu
-  if (!clockmode) start_conf = millis();
-
-  // Debug-Ausgabe der berührten Koordinaten
-  Serial.printf("Touch on %i, %i\n", p.x, p.y);
-
-  if (clockmode) {             // Wenn wir im Uhrmodus sind
-    if (p.y < 210) {           // Überprüfe, ob der Klick oberhalb von 210px ist
-      if (p.x < 40) {          // Links (X < 40)
-        beforeStation();       // Ruft die Funktion zum Wechseln zur vorherigen Station auf
-      } else if (p.x > 280) {  // Rechts (X > 280)
-        nextStation();         // Ruft die Funktion zum Wechseln zur nächsten Station auf
-      } else {                 // Restlicher Bereich oberhalb von 210px
-        clockmode = false;
-        configpage = false;
-        radiopage = true;
-        alarmpage = false;
-        showRadioPage();  // Wechselt zur Radiopage
-      }
-    } else {                          // Unterhalb von 210px
-      setGainValue(p.x, "MainPage");  // Passt die Lautstärke an
-    }
-  } else if (radiopage) {  //################################################ RADIO PAGE
-    // Wenn wir im Radiomodus sind
-    if (p.y > 180) {                                    // Wenn Y-Koordinate größer als 180, befinden wir uns im Button-Bereich
-      handleFooterButtons_Power_Sleep_Alarm(p.x, p.y);  // Verarbeite Footer-Buttons
-      if ((p.x > 192) && (p.x < 256)) changeStation();  // Wechsel zur nächsten Station
-      if (p.x > 256) {                                  // Wenn X-Koordinate größer als 256, wechsle zur Konfigurationsseite
-        clockmode = false;
-        configpage = true;
-        radiopage = false;
-        alarmpage = false;
-        showConfigPage();
-      }
-    }
-    // Bereich für Lautstärkeregler (0 bis 44)
-    if ((p.y > 0) && (p.y < 44)) setGainValue(p.x, "RadioPage");
-    // Bereich für Favoriten-Buttons (44 bis 132)
-    if ((p.y > 44) && (p.y < 132)) {
-      HandleFavoriteButtons(p.x, p.y);
-      changeStation();
-      toggleRadio(false);
-      showClock();
-    }
-    // Bereich für die Stationenliste (132 bis 175)
-    if ((p.y > 132) && (p.y < 175)) selectStation(p.x);
-  } else if (configpage) {  //################################################ CONFIG PAGE
-    // Wenn wir im Konfigurationsmodus sind
-    if (p.y > 180) {                                    // Wenn Y-Koordinate größer als 180, befinden wir uns im Button-Bereich
-      handleFooterButtons_Power_Sleep_Alarm(p.x, p.y);  // Verarbeite Footer-Buttons
-      if ((p.x > 192) && (p.x < 256)) changeStation();  // Wechsel zur nächsten Station
-      if (p.x > 256) {                                  // Wenn X-Koordinate größer als 256, wechsle zur Alarmseite
-        clockmode = false;
-        configpage = false;
-        radiopage = false;
-        alarmpage = true;
-        showAlarmPage();
-      }
-    }
-    // Bereich für Lautstärkeregler (0 bis 44)
-    if ((p.y > 0) && (p.y < 44)) setGainValue(p.x, "SettingPage");
-    // Bereich für Helligkeitsregler (44 bis 88)
-    if ((p.y > 44) && (p.y < 88)) setBrightness(p.x);
-    // Bereich für Schlummerzeitregler (88 bis 132)
-    if ((p.y > 88) && (p.y < 132)) setSnoozeTime(p.x);
-    // Bereich für die Stationenliste (132 bis 175)
-    if ((p.y > 132) && (p.y < 175)) selectStation(p.x);
-  } else if (alarmpage) {  //################################################ ALARM SETTING PAGE
-    // Wenn wir uns im Alarm-Einstellmodus befinden
-    if (p.y > 180) {                                    // Wenn Y-Koordinate größer als 180, befinden wir uns im Button-Bereich
-      handleFooterButtons_Power_Sleep_Alarm(p.x, p.y);  // Verarbeite Footer-Buttons
-      if ((p.x > 192) && (p.x < 256)) safeAlarmTime();  // Speichere die Alarmzeit
-      if (p.x > 256) {                                  // Wenn X-Koordinate größer als 256, wechsle zurück zur Hauptseite
-        clockmode = true;
-        configpage = false;
-        radiopage = false;
-        alarmpage = false;
-        showClock();
-      }
-    }
-    // Bereich für das Umschalten der Alarmtage (0 bis 44)
-    if ((p.y > 0) && (p.y < 44)) toggleAlarmDay(p.x, p.y);
-    // Bereich für das Umschalten der Alarmtage (88 bis 132)
-    if ((p.y > 88) && (p.y < 132)) toggleAlarmDay(p.x, p.y);
-    // Bereich für die Anpassung der Alarmzeit (HH) (44 bis 88 und 132 bis 176)
-    if (((p.y > 44) && (p.y < 88)) || ((p.y > 132) && (p.y < 176))) {
-      if (p.x < 50) in_de_crementAlarmTimeHH(p.x, p.y);
-      if ((p.x > 50) && (p.x < 100)) in_de_crementAlarmTimeHH(p.x, p.y);
-    }
-    // Bereich für die Anpassung der Alarmzeit (MM) (44 bis 88 und 132 bis 176)
-    if (((p.y > 44) && (p.y < 88)) || ((p.y > 132) && (p.y < 176))) {
-      if ((p.x > 220) && (p.x < 270)) in_de_crementAlarmTimeMM(p.x, p.y);
-      if (p.x > 270) in_de_crementAlarmTimeMM(p.x, p.y);
-    }
-    // Bereich für die Speichern-Funktion (kein spezieller Kommentar notwendig, da dies nicht direkt im Code spezifiziert ist)
-  }
-}
-
-
-// Setzt die Lautstärke basierend auf der x-Position, an der der Schieberegler geklickt wurde
-// Die Funktion berechnet den Lautstärkewert als Prozentsatz und passt den Schieberegler
-// auf der entsprechenden Seite an. Der Lautstärkewert wird auch gespeichert und aktualisiert.
-void setGainValue(uint16_t value, const char* sliderPage) {
-  char txt[10];
-  float v;
-
-  // Überprüfen, ob wir uns nicht auf der "WEBSITE"-Seite befinden
-  if (strcmp(sliderPage, "WEBSITE") != 0) {
-    // Berechne den Lautstärkewert basierend auf der x-Position des Schiebers von 0 bis 100%
-    int y_start = 11;       // Startlinie des Schiebers
-    int line_length = 298;  // Länge der Schiebereglerlinie
-
-    float start_slider = value - y_start;      // Bereich vor dem Linienstart abziehen
-    float end_slider = line_length - y_start;  // Bereich vor dem Linienstart abziehen
-    v = start_slider / end_slider * 100;       // Berechnung des Prozentsatzes
-    if (v > 100) v = 100;                      // Begrenze den Wert auf maximal 100%
-    if (v < 0) v = 0;                          // Begrenze den Wert auf mindestens 0%
-  } else {
-    // Bei der "WEBSITE"-Seite ist der Wert bereits direkt gegeben
-    v = value;
-  }
-
-  curGain = v;  // Setze den aktuellen Lautstärkewert
-
-  // Speichere den aktuellen Lautstärkewert und passe den Schieberegler an
+static void on_gain_slider(lv_event_t *e) {
+  if (ui_slider_internal) return;
+  lv_obj_t *sl = (lv_obj_t *)lv_event_get_target(e);
+  int v = (int)lv_slider_get_value(sl);
+  curGain = (uint8_t)constrain(v, 0, 100);
   pref.putUShort("gain", curGain);
+  setGain(curGain);
+  ui_sync_all_gain_sliders();
+  cfg_sync_value_labels();
+}
 
-  // Zeige den Schieberegler je nach Seite an
-  if (strcmp(sliderPage, "MainPage") == 0 || (clockmode && strcmp(sliderPage, "WEBSITE") == 0)) {
-    showSlider(218, curGain, 100, COLOR_SLIDER_BG, COLOR_SLIDER);  // Zeige den Schieberegler für die Hauptseite oder Website
+static void on_bright_slider(lv_event_t *e) {
+  if (ui_slider_internal) return;
+  (void)e;
+  int v = (int)lv_slider_get_value(sl_cfg_bright);
+  bright = (uint8_t)constrain(v, 0, 100);
+  pref.putUShort("bright", bright);
+  setBGLight(bright == 0 ? 0 : bright);
+  cfg_sync_value_labels();
+}
+
+static void on_snooze_slider(lv_event_t *e) {
+  if (ui_slider_internal) return;
+  (void)e;
+  int v = (int)lv_slider_get_value(sl_cfg_snooze);
+  snoozeTime = (uint8_t)constrain(v, 0, 60);
+  pref.putUShort("snooze", snoozeTime);
+  cfg_sync_value_labels();
+}
+
+/* Startseite (schwarzer Hintergrund) */
+static void style_slider(lv_obj_t *sl) {
+  lv_obj_set_style_bg_color(sl, lv_color_hex(0x404040), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(sl, lv_palette_main(LV_PALETTE_ORANGE), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(sl, lv_palette_darken(LV_PALETTE_ORANGE, 2), LV_PART_KNOB);
+}
+
+/* Favoriten-, Einstellungs-, Alarm-UI (hellgrauer Screen) — keine dunkle „Schlucht“ an den Rändern */
+static void style_slider_light(lv_obj_t *sl) {
+  lv_obj_set_style_bg_color(sl, lv_color_hex(0x888888), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(sl, lv_palette_main(LV_PALETTE_ORANGE), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(sl, lv_palette_darken(LV_PALETTE_ORANGE, 2), LV_PART_KNOB);
+}
+
+static void cfg_sync_value_labels(void) {
+  char b[16];
+  if (lbl_cfg_gain_val) {
+    snprintf(b, sizeof(b), "%u", (unsigned)constrain((int)curGain, 0, 100));
+    lv_label_set_text(lbl_cfg_gain_val, b);
+  }
+  if (lbl_cfg_bright_val) {
+    snprintf(b, sizeof(b), "%u%%", (unsigned)constrain((int)bright, 0, 100));
+    lv_label_set_text(lbl_cfg_bright_val, b);
+  }
+  if (lbl_cfg_snooze_val) {
+    snprintf(b, sizeof(b), "%u min", (unsigned)constrain((int)snoozeTime, 0, 60));
+    lv_label_set_text(lbl_cfg_snooze_val, b);
+  }
+}
+
+// --- Stations-Navigation (Touch & Web ohne server.send) ---
+bool station_navigate_prev(void) {
+  int attempts = 0;
+  do {
+    if (curStation == 0) curStation = STATIONS - 1;
+    else curStation--;
+    attempts++;
+    if (attempts >= STATIONS) {
+      curStation = STATIONS - 1;
+      Serial.println(F("Keine aktive Station gefunden."));
+      return false;
+    }
+  } while (!stationlist[curStation].enabled);
+  changeStation();
+  return true;
+}
+
+bool station_navigate_next(void) {
+  int attempts = 0;
+  do {
+    if (curStation >= STATIONS - 1) curStation = 0;
+    else curStation++;
+    attempts++;
+    if (attempts >= STATIONS) {
+      curStation = 0;
+      Serial.println(F("Keine aktive Station gefunden."));
+      return false;
+    }
+  } while (!stationlist[curStation].enabled);
+  changeStation();
+  return true;
+}
+
+static void rebuild_favorites(void) {
+  fav_count = 0;
+  for (int i = 0; i < STATIONS && fav_count < 10; i++) {
+    if (stationlist[i].enabled) {
+      fav_map[fav_count] = i;
+      const char *nm = stationlist[i].name;
+      /* Voller UTF-8-Name — %.6s hätte Umlaute mitten im Zeichen zerschnitten */
+      lv_label_set_text(fav_lbl[fav_count], nm);
+      lv_obj_clear_flag(fav_btn[fav_count], LV_OBJ_FLAG_HIDDEN);
+      if (actStation == i) {
+        lv_obj_set_style_bg_color(fav_btn[fav_count], lv_palette_main(LV_PALETTE_ORANGE), LV_PART_MAIN);
+      } else {
+        lv_obj_set_style_bg_color(fav_btn[fav_count], lv_palette_main(LV_PALETTE_BLUE), LV_PART_MAIN);
+      }
+      fav_count++;
+    }
+  }
+  for (int j = fav_count; j < 10; j++) {
+    lv_obj_add_flag(fav_btn[j], LV_OBJ_FLAG_HIDDEN);
+  }
+}
+
+static void on_fav_btn(lv_event_t *e) {
+  int idx = (int)(intptr_t)lv_event_get_user_data(e);
+  if (idx < 0 || idx >= fav_count) return;
+  curStation = fav_map[idx];
+  changeStation();
+  showStartPage();
+}
+
+static void cfg_station_prev_action(void) {
+  if (curStation == 0) curStation = STATIONS - 1;
+  else curStation--;
+  int guard = 0;
+  while (!stationlist[curStation].enabled && guard++ < STATIONS) {
+    if (curStation == 0) curStation = STATIONS - 1;
+    else curStation--;
+  }
+  updateStation();
+}
+
+static void cfg_station_next_action(void) {
+  if (curStation >= STATIONS - 1) curStation = 0;
+  else curStation++;
+  int guard = 0;
+  while (!stationlist[curStation].enabled && guard++ < STATIONS) {
+    if (curStation >= STATIONS - 1) curStation = 0;
+    else curStation++;
+  }
+  updateStation();
+}
+
+static void on_station_prev(lv_event_t *e) {
+  (void)e;
+  cfg_station_prev_action();
+}
+
+static void on_station_next(lv_event_t *e) {
+  (void)e;
+  cfg_station_next_action();
+}
+
+static void on_cfg_station_prev(lv_event_t *e) {
+  (void)e;
+  on_station_prev(e);
+}
+
+static void on_cfg_station_next(lv_event_t *e) {
+  (void)e;
+  on_station_next(e);
+}
+
+static void footer_style_btn(lv_obj_t *b) {
+  lv_obj_set_size(b, 62, 58);
+  lv_obj_set_style_radius(b, 4, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(b, lv_palette_main(LV_PALETTE_BLUE), LV_PART_MAIN);
+  lv_obj_set_style_text_color(b, lv_color_white(), LV_PART_MAIN);
+}
+
+/* Sender ↑/↓ in strow: gleiche blaue Fläche wie Footer — sonst LVGL-Default (wirkt schwarz auf hellgrau). */
+static void station_arrow_btn_style(lv_obj_t *b) {
+  lv_obj_set_style_radius(b, 4, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(b, lv_palette_main(LV_PALETTE_BLUE), LV_PART_MAIN);
+  lv_obj_set_style_text_color(b, lv_color_white(), LV_PART_MAIN);
+}
+
+static void evt_footer_power(lv_event_t *e) {
+  (void)e;
+  toggleRadio(radio);
+}
+
+static void evt_footer_snooze(lv_event_t *e) {
+  (void)e;
+  startSnooze();
+}
+
+static void evt_footer_alarm(lv_event_t *e) {
+  (void)e;
+  toggleAlarm();
+}
+
+static void evt_footer_mid_radio(lv_event_t *e) {
+  (void)e;
+  changeStation();
+}
+
+static void evt_footer_cfg_radio(lv_event_t *e) {
+  (void)e;
+  showFavoritenPage();
+}
+
+static void evt_footer_mid_cfg(lv_event_t *e) {
+  (void)e;
+  changeStation();
+}
+
+static void evt_footer_alarm_from_cfg(lv_event_t *e) {
+  (void)e;
+  startpage = false;
+  favoritenpage = false;
+  settingspage = false;
+  alarmpage = true;
+  showAlarmPage();
+}
+
+static void evt_footer_save_alarm(lv_event_t *e) {
+  (void)e;
+  safeAlarmTime();
+}
+
+static void evt_footer_home_alarm(lv_event_t *e) {
+  (void)e;
+  startpage = true;
+  favoritenpage = false;
+  settingspage = false;
+  alarmpage = false;
+  showStartPage();
+}
+
+static void evt_open_radio_page(lv_event_t *e) {
+  (void)e;
+  startpage = false;
+  favoritenpage = false;
+  settingspage = true;
+  alarmpage = false;
+  showSettingsPage();
+}
+
+static void on_clock_prev(lv_event_t *e) {
+  (void)e;
+  station_navigate_prev();
+}
+
+static void on_clock_next(lv_event_t *e) {
+  (void)e;
+  station_navigate_next();
+}
+
+static uint8_t day_mask_from_col(uint8_t col) {
+  return (uint8_t)(1u << ((col + 1) % 7));
+}
+
+static void on_alarm_day(lv_event_t *e) {
+  uintptr_t u = (uintptr_t)lv_event_get_user_data(e);
+  uint8_t row = (uint8_t)(u >> 8);
+  uint8_t col = (uint8_t)(u & 0xFF);
+  uint8_t m = day_mask_from_col(col);
+  if (row == 0) alarmConfig.alarmday_1 ^= m;
+  else alarmConfig.alarmday_2 ^= m;
+  showAlarms_Day_and_Time();
+}
+
+static void alarm_adj_h(uint8_t alarm_idx, int delta) {
+  if (alarm_idx == 0) {
+    int h = alarmConfig.h_1 + delta;
+    if (h < 0) h = 23;
+    if (h > 23) h = 0;
+    alarmConfig.h_1 = (uint8_t)h;
   } else {
-    // Standard: Einstellungsseite
-    showSlider(27, curGain, 100);         // Zeige den Schieberegler für die Einstellungsseite
-    sprintf(txt, "%i %%", (int)curGain);  // Formatiere den Lautstärkewert als Text
-    // Zeige den Lautstärkewert rechts vom Schieberegler an
-    displayMessage(231, 8, 80, 20, txt, ALIGNRIGHT, false, ILI9341_BLACK, ILI9341_LIGHTGREY, 1);
+    int h = alarmConfig.h_2 + delta;
+    if (h < 0) h = 23;
+    if (h > 23) h = 0;
+    alarmConfig.h_2 = (uint8_t)h;
+  }
+  showAlarms_Day_and_Time();
+}
+
+static void alarm_step_min(uint8_t *m, int delta) {
+  int mm = *m;
+  if (delta > 0) {
+    if (mm % 5 == 0) mm += 5;
+    else mm = ((mm + 4) / 5) * 5;
+    if (mm >= 60) mm = 0;
+  } else {
+    if (mm % 5 == 0) mm -= 5;
+    else mm = ((mm - 1) / 5) * 5;
+    if (mm < 0) mm = 55;
+  }
+  *m = (uint8_t)mm;
+}
+
+static void alarm_adj_m(uint8_t alarm_idx, int delta) {
+  if (alarm_idx == 0) alarm_step_min(&alarmConfig.m_1, delta);
+  else alarm_step_min(&alarmConfig.m_2, delta);
+  showAlarms_Day_and_Time();
+}
+
+static void on_al_h_up1(lv_event_t *e) {
+  (void)e;
+  alarm_adj_h(0, 1);
+}
+static void on_al_h_dn1(lv_event_t *e) {
+  (void)e;
+  alarm_adj_h(0, -1);
+}
+static void on_al_m_up1(lv_event_t *e) {
+  (void)e;
+  alarm_adj_m(0, 1);
+}
+static void on_al_m_dn1(lv_event_t *e) {
+  (void)e;
+  alarm_adj_m(0, -1);
+}
+static void on_al_h_up2(lv_event_t *e) {
+  (void)e;
+  alarm_adj_h(1, 1);
+}
+static void on_al_h_dn2(lv_event_t *e) {
+  (void)e;
+  alarm_adj_h(1, -1);
+}
+static void on_al_m_up2(lv_event_t *e) {
+  (void)e;
+  alarm_adj_m(1, 1);
+}
+static void on_al_m_dn2(lv_event_t *e) {
+  (void)e;
+  alarm_adj_m(1, -1);
+}
+
+static lv_obj_t *make_footer_nav(lv_obj_t *parent) {
+  lv_obj_t *row = lv_obj_create(parent);
+  lv_obj_remove_style_all(row);
+  lv_obj_set_size(row, LV_PCT(100), 62);
+  lv_obj_set_style_bg_color(row, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(row, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(row, 2, LV_PART_MAIN);
+  lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_scrollbar_mode(row, LV_SCROLLBAR_MODE_OFF);
+  return row;
+}
+
+static void build_msg_screen(void) {
+  scr_msg = lv_obj_create(NULL);
+  lv_obj_set_style_bg_color(scr_msg, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(scr_msg, LV_OPA_COVER, LV_PART_MAIN);
+  auto msg_line_style = [](lv_obj_t *lb) {
+    lv_obj_set_style_text_color(lb, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_text_align(lb, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+  };
+  msg_title = lv_label_create(scr_msg);
+  lv_obj_set_width(msg_title, LV_PCT(100));
+  lv_label_set_long_mode(msg_title, LV_LABEL_LONG_WRAP);
+  lv_obj_align(msg_title, LV_ALIGN_TOP_MID, 0, 20);
+  msg_line_style(msg_title);
+
+  msg_line2 = lv_label_create(scr_msg);
+  lv_obj_set_width(msg_line2, LV_PCT(100));
+  lv_label_set_long_mode(msg_line2, LV_LABEL_LONG_WRAP);
+  lv_obj_align(msg_line2, LV_ALIGN_TOP_MID, 0, 70);
+  msg_line_style(msg_line2);
+
+  msg_line3 = lv_label_create(scr_msg);
+  lv_obj_set_width(msg_line3, LV_PCT(100));
+  lv_label_set_long_mode(msg_line3, LV_LABEL_LONG_WRAP);
+  lv_obj_align(msg_line3, LV_ALIGN_TOP_MID, 0, 110);
+  msg_line_style(msg_line3);
+
+  msg_line4 = lv_label_create(scr_msg);
+  lv_obj_set_width(msg_line4, LV_PCT(100));
+  lv_label_set_long_mode(msg_line4, LV_LABEL_LONG_WRAP);
+  lv_obj_align(msg_line4, LV_ALIGN_TOP_MID, 0, 150);
+  msg_line_style(msg_line4);
+
+  msg_line5 = lv_label_create(scr_msg);
+  lv_obj_set_width(msg_line5, LV_PCT(100));
+  lv_label_set_long_mode(msg_line5, LV_LABEL_LONG_WRAP);
+  lv_obj_align(msg_line5, LV_ALIGN_TOP_MID, 0, 190);
+  msg_line_style(msg_line5);
+}
+
+static void build_ota_screen(void) {
+  scr_ota = lv_obj_create(NULL);
+  lv_obj_set_style_bg_color(scr_ota, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(scr_ota, LV_OPA_COVER, LV_PART_MAIN);
+  ota_lbl = lv_label_create(scr_ota);
+  lv_label_set_text(ota_lbl, "OTA");
+  lv_obj_align(ota_lbl, LV_ALIGN_TOP_MID, 0, 16);
+  lv_obj_set_style_text_color(ota_lbl, lv_color_black(), LV_PART_MAIN);
+
+  ota_bar = lv_bar_create(scr_ota);
+  lv_obj_set_size(ota_bar, 300, 22);
+  lv_obj_align(ota_bar, LV_ALIGN_CENTER, 0, -10);
+  lv_bar_set_range(ota_bar, 0, 100);
+  lv_obj_set_style_bg_color(ota_bar, lv_color_hex(0x888888), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(ota_bar, lv_palette_main(LV_PALETTE_ORANGE), LV_PART_INDICATOR);
+
+  ota_sub = lv_label_create(scr_ota);
+  lv_obj_set_width(ota_sub, LV_PCT(100));
+  lv_label_set_long_mode(ota_sub, LV_LABEL_LONG_WRAP);
+  lv_obj_align(ota_sub, LV_ALIGN_BOTTOM_MID, 0, -24);
+  lv_obj_set_style_text_align(ota_sub, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+  lv_obj_set_style_text_color(ota_sub, lv_color_black(), LV_PART_MAIN);
+}
+
+static void build_clock_screen(void) {
+  scr_clock = lv_obj_create(NULL);
+  lv_obj_set_style_bg_color(scr_clock, rgb565_to_lv(COLOR_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(scr_clock, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(scr_clock, 0, LV_PART_MAIN);
+  lv_obj_clear_flag(scr_clock, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t *hdr = lv_obj_create(scr_clock);
+  lv_obj_remove_style_all(hdr);
+  lv_obj_set_style_bg_opa(hdr, LV_OPA_TRANSP, LV_PART_MAIN);
+  lv_obj_set_size(hdr, 320, 22);
+  lv_obj_align(hdr, LV_ALIGN_TOP_MID, 0, 0);
+  lv_obj_set_flex_flow(hdr, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(hdr, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_left(hdr, 4, LV_PART_MAIN);
+  lv_obj_set_style_pad_right(hdr, 4, LV_PART_MAIN);
+
+  lbl_alarm_hdr = lv_label_create(hdr);
+  lv_obj_set_width(lbl_alarm_hdr, 88);
+  lv_label_set_long_mode(lbl_alarm_hdr, LV_LABEL_LONG_DOT);
+  lv_obj_set_style_text_font(lbl_alarm_hdr, &font_ui_primary, LV_PART_MAIN);
+
+  lbl_ip = lv_label_create(hdr);
+  lv_obj_set_flex_grow(lbl_ip, 1);
+  lv_obj_set_style_text_align(lbl_ip, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+  lv_obj_set_style_text_font(lbl_ip, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_ip, rgb565_to_lv(COLOR_IP), LV_PART_MAIN);
+
+  lbl_snooze = lv_label_create(hdr);
+  lv_label_set_text(lbl_snooze, "Zz");
+  lv_obj_set_width(lbl_snooze, 22);
+  lv_obj_set_style_text_font(lbl_snooze, &font_ui_primary, LV_PART_MAIN);
+
+  lbl_rssi = lv_label_create(hdr);
+  lv_obj_set_width(lbl_rssi, 52);
+  lv_obj_set_style_text_font(lbl_rssi, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_set_style_text_align(lbl_rssi, LV_TEXT_ALIGN_RIGHT, LV_PART_MAIN);
+
+  lv_obj_t *btn_l;
+  lv_obj_t *btn_r;
+
+  /* Flip-Uhr: Montserrat 24 (lv_conf.h muss in …/lvgl/src/lv_conf.h liegen) + große Kacheln. */
+  const lv_coord_t clock_top = 26;
+  const lv_coord_t flip_bar_h = 70;
+  const lv_coord_t flip_cell_w = 56;
+  const lv_coord_t flip_cell_h = 64;
+  const lv_coord_t date_below_flip = 6;
+  const lv_coord_t date_row_h = 36;
+  const lv_coord_t gap_date_to_mid = 0;
+
+  flip_time_bar = lv_obj_create(scr_clock);
+  lv_obj_remove_style_all(flip_time_bar);
+  lv_obj_set_size(flip_time_bar, 320, flip_bar_h);
+  lv_obj_align(flip_time_bar, LV_ALIGN_TOP_MID, 0, clock_top);
+  lv_obj_set_flex_flow(flip_time_bar, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(flip_time_bar, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_column(flip_time_bar, 10, LV_PART_MAIN);
+  lv_obj_clear_flag(flip_time_bar, LV_OBJ_FLAG_SCROLLABLE);
+
+  auto mk_flip_cell = [&](int idx) {
+    flip_cell[idx] = lv_obj_create(flip_time_bar);
+    lv_obj_set_size(flip_cell[idx], flip_cell_w, flip_cell_h);
+    lv_obj_set_style_bg_color(flip_cell[idx], rgb565_to_lv(COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(flip_cell[idx], LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_color(flip_cell[idx], rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
+    lv_obj_set_style_border_width(flip_cell[idx], 3, LV_PART_MAIN);
+    lv_obj_set_style_radius(flip_cell[idx], 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(flip_cell[idx], 0, LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(flip_cell[idx], 0, LV_PART_MAIN);
+    flip_lbl[idx] = lv_label_create(flip_cell[idx]);
+    lv_label_set_text(flip_lbl[idx], "0");
+    lv_obj_set_style_text_font(flip_lbl[idx], &font_clock_time, LV_PART_MAIN);
+    lv_obj_set_style_text_color(flip_lbl[idx], rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
+    lv_obj_set_style_text_letter_space(flip_lbl[idx], 4, LV_PART_MAIN);
+    lv_obj_center(flip_lbl[idx]);
+  };
+
+  mk_flip_cell(0);
+  mk_flip_cell(1);
+  flip_colon = lv_label_create(flip_time_bar);
+  lv_label_set_text(flip_colon, ":");
+  lv_obj_set_style_text_font(flip_colon, &font_clock_time, LV_PART_MAIN);
+  lv_obj_set_style_text_color(flip_colon, rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
+  lv_obj_set_style_pad_top(flip_colon, 2, LV_PART_MAIN);
+  mk_flip_cell(2);
+  mk_flip_cell(3);
+
+  lv_obj_update_layout(flip_time_bar);
+  for (int fi = 0; fi < 4; fi++) {
+    lv_coord_t pw = lv_obj_get_width(flip_lbl[fi]) / 2;
+    lv_coord_t ph = lv_obj_get_height(flip_lbl[fi]) / 2;
+    if (pw < 1) pw = 1;
+    if (ph < 1) ph = 1;
+    lv_obj_set_style_transform_pivot_x(flip_lbl[fi], pw, LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_y(flip_lbl[fi], ph, LV_PART_MAIN);
+    lv_obj_set_style_transform_scale_y(flip_lbl[fi], 256, LV_PART_MAIN);
   }
 
-  setGain(curGain);  // Setze die Lautstärke auf den neuen Wert
+  lbl_date = lv_label_create(scr_clock);
+  lv_obj_set_width(lbl_date, 308);
+  lv_label_set_long_mode(lbl_date, LV_LABEL_LONG_WRAP);
+  lv_obj_set_style_text_align(lbl_date, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_date, rgb565_to_lv(COLOR_DATE), LV_PART_MAIN);
+  lv_obj_set_style_text_font(lbl_date, &font_clock_date, LV_PART_MAIN);
+  lv_obj_set_style_text_line_space(lbl_date, 2, LV_PART_MAIN);
+  lv_obj_align(lbl_date, LV_ALIGN_TOP_MID, 0, clock_top + flip_bar_h + date_below_flip);
+
+  const lv_coord_t mid_y = clock_top + flip_bar_h + date_below_flip + date_row_h + gap_date_to_mid;
+
+  mid_weather = lv_obj_create(scr_clock);
+  lv_obj_remove_style_all(mid_weather);
+  lv_obj_set_size(mid_weather, 314, 76);
+  lv_obj_align(mid_weather, LV_ALIGN_TOP_MID, 0, mid_y);
+  lv_obj_set_flex_flow(mid_weather, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(mid_weather, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+  lv_obj_set_style_pad_column(mid_weather, 2, LV_PART_MAIN);
+  lv_obj_clear_flag(mid_weather, LV_OBJ_FLAG_CLICKABLE);
+
+  auto mkcol = [&](lv_obj_t *parent) {
+    lv_obj_t *c = lv_obj_create(parent);
+    lv_obj_set_size(c, 100, 72);
+    lv_obj_set_style_bg_color(c, rgb565_to_lv(COLOR_STATION_BOX_BG), LV_PART_MAIN);
+    lv_obj_set_style_border_color(c, rgb565_to_lv(COLOR_STATION_BOX_BORDER), LV_PART_MAIN);
+    lv_obj_set_style_border_width(c, 1, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(c, 2, LV_PART_MAIN);
+    lv_obj_set_flex_flow(c, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(c, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_scrollbar_mode(c, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(c, LV_OBJ_FLAG_CLICKABLE);
+    return c;
+  };
+  lv_obj_t *c0 = mkcol(mid_weather);
+  lv_obj_t *c1 = mkcol(mid_weather);
+  lv_obj_t *c2 = mkcol(mid_weather);
+  (void)c0;
+  auto mk3 = [&](lv_obj_t *col, lv_obj_t **a, lv_obj_t **b, lv_obj_t **c) {
+    *a = lv_label_create(col);
+    *b = lv_label_create(col);
+    *c = lv_label_create(col);
+    lv_obj_set_width(*a, LV_PCT(100));
+    lv_obj_set_width(*b, LV_PCT(100));
+    lv_obj_set_width(*c, LV_PCT(100));
+    lv_label_set_long_mode(*a, LV_LABEL_LONG_DOT);
+    lv_label_set_long_mode(*b, LV_LABEL_LONG_DOT);
+    lv_label_set_long_mode(*c, LV_LABEL_LONG_DOT);
+    lv_obj_set_style_text_color(*a, rgb565_to_lv(COLOR_STATION_TITLE), LV_PART_MAIN);
+    lv_obj_set_style_text_color(*b, rgb565_to_lv(COLOR_STATION_TITLE), LV_PART_MAIN);
+    lv_obj_set_style_text_color(*c, rgb565_to_lv(COLOR_STATION_TITLE), LV_PART_MAIN);
+    lv_obj_set_style_text_font(*a, &font_ui_primary, LV_PART_MAIN);
+    lv_obj_set_style_text_font(*b, &font_ui_primary, LV_PART_MAIN);
+    lv_obj_set_style_text_font(*c, &font_ui_primary, LV_PART_MAIN);
+    lv_obj_clear_flag(*a, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(*b, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(*c, LV_OBJ_FLAG_CLICKABLE);
+  };
+  lv_obj_t *t0a, *t0b, *t0c;
+  lv_obj_t *t1a, *t1b, *t1c;
+  lv_obj_t *t2a, *t2b, *t2c;
+  mk3(c0, &t0a, &t0b, &t0c);
+  mk3(c1, &t1a, &t1b, &t1c);
+  mk3(c2, &t2a, &t2b, &t2c);
+  w_lbl_now_t = t0b;
+  w_lbl_now_f = t0c;
+  w_lbl_td_min = t1b;
+  w_lbl_td_max = t1c;
+  w_lbl_tm_min = t2b;
+  w_lbl_tm_max = t2c;
+  lv_label_set_text(t0a, TXT_NOW);
+  lv_label_set_text(t1a, TXT_TODAY);
+  lv_label_set_text(t2a, TXT_TOMMORROW);
+
+  mid_radio = lv_obj_create(scr_clock);
+  lv_obj_remove_style_all(mid_radio);
+  lv_obj_set_size(mid_radio, 314, 76);
+  lv_obj_align(mid_radio, LV_ALIGN_TOP_MID, 0, mid_y);
+  lv_obj_set_style_bg_color(mid_radio, rgb565_to_lv(COLOR_STATION_BOX_BG), LV_PART_MAIN);
+  lv_obj_set_style_border_color(mid_radio, rgb565_to_lv(COLOR_STATION_BOX_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_border_width(mid_radio, 1, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(mid_radio, 6, LV_PART_MAIN);
+  lv_obj_set_flex_flow(mid_radio, LV_FLEX_FLOW_COLUMN);
+  /* START + CENTER: Titel links unter dem zentrierten Sendernamen (WRAP+CENTER buggt in LVGL9 teils: Anfang abgeschnitten) */
+  lv_obj_set_flex_align(mid_radio, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
+  lv_obj_add_flag(mid_radio, LV_OBJ_FLAG_HIDDEN);
+
+  lbl_station_big = lv_label_create(mid_radio);
+  lv_obj_set_width(lbl_station_big, LV_PCT(100));
+  lv_label_set_long_mode(lbl_station_big, LV_LABEL_LONG_DOT);
+  lv_obj_set_style_text_align(lbl_station_big, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_station_big, rgb565_to_lv(COLOR_STATION_NAME), LV_PART_MAIN);
+  lv_obj_set_style_text_font(lbl_station_big, &font_radio_meta, LV_PART_MAIN);
+  lv_label_set_text(lbl_station_big, "-");
+
+  lbl_stream_title = lv_label_create(mid_radio);
+  lv_obj_set_width(lbl_stream_title, LV_PCT(100));
+  lv_label_set_long_mode(lbl_stream_title, LV_LABEL_LONG_WRAP);
+  lv_obj_set_style_text_align(lbl_stream_title, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_stream_title, rgb565_to_lv(COLOR_STATION_TITLE), LV_PART_MAIN);
+  lv_obj_set_style_text_font(lbl_stream_title, &font_radio_meta, LV_PART_MAIN);
+  lv_obj_clear_flag(lbl_stream_title, LV_OBJ_FLAG_SCROLLABLE);
+  lv_label_set_text(lbl_stream_title, "");
+
+  /* Sender vor/zurück: unter der Flip-Uhr im Datumsband (nicht über der Uhr), Breite wie zuvor. */
+  const lv_coord_t clock_nav_w = 34;
+  const lv_coord_t clock_nav_y = clock_top + flip_bar_h + date_below_flip;
+  const lv_coord_t clock_nav_h = date_row_h;
+  btn_l = lv_button_create(scr_clock);
+  lv_obj_set_size(btn_l, clock_nav_w, clock_nav_h);
+  lv_obj_align(btn_l, LV_ALIGN_TOP_LEFT, 0, clock_nav_y);
+  lv_obj_set_style_bg_opa(btn_l, LV_OPA_30, LV_PART_MAIN);
+  lv_obj_add_event_cb(btn_l, on_clock_prev, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *l1 = lv_label_create(btn_l);
+  lv_label_set_text(l1, LV_SYMBOL_LEFT);
+  lv_obj_center(l1);
+
+  btn_r = lv_button_create(scr_clock);
+  lv_obj_set_size(btn_r, clock_nav_w, clock_nav_h);
+  lv_obj_align(btn_r, LV_ALIGN_TOP_RIGHT, 0, clock_nav_y);
+  lv_obj_set_style_bg_opa(btn_r, LV_OPA_30, LV_PART_MAIN);
+  lv_obj_add_event_cb(btn_r, on_clock_next, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *l2 = lv_label_create(btn_r);
+  lv_label_set_text(l2, LV_SYMBOL_RIGHT);
+  lv_obj_center(l2);
+
+  /* Tap-Bereich unter der Kopfzeile bis über Wetter/Radio-Block */
+  lv_obj_t *btn_clock_radio = lv_button_create(scr_clock);
+  lv_obj_set_size(btn_clock_radio, 288, (lv_coord_t)(mid_y + 76 - 22));
+  lv_obj_align(btn_clock_radio, LV_ALIGN_TOP_MID, 0, 22);
+  lv_obj_add_flag(btn_clock_radio, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_style_bg_opa(btn_clock_radio, LV_OPA_TRANSP, LV_PART_MAIN);
+  lv_obj_set_style_border_opa(btn_clock_radio, LV_OPA_TRANSP, LV_PART_MAIN);
+  lv_obj_set_style_shadow_opa(btn_clock_radio, LV_OPA_TRANSP, LV_PART_MAIN);
+  lv_obj_add_event_cb(btn_clock_radio, evt_open_radio_page, LV_EVENT_CLICKED, NULL);
+
+  sl_clock_vol = lv_slider_create(scr_clock);
+  lv_obj_set_size(sl_clock_vol, 300, 18);
+  lv_obj_align(sl_clock_vol, LV_ALIGN_BOTTOM_MID, 0, -8);
+  lv_slider_set_range(sl_clock_vol, 0, 100);
+  style_slider(sl_clock_vol);
+  lv_obj_add_event_cb(sl_clock_vol, on_gain_slider, LV_EVENT_VALUE_CHANGED, NULL);
+  lv_obj_add_event_cb(sl_clock_vol, on_gain_slider, LV_EVENT_RELEASED, NULL);
+
+  /* Transparenter Tap-Layer liegt sonst über den Pfeilen — Senderwechsel geht nicht */
+  lv_obj_move_foreground(btn_l);
+  lv_obj_move_foreground(btn_r);
 }
 
+static void add_radio_footer(lv_obj_t *parent, bool settings_next) {
+  lv_obj_t *row = make_footer_nav(parent);
+  lv_obj_align(row, LV_ALIGN_BOTTOM_MID, 0, 0);
+  lv_obj_t *b0 = lv_button_create(row);
+  footer_style_btn(b0);
+  lv_obj_t *x0 = lv_label_create(b0);
+  lv_label_set_text(x0, LV_SYMBOL_POWER);
+  lv_obj_center(x0);
+  lv_obj_add_event_cb(b0, evt_footer_power, LV_EVENT_CLICKED, NULL);
 
-// Setzt die Helligkeit basierend auf der x-Position, an der der Schieberegler geklickt wurde
-// Die Funktion berechnet den Helligkeitswert als Prozentsatz und passt den Schieberegler
-// entsprechend an. Der Helligkeitswert wird ebenfalls gespeichert und angezeigt.
+  lv_obj_t *b1 = lv_button_create(row);
+  footer_style_btn(b1);
+  lv_obj_t *x1 = lv_label_create(b1);
+  lv_label_set_text(x1, "Zz");
+  lv_obj_center(x1);
+  lv_obj_add_event_cb(b1, evt_footer_snooze, LV_EVENT_CLICKED, NULL);
+
+  lv_obj_t *b2 = lv_button_create(row);
+  footer_style_btn(b2);
+  lv_obj_t *x2 = lv_label_create(b2);
+  lv_label_set_text(x2, LV_SYMBOL_BELL);
+  lv_obj_center(x2);
+  lv_obj_add_event_cb(b2, evt_footer_alarm, LV_EVENT_CLICKED, NULL);
+
+  lv_obj_t *b3 = lv_button_create(row);
+  footer_style_btn(b3);
+  lv_obj_t *x3 = lv_label_create(b3);
+  lv_label_set_text(x3, LV_SYMBOL_NEXT);
+  lv_obj_center(x3);
+  lv_obj_add_event_cb(b3, evt_footer_mid_radio, LV_EVENT_CLICKED, NULL);
+
+  lv_obj_t *b4 = lv_button_create(row);
+  footer_style_btn(b4);
+  lv_obj_t *x4 = lv_label_create(b4);
+  lv_label_set_text(x4, settings_next ? LV_SYMBOL_SETTINGS : LV_SYMBOL_HOME);
+  lv_obj_center(x4);
+  if (settings_next)
+    lv_obj_add_event_cb(b4, evt_footer_cfg_radio, LV_EVENT_CLICKED, NULL);
+  else
+    lv_obj_add_event_cb(b4, evt_footer_home_alarm, LV_EVENT_CLICKED, NULL);
+
+  ui_footer_register_state_row(b0, x0, b1, x1, b2, x2);
+}
+
+static void build_radio_screen(void) {
+  scr_radio = lv_obj_create(NULL);
+  lv_obj_set_style_bg_color(scr_radio, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(scr_radio, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(scr_radio, 0, LV_PART_MAIN);
+
+  sl_radio_gain = lv_slider_create(scr_radio);
+  lv_obj_set_width(sl_radio_gain, 312);
+  lv_obj_set_height(sl_radio_gain, 16);
+  lv_obj_align(sl_radio_gain, LV_ALIGN_TOP_MID, 0, 14);
+  lv_slider_set_range(sl_radio_gain, 0, 100);
+  style_slider_light(sl_radio_gain);
+  lv_obj_add_event_cb(sl_radio_gain, on_gain_slider, LV_EVENT_VALUE_CHANGED, NULL);
+  lv_obj_add_event_cb(sl_radio_gain, on_gain_slider, LV_EVENT_RELEASED, NULL);
+
+  lv_obj_t *gf = lv_obj_create(scr_radio);
+  lv_obj_remove_style_all(gf);
+  lv_obj_set_size(gf, 320, 90);
+  lv_obj_align(gf, LV_ALIGN_TOP_MID, 0, 38);
+  lv_obj_set_style_bg_color(gf, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(gf, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_flex_flow(gf, LV_FLEX_FLOW_ROW_WRAP);
+  lv_obj_set_style_pad_column(gf, 2, LV_PART_MAIN);
+  lv_obj_set_style_pad_row(gf, 2, LV_PART_MAIN);
+  lv_obj_set_flex_align(gf, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+  for (int i = 0; i < 10; i++) {
+    fav_btn[i] = lv_button_create(gf);
+    lv_obj_set_size(fav_btn[i], 60, 40);
+    station_arrow_btn_style(fav_btn[i]);
+    fav_lbl[i] = lv_label_create(fav_btn[i]);
+    lv_obj_set_width(fav_lbl[i], 54);
+    lv_label_set_long_mode(fav_lbl[i], LV_LABEL_LONG_DOT);
+    lv_obj_set_style_text_font(fav_lbl[i], &font_ui_primary, LV_PART_MAIN);
+    lv_obj_set_style_text_color(fav_lbl[i], lv_color_white(), LV_PART_MAIN);
+    lv_obj_center(fav_lbl[i]);
+    lv_obj_add_event_cb(fav_btn[i], on_fav_btn, LV_EVENT_CLICKED, (void *)(intptr_t)i);
+    lv_obj_add_flag(fav_btn[i], LV_OBJ_FLAG_HIDDEN);
+  }
+
+  lv_obj_t *strow = lv_obj_create(scr_radio);
+  lv_obj_remove_style_all(strow);
+  lv_obj_set_size(strow, 320, 50);
+  lv_obj_align(strow, LV_ALIGN_TOP_MID, 0, 128);
+  lv_obj_set_style_bg_color(strow, rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(strow, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_border_color(strow, rgb565_to_lv(COLOR_SETTING_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_border_width(strow, 1, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(strow, 2, LV_PART_MAIN);
+  lv_obj_set_flex_flow(strow, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(strow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+  lv_obj_t *bsu = lv_button_create(strow);
+  lv_obj_set_size(bsu, 48, 40);
+  station_arrow_btn_style(bsu);
+  lv_obj_t *lsu = lv_label_create(bsu);
+  lv_label_set_text(lsu, LV_SYMBOL_UP);
+  lv_obj_center(lsu);
+  lv_obj_add_event_cb(bsu, on_station_prev, LV_EVENT_CLICKED, NULL);
+
+  lbl_station_radio = lv_label_create(strow);
+  lv_obj_set_width(lbl_station_radio, 210);
+  lv_label_set_long_mode(lbl_station_radio, LV_LABEL_LONG_DOT);
+  lv_obj_set_style_text_align(lbl_station_radio, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+  lv_obj_set_style_text_font(lbl_station_radio, &font_radio_meta, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_station_radio, lv_color_black(), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(lbl_station_radio, LV_OPA_TRANSP, LV_PART_MAIN);
+
+  lv_obj_t *bsd = lv_button_create(strow);
+  lv_obj_set_size(bsd, 48, 40);
+  station_arrow_btn_style(bsd);
+  lv_obj_t *lsd = lv_label_create(bsd);
+  lv_label_set_text(lsd, LV_SYMBOL_DOWN);
+  lv_obj_center(lsd);
+  lv_obj_add_event_cb(bsd, on_station_next, LV_EVENT_CLICKED, NULL);
+
+  add_radio_footer(scr_radio, true);
+}
+
+static void config_row_slider(lv_obj_t *parent, const char *label, lv_obj_t **sl, lv_obj_t **val_lbl, int y0, int vmax) {
+  lv_obj_t *box = lv_obj_create(parent);
+  lv_obj_set_size(box, 320, 44);
+  lv_obj_align(box, LV_ALIGN_TOP_LEFT, 0, y0);
+  lv_obj_set_style_bg_color(box, rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(box, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_border_color(box, rgb565_to_lv(COLOR_SETTING_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_border_width(box, 1, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(box, 4, LV_PART_MAIN);
+  lv_obj_t *lb = lv_label_create(box);
+  lv_label_set_text(lb, label);
+  lv_obj_set_style_text_font(lb, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lb, lv_color_black(), LV_PART_MAIN);
+  lv_obj_align(lb, LV_ALIGN_TOP_LEFT, 4, 2);
+  *val_lbl = lv_label_create(box);
+  lv_label_set_text(*val_lbl, "--");
+  lv_obj_set_style_text_font(*val_lbl, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_set_style_text_color(*val_lbl, lv_color_black(), LV_PART_MAIN);
+  lv_obj_align(*val_lbl, LV_ALIGN_TOP_RIGHT, -6, 2);
+  *sl = lv_slider_create(box);
+  lv_obj_set_size(*sl, 300, 14);
+  lv_obj_align(*sl, LV_ALIGN_BOTTOM_MID, 0, -4);
+  lv_slider_set_range(*sl, 0, vmax);
+  style_slider_light(*sl);
+}
+
+static void build_config_screen(void) {
+  scr_config = lv_obj_create(NULL);
+  lv_obj_set_style_bg_color(scr_config, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(scr_config, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(scr_config, 0, LV_PART_MAIN);
+
+  config_row_slider(scr_config, "Lautstärke", &sl_cfg_gain, &lbl_cfg_gain_val, 0, 100);
+  lv_obj_add_event_cb(sl_cfg_gain, on_gain_slider, LV_EVENT_VALUE_CHANGED, NULL);
+  lv_obj_add_event_cb(sl_cfg_gain, on_gain_slider, LV_EVENT_RELEASED, NULL);
+
+  config_row_slider(scr_config, "Helligkeit", &sl_cfg_bright, &lbl_cfg_bright_val, 44, 100);
+  lv_obj_add_event_cb(sl_cfg_bright, on_bright_slider, LV_EVENT_VALUE_CHANGED, NULL);
+  lv_obj_add_event_cb(sl_cfg_bright, on_bright_slider, LV_EVENT_RELEASED, NULL);
+
+  config_row_slider(scr_config, "Einschlafzeit", &sl_cfg_snooze, &lbl_cfg_snooze_val, 88, 60);
+  lv_obj_add_event_cb(sl_cfg_snooze, on_snooze_slider, LV_EVENT_VALUE_CHANGED, NULL);
+  lv_obj_add_event_cb(sl_cfg_snooze, on_snooze_slider, LV_EVENT_RELEASED, NULL);
+
+  lv_obj_t *strow = lv_obj_create(scr_config);
+  lv_obj_remove_style_all(strow);
+  lv_obj_set_size(strow, 320, 44);
+  lv_obj_align(strow, LV_ALIGN_TOP_LEFT, 0, 132);
+  lv_obj_set_style_bg_color(strow, rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(strow, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_border_color(strow, rgb565_to_lv(COLOR_SETTING_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_border_width(strow, 1, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(strow, 2, LV_PART_MAIN);
+  lv_obj_set_flex_flow(strow, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(strow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+  lv_obj_t *bsu = lv_button_create(strow);
+  lv_obj_set_size(bsu, 48, 40);
+  station_arrow_btn_style(bsu);
+  lv_obj_t *lsu = lv_label_create(bsu);
+  lv_label_set_text(lsu, LV_SYMBOL_UP);
+  lv_obj_center(lsu);
+  lv_obj_add_event_cb(bsu, on_cfg_station_prev, LV_EVENT_CLICKED, NULL);
+
+  lbl_station_cfg = lv_label_create(strow);
+  lv_obj_set_width(lbl_station_cfg, 210);
+  lv_label_set_long_mode(lbl_station_cfg, LV_LABEL_LONG_DOT);
+  lv_obj_set_style_text_align(lbl_station_cfg, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+  lv_obj_set_style_text_font(lbl_station_cfg, &font_radio_meta, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_station_cfg, lv_color_black(), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(lbl_station_cfg, LV_OPA_TRANSP, LV_PART_MAIN);
+
+  lv_obj_t *bsd = lv_button_create(strow);
+  lv_obj_set_size(bsd, 48, 40);
+  station_arrow_btn_style(bsd);
+  lv_obj_t *lsd = lv_label_create(bsd);
+  lv_label_set_text(lsd, LV_SYMBOL_DOWN);
+  lv_obj_center(lsd);
+  lv_obj_add_event_cb(bsd, on_cfg_station_next, LV_EVENT_CLICKED, NULL);
+
+  lv_obj_t *row = make_footer_nav(scr_config);
+  lv_obj_align(row, LV_ALIGN_BOTTOM_MID, 0, 0);
+  const char *syms[] = {LV_SYMBOL_POWER, "Zz", LV_SYMBOL_BELL, LV_SYMBOL_NEXT, LV_SYMBOL_LIST};
+  lv_event_cb_t cbs[] = {evt_footer_power, evt_footer_snooze, evt_footer_alarm, evt_footer_mid_cfg, evt_footer_alarm_from_cfg};
+  lv_obj_t *fb0 = NULL, *fx0 = NULL, *fb1 = NULL, *fx1 = NULL, *fb2 = NULL, *fx2 = NULL;
+  for (int i = 0; i < 5; i++) {
+    lv_obj_t *b = lv_button_create(row);
+    footer_style_btn(b);
+    lv_obj_t *x = lv_label_create(b);
+    lv_label_set_text(x, syms[i]);
+    lv_obj_center(x);
+    lv_obj_add_event_cb(b, cbs[i], LV_EVENT_CLICKED, NULL);
+    if (i == 0) {
+      fb0 = b;
+      fx0 = x;
+    } else if (i == 1) {
+      fb1 = b;
+      fx1 = x;
+    } else if (i == 2) {
+      fb2 = b;
+      fx2 = x;
+    }
+  }
+  ui_footer_register_state_row(fb0, fx0, fb1, fx1, fb2, fx2);
+}
+
+static void build_alarm_screen(void) {
+  scr_alarm = lv_obj_create(NULL);
+  lv_obj_set_style_bg_color(scr_alarm, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(scr_alarm, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(scr_alarm, 0, LV_PART_MAIN);
+
+  lv_obj_t *z1 = lv_obj_create(scr_alarm);
+  lv_obj_set_size(z1, 320, 88);
+  lv_obj_align(z1, LV_ALIGN_TOP_LEFT, 0, 0);
+  lv_obj_set_style_bg_color(z1, rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(z1, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_border_width(z1, 1, LV_PART_MAIN);
+  lv_obj_set_style_border_color(z1, rgb565_to_lv(COLOR_SETTING_BORDER), LV_PART_MAIN);
+
+  lv_obj_t *z2 = lv_obj_create(scr_alarm);
+  lv_obj_set_size(z2, 320, 88);
+  lv_obj_align(z2, LV_ALIGN_TOP_LEFT, 0, 88);
+  lv_obj_set_style_bg_color(z2, rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(z2, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_border_width(z2, 1, LV_PART_MAIN);
+  lv_obj_set_style_border_color(z2, rgb565_to_lv(COLOR_SETTING_BORDER), LV_PART_MAIN);
+
+  for (uint8_t row = 0; row < 2; row++) {
+    lv_obj_t *zone = (row == 0) ? z1 : z2;
+    uint8_t y0 = (uint8_t)(8 + row * 88);
+    for (uint8_t col = 0; col < 7; col++) {
+      al_day_btn[row][col] = lv_button_create(scr_alarm);
+      lv_obj_set_size(al_day_btn[row][col], 40, 28);
+      lv_obj_align(al_day_btn[row][col], LV_ALIGN_TOP_LEFT, 10 + col * 42, y0);
+      lv_obj_set_style_bg_color(al_day_btn[row][col], rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
+      lv_obj_set_style_text_color(al_day_btn[row][col], lv_color_black(), LV_PART_MAIN);
+      lv_obj_t *lb = lv_label_create(al_day_btn[row][col]);
+      lv_label_set_text(lb, days_short[(col + 1) % 7]);
+      lv_obj_set_style_text_color(lb, lv_color_black(), LV_PART_MAIN);
+      lv_obj_center(lb);
+      uintptr_t ud = ((uintptr_t)row << 8) | col;
+      lv_obj_add_event_cb(al_day_btn[row][col], on_alarm_day, LV_EVENT_CLICKED, (void *)ud);
+    }
+  }
+
+  lbl_al_t1 = lv_label_create(scr_alarm);
+  lv_obj_align(lbl_al_t1, LV_ALIGN_TOP_MID, 0, 52);
+  lv_obj_set_style_text_font(lbl_al_t1, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_al_t1, lv_color_black(), LV_PART_MAIN);
+
+  lbl_al_t2 = lv_label_create(scr_alarm);
+  lv_obj_align(lbl_al_t2, LV_ALIGN_TOP_MID, 0, 140);
+  lv_obj_set_style_text_font(lbl_al_t2, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_al_t2, lv_color_black(), LV_PART_MAIN);
+
+  auto mkpair = [&](lv_coord_t x, lv_coord_t y, lv_event_cb_t up, lv_event_cb_t dn) {
+    lv_obj_t *bu = lv_button_create(scr_alarm);
+    lv_obj_set_size(bu, 44, 36);
+    lv_obj_align(bu, LV_ALIGN_TOP_LEFT, x, y);
+    station_arrow_btn_style(bu);
+    lv_obj_t *lu = lv_label_create(bu);
+    lv_label_set_text(lu, LV_SYMBOL_UP);
+    lv_obj_center(lu);
+    lv_obj_add_event_cb(bu, up, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *bd = lv_button_create(scr_alarm);
+    lv_obj_set_size(bd, 44, 36);
+    lv_obj_align(bd, LV_ALIGN_TOP_LEFT, x + 48, y);
+    station_arrow_btn_style(bd);
+    lv_obj_t *ld = lv_label_create(bd);
+    lv_label_set_text(ld, LV_SYMBOL_DOWN);
+    lv_obj_center(ld);
+    lv_obj_add_event_cb(bd, dn, LV_EVENT_CLICKED, NULL);
+  };
+  mkpair(4, 44, on_al_h_up1, on_al_h_dn1);
+  mkpair(214, 44, on_al_m_up1, on_al_m_dn1);
+  mkpair(4, 132, on_al_h_up2, on_al_h_dn2);
+  mkpair(214, 132, on_al_m_up2, on_al_m_dn2);
+
+  lv_obj_t *row = make_footer_nav(scr_alarm);
+  lv_obj_align(row, LV_ALIGN_BOTTOM_MID, 0, 0);
+  lv_obj_t *b0 = lv_button_create(row);
+  footer_style_btn(b0);
+  lv_obj_t *x0 = lv_label_create(b0);
+  lv_label_set_text(x0, LV_SYMBOL_POWER);
+  lv_obj_center(x0);
+  lv_obj_add_event_cb(b0, evt_footer_power, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *b1 = lv_button_create(row);
+  footer_style_btn(b1);
+  lv_obj_t *x1 = lv_label_create(b1);
+  lv_label_set_text(x1, "Zz");
+  lv_obj_center(x1);
+  lv_obj_add_event_cb(b1, evt_footer_snooze, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *b2 = lv_button_create(row);
+  footer_style_btn(b2);
+  lv_obj_t *x2 = lv_label_create(b2);
+  lv_label_set_text(x2, LV_SYMBOL_BELL);
+  lv_obj_center(x2);
+  lv_obj_add_event_cb(b2, evt_footer_alarm, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *b3 = lv_button_create(row);
+  footer_style_btn(b3);
+  lv_obj_t *x3 = lv_label_create(b3);
+  lv_label_set_text(x3, LV_SYMBOL_OK);
+  lv_obj_center(x3);
+  lv_obj_add_event_cb(b3, evt_footer_save_alarm, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *b4 = lv_button_create(row);
+  footer_style_btn(b4);
+  lv_obj_t *x4 = lv_label_create(b4);
+  lv_label_set_text(x4, LV_SYMBOL_HOME);
+  lv_obj_center(x4);
+  lv_obj_add_event_cb(b4, evt_footer_home_alarm, LV_EVENT_CLICKED, NULL);
+
+  ui_footer_register_state_row(b0, x0, b1, x1, b2, x2);
+}
+
+static void ui_refresh_header(void) {
+  if (!lbl_rssi || !lbl_ip || !lbl_snooze || !lbl_alarm_hdr) return;
+  int rssi = WiFi.RSSI();
+  char rssiChar[8];
+  snprintf(rssiChar, sizeof(rssiChar), "%d", rssi);
+  lv_color_t wc = lv_color_white();
+  if (rssi <= -70) wc = lv_palette_main(LV_PALETTE_RED);
+  else if (rssi <= -50) wc = lv_palette_main(LV_PALETTE_YELLOW);
+  else wc = lv_palette_main(LV_PALETTE_GREEN);
+  lv_obj_set_style_text_color(lbl_rssi, wc, LV_PART_MAIN);
+  lv_label_set_text(lbl_rssi, rssiChar);
+
+  IPAddress ip = WiFi.localIP();
+  char ipstr[20];
+  snprintf(ipstr, sizeof(ipstr), "%u.%u.%u.%u", (unsigned)ip[0], (unsigned)ip[1], (unsigned)ip[2], (unsigned)ip[3]);
+  lv_label_set_text(lbl_ip, ipstr);
+
+  if (snoozeTimeEnd != 0)
+    lv_obj_set_style_text_color(lbl_snooze, rgb565_to_lv(COLOR_SLEEP_SYMBOL), LV_PART_MAIN);
+  else
+    lv_obj_set_style_text_color(lbl_snooze, rgb565_to_lv(COLOR_BG), LV_PART_MAIN);
+
+  if (startpage) {
+    char txt[50] = "";
+    lv_color_t ac = rgb565_to_lv(COLOR_ALARM_SYMBOL);
+    if (alarmday < 8) {
+      uint8_t h = alarmtime / 60;
+      uint8_t m = alarmtime % 60;
+      snprintf(txt, sizeof(txt), "%s %02u:%02u", days_short[alarmday], h, m);
+    } else {
+      ac = lv_palette_main(LV_PALETTE_RED);
+      snprintf(txt, sizeof(txt), "AUS");
+    }
+    lv_obj_set_style_text_color(lbl_alarm_hdr, ac, LV_PART_MAIN);
+    lv_label_set_text(lbl_alarm_hdr, txt);
+  }
+}
+
+static void ui_refresh_mid_clock(void) {
+  if (!mid_radio || !mid_weather) return;
+  if (radio) {
+    lv_obj_add_flag(mid_weather, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(mid_radio, LV_OBJ_FLAG_HIDDEN);
+    lv_label_set_text(lbl_station_big, stationlist[actStation].name);
+    lv_label_set_text(lbl_stream_title, title);
+    lv_obj_scroll_to_y(lbl_stream_title, 0, LV_ANIM_OFF);
+  } else {
+    lv_obj_clear_flag(mid_weather, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(mid_radio, LV_OBJ_FLAG_HIDDEN);
+  }
+}
+
+void touch_loop(void) {
+  /* Tick: lv_tick_set_cb(millis) nach lv_init() — kein lv_tick_inc nötig */
+  lv_timer_handler();
+}
+
+void setup_display(void) {
+  pinMode(TFT_LED, OUTPUT);
+  pinMode(LDR, INPUT);
+  lastldr = analogRead(LDR);
+  setBGLight(100);
+
+  tft.begin();
+  tft.setRotation(3);
+  tft.fillScreen(ILI9341_BLACK);
+
+  touch.begin();
+
+  lv_init();
+  lv_tick_set_cb(lvgl_tick_get_cb);
+
+  font_ui_primary = lv_font_montserrat_14;
+  font_ui_primary.fallback = &lv_font_de_supp_14;
+
+  font_clock_time = lv_font_montserrat_24;
+  font_clock_date = lv_font_montserrat_18;
+  font_clock_date.fallback = &lv_font_de_supp_14;
+  font_radio_meta = lv_font_montserrat_18;
+  font_radio_meta.fallback = &lv_font_de_supp_14;
+
+  lv_disp_main = lv_display_create(320, 240);
+  lv_display_set_flush_cb(lv_disp_main, disp_flush);
+  lv_display_set_buffers(lv_disp_main, buf1, NULL, sizeof(buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
+
+  lv_indev_t *indev = lv_indev_create();
+  lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
+  lv_indev_set_read_cb(indev, touch_read);
+  lv_indev_set_display(indev, lv_disp_main);
+
+  ui_footer_icons_reset();
+  build_msg_screen();
+  yield();
+  build_ota_screen();
+  yield();
+  build_clock_screen();
+  yield();
+  build_radio_screen();
+  yield();
+  build_config_screen();
+  yield();
+  build_alarm_screen();
+  yield();
+
+  ui_refresh_footer_icons();
+  ui_sync_all_gain_sliders();
+  lv_slider_set_value(sl_cfg_bright, bright, LV_ANIM_OFF);
+  lv_slider_set_value(sl_cfg_snooze, snoozeTime, LV_ANIM_OFF);
+  cfg_sync_value_labels();
+}
+
+void displayClear(void) {
+  if (msg_title) lv_label_set_text(msg_title, "");
+  if (msg_line2) lv_label_set_text(msg_line2, "");
+  if (msg_line3) lv_label_set_text(msg_line3, "");
+  if (msg_line4) lv_label_set_text(msg_line4, "");
+  if (msg_line5) lv_label_set_text(msg_line5, "");
+  if (scr_msg) {
+    lv_obj_set_style_bg_color(scr_msg, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(scr_msg, LV_OPA_COVER, LV_PART_MAIN);
+  }
+}
+
+void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char *text, uint8_t align, boolean big,
+                    uint16_t fc, uint16_t bg, uint8_t lines) {
+  (void)x;
+  (void)w;
+  (void)h;
+  (void)lines;
+  lv_obj_t *target = msg_title;
+  if (y > 170) target = msg_line5;
+  else if (y > 130) target = msg_line4;
+  else if (y > 85) target = msg_line3;
+  else if (y > 35) target = msg_line2;
+  else target = msg_title;
+
+  lv_label_set_text(target, text ? text : "");
+  lv_obj_set_style_text_color(target, rgb565_to_lv(fc), LV_PART_MAIN);
+  lv_obj_set_style_text_font(target, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_set_style_text_align(target,
+                              align == ALIGNCENTER ? LV_TEXT_ALIGN_CENTER : (align == ALIGNRIGHT ? LV_TEXT_ALIGN_RIGHT : LV_TEXT_ALIGN_LEFT),
+                              LV_PART_MAIN);
+  lv_obj_set_style_bg_color(scr_msg, rgb565_to_lv(bg), LV_PART_MAIN);
+  lv_screen_load(scr_msg);
+  lv_timer_handler();
+}
+
+void ota_ui_begin(const char *title) {
+  if (!scr_ota) return;
+  lv_label_set_text(ota_lbl, title ? title : "OTA");
+  lv_label_set_text(ota_sub, "");
+  lv_bar_set_value(ota_bar, 0, LV_ANIM_OFF);
+  lv_screen_load(scr_ota);
+  lv_timer_handler();
+}
+
+void ota_ui_set_sub(const char *sub) {
+  if (ota_sub) lv_label_set_text(ota_sub, sub ? sub : "");
+  lv_timer_handler();
+}
+
+void textInBox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char *text, uint8_t align, boolean big, uint16_t fc, uint16_t bg,
+               uint8_t lines) {
+  (void)lines;
+  displayMessage(x, y, w, h, text, align, big, fc, bg, 1);
+}
+
+static void ui_flip_clock_set(uint8_t hour, uint8_t minute, bool instant) {
+  if (!flip_lbl[0]) return;
+  char newd[4];
+  newd[0] = (char)('0' + (hour / 10) % 10);
+  newd[1] = (char)('0' + hour % 10);
+  newd[2] = (char)('0' + (minute / 10) % 10);
+  newd[3] = (char)('0' + minute % 10);
+
+  if (instant || !s_flip_ready) {
+    for (int i = 0; i < 4; i++) {
+      flip_cancel_digit_async((uint8_t)i);
+      lv_anim_delete(flip_lbl[i], NULL);
+      char s[2] = {newd[i], '\0'};
+      lv_label_set_text(flip_lbl[i], s);
+      lv_obj_set_style_transform_scale_y(flip_lbl[i], 256, LV_PART_MAIN);
+      s_flip_last[i] = newd[i];
+    }
+    s_flip_ready = true;
+    return;
+  }
+
+  for (int i = 0; i < 4; i++) {
+    if (newd[i] != s_flip_last[i]) {
+      s_flip_pending[i] = newd[i];
+      flip_start_digit_anim((uint8_t)i);
+    }
+  }
+}
+
+void updateTime(boolean redraw) {
+  char tim[40];
+  if (!getLocalTime(&ti)) {
+    ui_refresh_footer_icons();
+    return;
+  }
+
+  sprintf(tim, "%s %i. %s %i", days[ti.tm_wday], ti.tm_mday, months[ti.tm_mon], ti.tm_year + 1900);
+  if (redraw || strcmp(tim, lastdate) != 0) {
+    strncpy(lastdate, tim, sizeof(lastdate) - 1);
+    lastdate[sizeof(lastdate) - 1] = 0;
+    lv_label_set_text(lbl_date, tim);
+  }
+
+  strftime(tim, sizeof(tim), "%H:%M", &ti);
+  if (redraw || strcmp(tim, lasttime) != 0) {
+    strncpy(lasttime, tim, sizeof(lasttime) - 1);
+    lasttime[sizeof(lasttime) - 1] = 0;
+    /* Kein Flip während Stream: Animation + LVGL frisst CPU → TCP/Audio/Web hängen */
+    const bool flip_instant = redraw || radio || (decoder != nullptr);
+    ui_flip_clock_set((uint8_t)ti.tm_hour, (uint8_t)ti.tm_min, flip_instant);
+    ui_refresh_header();
+  }
+  ui_refresh_footer_icons();
+}
+
+void displayDateTime(void) {
+  updateTime(false);
+}
+
+void showProgress(uint32_t prc) {
+  if (lv_screen_active() != scr_ota) lv_screen_load(scr_ota);
+  lv_bar_set_value(ota_bar, (int)prc, LV_ANIM_OFF);
+  char tmp[24];
+  snprintf(tmp, sizeof(tmp), "%u%%", (unsigned)prc);
+  lv_label_set_text(ota_sub, tmp);
+  lv_timer_handler();
+}
+
+void showSlider(uint16_t y, float value, uint16_t vmax, uint16_t bgColor, uint16_t lineColor) {
+  (void)y;
+  (void)bgColor;
+  (void)lineColor;
+  curGain = (uint8_t)constrain((int)value, 0, 100);
+  ui_sync_all_gain_sliders();
+  (void)vmax;
+}
+
+void setGainValue(uint16_t value, const char *sliderPage) {
+  float v;
+  if (strcmp(sliderPage, "WEBSITE") != 0) {
+    int y_start = 11;
+    int line_length = 298;
+    float start_slider = (float)value - y_start;
+    float end_slider = (float)line_length - y_start;
+    v = start_slider / end_slider * 100.0f;
+    if (v > 100) v = 100;
+    if (v < 0) v = 0;
+  } else {
+    v = (float)value;
+  }
+  curGain = (uint8_t)constrain((int)v, 0, 100);
+  pref.putUShort("gain", curGain);
+  ui_sync_all_gain_sliders();
+  setGain(curGain);
+}
+
 void setBrightness(uint16_t value) {
-  char txt[10];
-  // Berechne die Helligkeit basierend auf der x-Position des Schiebers von 0 bis 100 %
-  // Der Schieberegler hat einen Startwert von 15, und der Wertbereich wird auf 0 bis 100 % abgebildet
-  float v = (value - 15) * 0.345;  // Umrechnung der Position in Prozent
-
-  // Begrenze den Wert auf den Bereich von 0 bis 100 %
-  if (v > 100) v = 100;  // Maximalwert auf 100 % begrenzen
-  if (v < 5) v = 0;      // Minimalwert auf 5 % begrenzen (Anpassung für mögliche Abweichungen)
-
-  bright = v;  // Setze den aktuellen Helligkeitswert
-
-  // Speichere den aktuellen Helligkeitswert
+  float vf = (value - 15) * 0.345f;
+  if (vf > 100) vf = 100;
+  if (vf < 5) vf = 0;
+  bright = (uint8_t)vf;
   pref.putUShort("bright", bright);
-
-  // Zeige den Schieberegler für die Helligkeit an
-  showSlider(71, bright, 100);
-
-  // Formatiere den Helligkeitswert als Text
-  sprintf(txt, "%i %%", (int)bright);
-
-  // Zeige den Helligkeitswert rechts vom Schieberegler an
-  displayMessage(231, 52, 80, 20, txt, ALIGNRIGHT, false, ILI9341_BLACK, ILI9341_LIGHTGREY, 1);
+  ui_slider_internal = true;
+  if (sl_cfg_bright) lv_slider_set_value(sl_cfg_bright, bright, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  setBGLight(bright == 0 ? 0 : bright);
 }
 
-// Setzt die Schlummerzeit basierend auf der x-Position, an der der Schieberegler geklickt wurde
-// Die Funktion berechnet die Schlummerzeit in Minuten und passt den Schieberegler entsprechend an.
-// Der Wert wird auf einen Bereich von 0 bis 60 Minuten begrenzt, gespeichert und angezeigt.
 void setSnoozeTime(uint16_t value) {
-  char txt[10];
-
-  // Berechne die Schlummerzeit basierend auf der x-Position des Schiebers von 0 bis 60 Minuten
-  // Der Schieberegler hat einen Startwert von 15, und der Wertbereich wird auf 0 bis 60 Minuten abgebildet
-  float v = (value - 15) * 0.21;  // Umrechnung der Position in Minuten
-
-  // Begrenze den Wert auf den Bereich von 0 bis 60 Minuten
-  if (v > 60) v = 60;  // Maximalwert auf 60 Minuten begrenzen
-  if (v < 0) v = 0;    // Minimalwert auf 0 Minuten begrenzen
-
-  snoozeTime = v;  // Setze den aktuellen Schlummerzeitwert
-
-  // Speichere den aktuellen Schlummerzeitwert
+  float vf = (value - 15) * 0.21f;
+  if (vf > 60) vf = 60;
+  if (vf < 0) vf = 0;
+  snoozeTime = (uint8_t)vf;
   pref.putUShort("snooze", snoozeTime);
-
-  // Zeige den Schieberegler für die Schlummerzeit an
-  showSlider(115, snoozeTime, 60);
-
-  // Formatiere den Schlummerzeitwert als Text
-  sprintf(txt, "%i min", (int)snoozeTime);
-
-  // Zeige den Schlummerzeitwert rechts vom Schieberegler an
-  displayMessage(231, 96, 80, 20, txt, ALIGNRIGHT, false, ILI9341_BLACK, ILI9341_LIGHTGREY, 1);
+  ui_slider_internal = true;
+  if (sl_cfg_snooze) lv_slider_set_value(sl_cfg_snooze, snoozeTime, LV_ANIM_OFF);
+  ui_slider_internal = false;
 }
 
 void setBGLight(uint8_t prct) {
-  uint16_t ledb;  // Variable für die Helligkeit der LED
-
-  // Wenn der Prozentsatz 0 ist, lese die Umgebungshelligkeit vom LDR (Lichtabhängiger Widerstand)
+  uint16_t ledb;
   if (prct == 0) {
-    static unsigned long prevMillis = -20000;   // Zeitstempel der letzten Helligkeitsmessung
-    if (millis() - prevMillis < 10000) return;  // Warte 10 Sekunden, bevor die Helligkeit erneut gemessen wird
-    prevMillis = millis();                      // Aktualisiere den Zeitstempel
-    ledb = analogRead(LDR) * 255 / 4096;        // Lese den LDR-Wert und skaliere ihn auf 0 bis 255
+    static unsigned long prevMillis = -20000UL;
+    if (millis() - prevMillis < 10000) return;
+    prevMillis = millis();
+    ledb = (uint16_t)(analogRead(LDR) * 255 / 4096);
   } else {
-    // Berechne die Helligkeit basierend auf dem Prozentsatz
-    ledb = 255 * prct / 100;  // Skaliere den Prozentsatz auf einen Bereich von 0 bis 255
+    ledb = (uint16_t)(255 * prct / 100);
   }
-
-  // Begrenze den Helligkeitswert auf den Bereich von 3 bis 255
-  if (ledb > 255) ledb = 255;  // Maximalwert auf 255 begrenzen
-  if (ledb < 3) ledb = 3;      // Minimalwert auf 3 begrenzen, um ein Ausbleichen zu vermeiden
-
-  // Wenn LED_ON auf 0 gesetzt ist, invertiere die Helligkeit
-  if (LED_ON == 0) ledb = 255 - ledb;
-
-  // Nur dann die Helligkeit setzen, wenn sich der Wert geändert hat
+  if (ledb > 255) ledb = 255;
+  if (ledb < 3) ledb = 3;
+  if (LED_ON == 0) ledb = (uint16_t)(255 - ledb);
   if (ledb != lastLedb) {
-    // Debug-Ausgabe der Helligkeit
     Serial.printf("percent = %i LED = %i\n", prct, ledb);
-
-    // Setze die Helligkeit der Hintergrundbeleuchtung
     analogWrite(TFT_LED, ledb);
-    lastLedb = ledb;  // Speichere den neuen Helligkeitswert
+    lastLedb = ledb;
   }
 }
 
-// Wählt eine Station aus der Liste der Stationen basierend auf der x-Position des Touch-Ereignisses aus
-// Der linke Button (x < 50) scrollt die Liste der Stationen nach unten,
-// während der rechte Button (x > 270) die Liste nach oben scrollt.
-// Die Auswahl wird auf die nächste aktivierte Station gesetzt und die Anzeige aktualisiert.
 void selectStation(uint16_t x) {
-  // Überprüfe, ob die x-Position im Bereich des linken Buttons liegt
-  if (x < 50) {  // Linker Button, um die Stationen nach unten zu scrollen
-    // Gehe nach unten durch die Liste, bis eine aktivierte Station gefunden wird
-    do {
-      if (curStation == 0) {
-        // Wenn wir am Anfang der Liste sind, gehe zum Ende der Liste
-        curStation = STATIONS - 1;
-      } else {
-        // Andernfalls, gehe zur vorherigen Station
-        curStation--;
-      }
-    } while (!stationlist[curStation].enabled);  // Wiederhole, bis eine aktivierte Station gefunden wird
-  }
-
-  // Überprüfe, ob die x-Position im Bereich des rechten Buttons liegt
-  if (x > 270) {  // Rechter Button, um die Stationen nach oben zu scrollen
-    // Gehe nach oben durch die Liste, bis eine aktivierte Station gefunden wird
-    do {
-      if (curStation == (STATIONS - 1)) {
-        // Wenn wir am Ende der Liste sind, gehe zum Anfang der Liste
-        curStation = 0;
-      } else {
-        // Andernfalls, gehe zur nächsten Station
-        curStation++;
-      }
-    } while (!stationlist[curStation].enabled);  // Wiederhole, bis eine aktivierte Station gefunden wird
-  }
-
-  // Zeige die ausgewählte Station an
-  updateStation();
+  if (x < 50) cfg_station_prev_action();
+  else if (x > 270) cfg_station_next_action();
 }
 
-// Schaltet das Radio ein oder aus, basierend auf dem boolean Parameter 'off'.
-// Wenn 'off' wahr ist, wird das Radio gestoppt, die Schlummerzeit zurückgesetzt und der Radio-Status auf 'aus' gesetzt.
-// Wenn 'off' falsch ist, wird das Radio eingeschaltet, die URL der aktuellen Station gestartet (oder zur ersten Station gewechselt, wenn das Starten fehlschlägt),
-// und die Lautstärke auf den aktuellen Wert gesetzt.
-// Der Modus wird anschließend auf Uhr gesetzt und die Uhr-Anzeige wird angezeigt.
 void toggleRadio(boolean off) {
   if (off) {
-    // Wenn 'off' wahr ist, stoppe das Radio
-    stopPlaying();      // Stoppe den aktuellen Stream
-    snoozeTimeEnd = 0;  // Schalte die Schlummerzeit aus
-    radio = false;      // Setze den Radio-Status auf 'aus'
-    //setGain(0);  // (Optional) Setze die Lautstärke auf 0 (auskommentiert)
+    stopPlaying();
+    snoozeTimeEnd = 0;
+    radio = false;
   } else {
-    // Wenn 'off' falsch ist, schalte das Radio ein
-    if (connected) {  // Überprüfe, ob eine Verbindung besteht
-      radio = true;   // Setze den Radio-Status auf 'ein'
-      if (!startUrl(String(stationlist[actStation].url))) {
-        // Wenn das Starten der URL fehlschlägt, wechsle zur ersten Station
-        actStation = 0;                                 // Setze die aktuelle Station auf 0
-        startUrl(String(stationlist[actStation].url));  // Versuche erneut, die URL zu starten
-      }
-      setGain(curGain);  // Setze die Lautstärke auf den aktuellen Wert
-    }
-  }
-  // Wechsel zur Uhr-Anzeige
-  clockmode = true;  // Setze den Modus auf Uhr
-  showClock();       // Zeige die Uhr-Anzeige an
-}
-
-// Schaltet den Alarm ein oder aus, basierend auf dem aktuellen Wert von 'alarmday'.
-// Wenn 'alarmday' größer als 7 ist (was bedeutet, dass der Alarm derzeit deaktiviert ist),
-// wird der nächste verfügbare Alarm gefunden und der Alarm-Status auf 'ein' gesetzt.
-// Wenn 'alarmday' 7 oder kleiner ist (was bedeutet, dass der Alarm aktiviert ist),
-// wird der Alarm deaktiviert, indem 'alarmday' auf 8 gesetzt wird.
-// Der Alarm-Status wird entsprechend in den Einstellungen aktualisiert.
-// Anschließend wird der Modus auf Uhr gesetzt und die Uhr-Anzeige wird angezeigt.
-void toggleAlarm() {
-  if (alarmday > 7) {
-    // Wenn der Alarm ausgeschaltet war (alarmday > 7), finde den nächsten Alarm und aktiviere ihn
-    findNextAlarm();                // Suche nach dem nächsten verfügbaren Alarm
-    pref.putBool("alarmon", true);  // Setze die Alarm-Status in den Einstellungen auf 'ein'
-  } else {
-    // Wenn der Alarm aktiviert ist, deaktiviere ihn
-    alarmday = 8;                    // Setze alarmday auf 8, was als 'Alarm aus' interpretiert wird
-    pref.putBool("alarmon", false);  // Setze die Alarm-Status in den Einstellungen auf 'aus'
-  }
-  // Wechsel zur Uhr-Anzeige
-  clockmode = true;  // Setze den Modus auf Uhr
-  showClock();       // Zeige die Uhr-Anzeige an
-}
-
-// Startet die Schlummerfunktion.
-// Berechnet die Zeit zum Ende des Schlummermodus basierend auf der aktuellen Uhrzeit oder alternativ mit 'millis()', falls die Zeit nicht verfügbar ist.
-// Setzt den Modus auf Uhr, stoppt die Radio-Wiedergabe und zeigt die Uhr-Anzeige an.
-void startSnooze() {
-  struct tm ti;
-  if (getLocalTime(&ti)) {
-    // Berechne die aktuelle Zeit in Minuten seit Mitternacht
-    int currentMinutes = ti.tm_hour * 60 + ti.tm_min;
-    // Setzt die Zeit für das Ende des Schlummermodus relativ zur aktuellen Zeit in Millisekunden
-    snoozeTimeEnd = millis() + (snoozeTime * 60000);
-  } else {
-    // Fallback: Setzt die Schlummerzeit basierend auf millis(), falls keine Zeit verfügbar ist
-    snoozeTimeEnd = millis() + snoozeTime * 60000;
-  }
-  toggleRadio(false);  // Schaltet das Radio aus
-  clockmode = true;    // Wechselt in den Uhr-Modus
-  showClock();         // Zeigt die Uhr-Anzeige an
-}
-
-// Setzt die ausgewählte Station als aktive Station, speichert diesen Wert und versucht, die URL der aktuellen Station zu starten.
-// Falls das Starten der URL fehlschlägt, wird zur Station 0 gewechselt. Danach wird der Modus auf Uhr gesetzt und die Uhr-Anzeige angezeigt.
-void changeStation() {
-  actStation = curStation;  // Setzt die aktuelle Station (curStation) als aktive Station (actStation)
-
-  // Speichert den neuen Wert der aktiven Station
-  pref.putUShort("station", curStation);
-
-  // Versucht, die URL der aktuellen Station zu starten
-  if (!startUrl(String(stationlist[actStation].url))) {
-    // Wenn das Starten fehlschlägt, wechselt zur Station 0
-    actStation = 0;
-    startUrl(String(stationlist[actStation].url));  // Startet die URL der Station 0
-  }
-
-  // Wechselt zum Uhr-Bildschirm
-  clockmode = true;
-  showClock();  // Zeigt die Uhr-Anzeige an
-}
-
-// Wird in der Hauptschleife aufgerufen, um Touch-Ereignisse vom Touchscreen abzufragen und zu verarbeiten.
-void touch_loop() {
-  tevent.pollTouchScreen();  // Fragt den Touchscreen nach Ereignissen ab
-}
-
-// Bereitet das Display für die Nutzung vor, indem es das TFT-Display und das Touchscreen-Modul initialisiert,
-// die Hintergrundbeleuchtung einstellt und die Display-Konfiguration vornimmt.
-void setup_display() {
-  pinMode(TFT_LED, OUTPUT);  // Setzt den Pin für die Hintergrundbeleuchtung des TFT-Displays auf Ausgang
-  pinMode(LDR, INPUT);       // Setzt den Pin für den Lichtsensor (LDR) auf Eingang
-
-  lastldr = analogRead(LDR);  // Liest den aktuellen Wert des Lichtsensors (LDR) und speichert ihn
-
-  setBGLight(100);  // Setzt die Hintergrundbeleuchtung auf 100% Helligkeit
-
-  tft.begin();                    // Initialisiert das TFT-Display
-  tft.fillScreen(ILI9341_BLACK);  // Füllt den gesamten Bildschirm mit der Farbe Schwarz
-  tft.setRotation(3);             // Setzt die Display-Rotation auf 3 (kann je nach Display unterschiedlich sein)
-  tft.setFont(&AT_Bold12pt7b);    // Setzt die Schriftart für den Text auf eine benutzerdefinierte Schriftart
-
-  touch.begin();                                    // Initialisiert das Touchscreen-Modul
-  tevent.setResolution(tft.width(), tft.height());  // Setzt die Auflösung für das Touch-Ereignis-Modul
-  tevent.setDrawMode(false);                        // Setzt den Zeichenmodus für das Touch-Ereignis-Modul auf aus (Zeichnen ist deaktiviert)
-
-  // Registriert die Callback-Funktion für Touch-Ereignisse
-  tevent.registerOnTouchClick(onTouchClick);
-}
-
-// Zeichnet einen Text in einem Rechteck an der Position x,y mit der Größe w,h
-// Der Text kann linksbündig, zentriert oder rechtsbündig ausgerichtet werden
-// Die Textgröße kann auf standard oder groß gesetzt werden
-// Schriftfarbe und Hintergrundfarbe können ausgewählt werden sowie die Anzahl der Zeilen
-void textInBox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1) {
-  char tmp[256];               // Temporäres Array zum Speichern des kodierten Textes
-  char msg[50];                // Temporäres Array zum Speichern der aktuellen Zeile
-  char* token;                 // Zeiger für die Tokenisierung des Textes
-  int16_t xt, yt, h0, x0, sp;  // Variablen für Text-Berechnungen
-  uint16_t wt, ht, len;        // Variablen für Text-Breite und -Höhe
-  uint8_t l;                   // Anzahl der verbleibenden Zeilen
-
-  // Füllt das Rechteck mit der Hintergrundfarbe, um alten Inhalt zu löschen
-  tft.fillRect(x, y, w, h, bg);
-
-  // Setzt die Schriftart basierend auf der `big`-Variable
-  if (big) tft.setFont(FNT12);  // Große Schriftart
-  else tft.setFont(FNT9);       // Standard Schriftart
-
-  tft.setTextColor(fc);  // Setzt die Textfarbe
-
-  // Kodierung für deutsche Umlaute
-  encodeUnicode(text, tmp);
-
-  // Bestimmt die Breite und Höhe eines einzelnen Buchstabens (z.B. "n") zur Berechnung des Abstands
-  tft.getTextBounds("n", 0, 100, &xt, &yt, &wt, &ht);
-  sp = wt;  // Abstand zwischen Zeichen
-
-  // Bestimmt die Breite und Höhe des gesamten Textes
-  tft.getTextBounds(tmp, 0, 100, &xt, &yt, &wt, &ht);
-
-  // Berechnet den y-Offset basierend auf der Texthöhe
-  h0 = 100 - yt;
-  x0 = x;
-  y = y + h0 + 1;  // Setzt den Startpunkt für das Zeichnen des Textes
-
-  if (wt < w) {                                    // Genügend Platz für den gesamten Text in einer Zeile
-    if (align == ALIGNCENTER) x0 += (w - wt) / 2;  // Zentriert den Text
-    if (align == ALIGNRIGHT) x0 += (w - wt);       // Rechtsbündige Ausrichtung
-    tft.setCursor(x0, y);                          // Setzt den Cursor an die berechnete Position
-    tft.print(tmp);                                // Zeichnet den Text
-  } else {                                         // Nicht genügend Platz für den gesamten Text in einer Zeile
-    // Text wird durch Wortumbruch angepasst, wenn nur eine Zeile erlaubt ist
-    l = lines;
-    token = strtok(tmp, " ");  // Zerlegt den Text in einzelne Wörter
-    msg[0] = 0;                // Leert das Nachrichten-Array
-    len = 0;                   // Initialisiert die Länge der aktuellen Zeile
-    while ((token != NULL) && (l > 0)) {
-      tft.getTextBounds(token, 0, 100, &xt, &yt, &wt, &ht);
-      if ((len + wt + sp) < w) {  // Prüft, ob das Wort in die aktuelle Zeile passt
-        if (len > 0) {
-          strcat(msg, " ");  // Fügt ein Leerzeichen hinzu, wenn notwendig
-          len += sp;         // Fügt den Abstand zwischen den Wörtern hinzu
-        }
-        len = len + wt;
-        strcat(msg, token);  // Fügt das Wort zur aktuellen Zeile hinzu
+    if (connected) {
+      if (startUrl(String(stationlist[actStation].url))) {
+        radio = true;
+        setGain(curGain);
       } else {
-        x0 = x;
-        if (align == ALIGNCENTER) x0 += (w - len) / 2;  // Zentriert die Zeile
-        if (align == ALIGNRIGHT) x0 += (w - len);       // Rechtsbündige Ausrichtung
-        tft.setCursor(x0, y);                           // Setzt den Cursor für die neue Zeile
-        tft.print(msg);                                 // Zeichnet die aktuelle Zeile
-        len = wt;                                       // Setzt die Länge auf die Breite des aktuellen Wortes
-        strcpy(msg, token);                             // Startet eine neue Zeile mit dem aktuellen Wort
-        y = y + ht + 1;                                 // Verschiebt die y-Position für die nächste Zeile
-        l--;                                            // Verringert die verbleibende Anzahl der Zeilen
-      }
-      token = strtok(NULL, " ");  // Holt das nächste Wort
-    }
-    if ((len > 0) && (l > 0)) {  // Zeichnet die letzte Zeile, wenn noch Platz ist
-      x0 = x;
-      if (align == ALIGNCENTER) x0 += (w - len) / 2;  // Zentriert die Zeile
-      if (align == ALIGNRIGHT) x0 += (w - len);       // Rechtsbündige Ausrichtung
-      y = y + h0 + 1;                                 // Verschiebt die y-Position für die letzte Zeile
-      tft.setCursor(x0, y);                           // Setzt den Cursor für die letzte Zeile
-      tft.print(msg);                                 // Zeichnet die letzte Zeile
-    }
-  }
-}
-
-// Aktualisiert die Uhrzeit auf dem Display. Um Flackern zu vermeiden, werden nur die geänderten Teile neu gezeichnet.
-// Wenn der Parameter `redraw` auf true gesetzt ist, wird der gesamte Inhalt neu gezeichnet.
-void updateTime(boolean redraw) {
-  char tim[40];  // Temporäres Array für die Zeit- und Datumsdarstellung
-
-  static char lastdate[40] = "";
-  static char lasttime[10] = "";
-
-  // Prüfe, ob getLocalTime erfolgreich die aktuelle Zeit geholt hat
-  if (getLocalTime(&ti)) {
-    // Formatiere Datum: "Wochentag Tag. Monat Jahr"
-    sprintf(tim, "%s %i. %s %i", days[ti.tm_wday], ti.tm_mday, months[ti.tm_mon], ti.tm_year + 1900);
-
-    // Zeichne das Datum, wenn es sich geändert hat oder die Anzeige neu gezeichnet werden soll
-    if (redraw || (strcmp(tim, lastdate) != 0)) {
-      strcpy(lastdate, tim);
-      textInBox(0, 90, 320, 25, tim, ALIGNCENTER, true, COLOR_DATE, COLOR_BG, 1);
-    }
-
-    uint8_t z;
-    // Formatiere die Uhrzeit: "HH:MM"
-    strftime(tim, sizeof(tim), "%H:%M", &ti);
-
-    // Zeichne nur die Ziffern, die sich geändert haben
-    for (uint8_t i = 0; i < 5; i++) {
-      z = (i == 2) ? 10 : tim[i] - '0';
-      if ((z < 11) && (redraw || (tim[i] != lasttime[i]))) {
-        tft.drawBitmap(30 + i * 55, 18, ziffern[z], 50, 70, COLOR_TIME, COLOR_BG);
-        drawHeaderInfos();  // Zeichne Symbole und Text im Header
-        Serial.printf("Zeit = %s\n", tim);
+        radio = false;
+        Serial.println(F("toggleRadio: Stream-Start fehlgeschlagen"));
       }
     }
-
-    strcpy(lasttime, tim);
-
   }
+  startpage = true;
+  showStartPage();
 }
 
-
-// Zeichnet die Informationen im Header des Displays, einschließlich Wifi-Informationen, Einschlafsymbol und nächste Alarmzeit.
-void drawHeaderInfos() {
-  drawWifiInfo();    // Zeichnet die aktuellen Wifi-Informationen im Header
-  drawSnoozeInfo();  // Zeichnet das Einschlafsymbol im Header
-  showNextAlarm();   // Zeichnet das Wecker-Symbol und den nächsten Alarmtext im Header
-}
-
-// Zeichnet die Wifi-Informationen im Header des Displays
-void drawWifiInfo() {
-  int rssi = WiFi.RSSI();                            // Hole den RSSI-Wert für die Signalstärke
-  char rssiChar[5];                                  // Char-Array zum Speichern des RSSI-Werts als Text
-  snprintf(rssiChar, sizeof(rssiChar), "%d", rssi);  // RSSI-Wert in rssiChar umwandeln
-
-  uint16_t color_wifi;  // Farbvariable für das Wifi-Symbol
-  // Bestimme die Farbe basierend auf der Signalstärke (RSSI-Wert)
-  if (rssi <= -70) {  // Schwacher Empfang (z.B. Rot)
-    color_wifi = ILI9341_RED;
-  } else if (rssi <= -50) {  // Mittlerer Empfang (Z.B. Gelb)
-    color_wifi = ILI9341_YELLOW;
-  } else {  // Starker Empfang (Z.B. Grün)
-    color_wifi = ILI9341_GREEN;
-  }
-
-  // Zeichne das Wifi-Symbol an der Position (303, 0) mit der festgelegten Farbe
-  tft.drawBitmap(303, 0, symbole[0], 17, 17, color_wifi, COLOR_BG);
-
-  // Zeichne den RSSI-Wert als Text in der Box (Position (273, 0) mit Größe (30, 17))
-  textInBox(273, 0, 30, 17, rssiChar, ALIGNCENTER, false, COLOR_WIFI_RSSI, COLOR_BG);
-
-  // Zeichne die lokale IP-Adresse in der Box (Position (97, 0) mit Größe (159, 17))
-  String localIPString = WiFi.localIP().toString();  // Hole die lokale IP-Adresse als String
-  textInBox(97, 0, 159, 17, localIPString.c_str(), ALIGNCENTER, false, COLOR_IP, COLOR_BG);
-}
-
-// Zeichnet das Einschlafsymbol im Header des Displays
-void drawSnoozeInfo() {
-  uint16_t color_snooze;  // Variable zur Speicherung der Farbe für das Einschlafsymbol
-
-  // Überprüfen, ob die Schlummerfunktion aktiv ist (snoozeTimeEnd != 0)
-  if (snoozeTimeEnd != 0) {
-    color_snooze = COLOR_SLEEP_SYMBOL;  // Farbe für das aktive Einschlafsymbol
+void toggleAlarm(void) {
+  if (alarmday > 7) {
+    findNextAlarm();
+    pref.putBool("alarmon", true);
   } else {
-    color_snooze = COLOR_BG;  // Hintergrundfarbe für das nicht aktive Einschlafsymbol
+    alarmday = 8;
+    pref.putBool("alarmon", false);
   }
-
-  // Zeichne das Einschlafsymbol an der Position (256, 0) mit der festgelegten Farbe
-  // Das Symbol hat eine Größe von 17x17 Pixel
-  tft.drawBitmap(256, 0, symbole[1], 17, 17, color_snooze, COLOR_BG);
+  startpage = true;
+  showStartPage();
 }
 
-// Löscht den gesamten Bildschirm und setzt ihn auf die Hintergrundfarbe zurück
-void displayClear() {
-  // Füllt den gesamten Bildschirm mit der Hintergrundfarbe
-  tft.fillScreen(COLOR_BG);
-}
-
-// Zeigt Datum und Uhrzeit an der vorgesehenen Position an
-void displayDateTime() {
-  updateTime(false);  // Aktualisiert die Zeit ohne komplettes Neuzeichnen
-}
-
-// Zeigt den Fortschritt eines Software-Updates als Balken und Prozentsatz an
-void showProgress(uint32_t prc) {
-  char tmp[20];
-
-  // Formatierung des Fortschrittsprozentsatzes als Text
-  sprintf(tmp, "Progress %i%%", prc);
-
-  // Zeigt den Fortschrittstext an der Position (5, 50) auf dem Display
-  textInBox(5, 50, 310, 30, tmp, ALIGNLEFT, true, ILI9341_GREEN, COLOR_BG, 1);
-
-  // Zeichnet den Fortschrittsbalken basierend auf dem Fortschritt
-  if (prc == 0) {
-    // Zeichnet nur den Umriss des Fortschrittsbalkens, wenn der Fortschritt 0% ist
-    tft.drawRect(5, 80, 310, 20, ILI9341_BLUE);
+void startSnooze(void) {
+  /* Läuft bereits: nur Timer; Ende → toggleRadio(true) im Hauptschleifen-Timer.
+     Aus: einschalten, dann Timer; Ende → wieder aus. */
+  if (radio) {
+    snoozeTimeEnd = millis() + (uint32_t)snoozeTime * 60000UL;
+    ui_refresh_footer_icons();
+    ui_refresh_header();
   } else {
-    // Füllt den Fortschrittsbalken entsprechend dem Fortschritt
-    tft.fillRect(5, 80, 310 * prc / 100, 20, ILI9341_BLUE);
+    toggleRadio(false);
+    snoozeTimeEnd = millis() + (uint32_t)snoozeTime * 60000UL;
   }
 }
 
-// Kodiert Text von Unicode in das Display-Codeformat für die angegebene Schriftart
-// Die Quell- und Zielpuffer müssen existieren
-void encodeUnicode(const char* src, char* dst) {
-  uint8_t i = 0;             // Index für das Quellarray
-  uint8_t i1 = 0;            // Index für das Zielarray
-  char c;                    // Aktuelles Zeichen
-  uint16_t m = strlen(src);  // Länge des Quellstrings
-
-  do {
-    c = src[i];
-
-    // Prüft auf UTF-8 Zeichen für deutsche Umlaute
-    if (c == 195) {
-      i++;
-      switch (src[i]) {
-        case 164: c = 130; break;  // ä -> 130
-        case 182: c = 131; break;  // ö -> 131
-        case 188: c = 132; break;  // ü -> 132
-        case 159: c = 133; break;  // ß -> 133
-        case 132: c = 127; break;  // Ä -> 127
-        case 150: c = 128; break;  // Ö -> 128
-        case 156: c = 129; break;  // Ü -> 129
-        default: c = 255;          // Unbekanntes Zeichen, nicht kodiert
-      }
-    } else if (c == 194) {  // Prüft auf UTF-8 Zeichen für das Grad-Symbol
-      i++;
-      if (src[i] == 176) c = 134;  // Grad-Symbol -> 134
-      else c = 255;                // Unbekanntes Zeichen
-    }
-
-    if (c < 135) dst[i1] = c;  // Nur Zeichen im Bereich < 135 werden in den Zielpuffer geschrieben
-    i++;
-    i1++;
-  } while (i < m);  // Schleife bis zum Ende des Quellstrings
-
-  dst[i1] = 0;  // Null-Terminierung des Zielstrings
+void changeStation(void) {
+  actStation = curStation;
+  pref.putUShort("station", curStation);
+  if (startUrl(String(stationlist[actStation].url))) {
+    radio = true;
+  } else {
+    radio = false;
+    Serial.println(F("changeStation: Stream-Start fehlgeschlagen (Sender unverändert gespeichert)."));
+  }
+  startpage = true;
+  showStartPage();
 }
 
-// Zeigt einen Schieberegler an. y definiert die obere Linie, value ist die Position des Rechtecks
-void showSlider(uint16_t y, float value, uint16_t vmax, uint16_t bgColor, uint16_t lineColor) {
-  // Füllt den Hintergrund des Schiebereglers mit der Hintergrundfarbe
-  tft.fillRect(11, y, 298, 14, bgColor);
-
-  // Zeichnet die horizontale Linie des Schiebereglers
-  tft.drawLine(15, y + 6, 305, y + 6, lineColor);  // Oberkante der Linie
-  tft.drawLine(15, y + 7, 305, y + 7, lineColor);  // Unterkante der Linie
-
-  // Berechnet die Position des Schiebereglers basierend auf dem Wert
-  uint16_t pos = value * 290 / vmax;
-
-  // Zeichnet das Schieberegler-Rechteck an der berechneten Position
-  tft.fillRect(12 + pos, y, 8, 14, lineColor);
+void updateStation(void) {
+  char txt[40];
+  strncpy(txt, stationlist[curStation].name, sizeof(txt) - 1);
+  txt[sizeof(txt) - 1] = 0;
+  if (lbl_station_radio) lv_label_set_text(lbl_station_radio, txt);
+  if (lbl_station_cfg) lv_label_set_text(lbl_station_cfg, txt);
 }
 
-// Zeigt den Bereich zur Anzeige der Lautstärke auf dem Konfigurationsbildschirm an
-void showGain() {
-  char txt[20];
-
-  // Hintergrund des Bereichs mit der Farbe COLOR_SETTING_BG füllen
-  tft.fillRect(0, 0, 320, 44, COLOR_SETTING_BG);
-
-  // Einen Rand um den Bereich zeichnen
-  tft.drawRect(0, 0, 320, 44, COLOR_SETTING_BORDER);
-
-  // Lautstärkewert in Prozent formatieren und in txt speichern
-  sprintf(txt, "%i %%", curGain);
-
-  // Den Lautstärkewert rechtsbündig in einem Bereich anzeigen
-  textInBox(231, 8, 80, 20, txt, ALIGNRIGHT, false, ILI9341_BLACK, COLOR_SETTING_BG, 1);
-
-  // Cursorposition und Schriftart für das Label setzen
-  tft.setCursor(5, 23);
-  tft.setFont(FNT9);
-  tft.setTextColor(ILI9341_BLACK);
-
-  // Text für das Label "Lautstärke" kodieren und anzeigen
-  encodeUnicode("Lautstärke", txt);
-  tft.print(txt);
-
-  // Den Schieberegler anzeigen, um die aktuelle Lautstärke darzustellen
-  showSlider(27, curGain, 100);
-}
-
-// Zeigt den Bereich zur Lautstärkeanzeige auf dem Hauptbildschirm an
-void showGainMain() {
-  // Füllt einen Bereich auf dem Bildschirm (Box) mit der Hintergrundfarbe COLOR_SLIDER_BG
-  tft.fillRect(0, 210, 320, 30, COLOR_SLIDER_BG);
-
-  // Zeichnet einen Rahmen um den zuvor gefüllten Bereich mit der Farbe COLOR_SLIDER_BORDER
-  tft.drawRect(0, 210, 320, 30, COLOR_SLIDER_BORDER);
-
-  // Zeigt einen Schieberegler an, der die aktuelle Lautstärke (curGain) darstellt
-  // Der Schieberegler beginnt bei der y-Position 218, hat einen maximalen Wert von 100
-  // und verwendet die Farben COLOR_SLIDER_BG und COLOR_SLIDER
-  showSlider(218, curGain, 100, COLOR_SLIDER_BG, COLOR_SLIDER);
-}
-
-// Zeigt den Bereich zur Helligkeitsanzeige auf dem Konfigurationsbildschirm an
-void showBrigthness() {
-  char txt[20];
-
-  // Füllt einen rechteckigen Bereich auf dem Bildschirm mit der Hintergrundfarbe COLOR_SETTING_BG
-  tft.fillRect(0, 44, 320, 44, COLOR_SETTING_BG);
-
-  // Zeichnet einen Rahmen um den zuvor gefüllten Bereich mit der Farbe COLOR_SETTING_BORDER
-  tft.drawRect(0, 44, 320, 44, COLOR_SETTING_BORDER);
-
-  // Formatiert die Helligkeit (bright) als Prozentsatz und speichert sie in txt
-  sprintf(txt, "%i %%", bright);
-
-  // Zeigt den formatierten Text in einer Box an, rechtsbündig ausgerichtet
-  textInBox(231, 52, 80, 20, txt, ALIGNRIGHT, false, ILI9341_BLACK, COLOR_SETTING_BG, 1);
-
-  // Setzt den Cursor für den Text
-  tft.setCursor(5, 67);
-
-  // Wählt die Schriftart und die Textfarbe aus
-  tft.setFont(FNT9);
-  tft.setTextColor(ILI9341_BLACK);
-
-  // Kodiert den Text "Helligkeit" in das Ziel-Array txt, um Umlaute darzustellen
-  encodeUnicode("Helligkeit", txt);
-
-  // Druckt den Text "Helligkeit" auf den Bildschirm
-  tft.print(txt);
-
-  // Zeigt einen Schieberegler an, um die aktuelle Helligkeit (bright) darzustellen
-  showSlider(71, bright, 100);
-}
-
-// Funktion zur Anzeige der Snooze-Zeit auf dem Konfigurationsbildschirm
-void showSnoozeTime() {
-  char txt[20];  // Puffer für Text
-
-  // Rechteck für den Hintergrund zeichnen
-  tft.fillRect(0, 88, 320, 44, COLOR_SETTING_BG);
-
-  // Rechteck für den Rahmen zeichnen
-  tft.drawRect(0, 88, 320, 44, COLOR_SETTING_BORDER);
-
-  // Aktuelle Snooze-Zeit als Text formatieren
-  sprintf(txt, "%i min", snoozeTime);
-
-  // Text für die Snooze-Zeit anzeigen
-  textInBox(231, 96, 80, 20, txt, ALIGNRIGHT, false, ILI9341_BLACK, COLOR_SETTING_BG, 1);
-
-  // Cursorposition setzen für den Beschriftungstext
-  tft.setCursor(5, 111);
-
-  // Schriftart festlegen
-  tft.setFont(FNT9);
-
-  // Textfarbe auf Schwarz setzen
-  tft.setTextColor(ILI9341_BLACK);
-
-  // Text "Einschlafzeit" mit kodierten Umlauten anzeigen
-  encodeUnicode("Einschlafzeit", txt);
-  tft.print(txt);
-
-  // Slider zur Anzeige der Snooze-Zeit zeichnen
-  showSlider(115, snoozeTime, 60);
-}
-
-// Funktion zur Anzeige der ausgewählten Station im Stationsbereich
-void updateStation() {
-  char txt[40];  // Puffer für den Stationsnamen
-
-  // Stationsname kodieren (z.B. für Umlaute) und in den Puffer speichern
-  encodeUnicode(stationlist[curStation].name, txt);
-
-  // Kodierten Stationsnamen im Stationsbereich anzeigen
-  textInBox(40, 145, 240, 20, txt, ALIGNCENTER, false, ILI9341_BLACK, COLOR_SETTING_BG, 1);
-}
-
-// Funktion zur Anzeige der Stationsliste im Einstellungsbildschirm
-void showStationList() {
-  // Bereich für die Stationsliste zeichnen
-  tft.fillRect(0, 132, 320, 44, COLOR_SETTING_BG);      // Hintergrundfarbe setzen
-  tft.drawRect(0, 132, 320, 44, COLOR_SETTING_BORDER);  // Rahmen zeichnen
-
-  // Symbole für Hoch- und Runter-Scrollen anzeigen
-  tft.drawBitmap(0, 132, symbole[4], 50, 44, COLOR_SETTING_UP_DOWN);    // Pfeil nach oben
-  tft.drawBitmap(270, 132, symbole[5], 50, 44, COLOR_SETTING_UP_DOWN);  // Pfeil nach unten
-
-  // Aktuelle Station als ausgewählte Station festlegen
+void showStationList(void) {
   curStation = actStation;
-
-  // Ausgewählte Station anzeigen
   updateStation();
 }
 
-// Funktion zur Anzeige des vollständigen Konfigurationsbildschirms
-void showConfigPage() {
-  setBGLight(100);           // Helligkeit des Hintergrundlichts auf 100% setzen
-  tft.fillScreen(COLOR_BG);  // Bildschirmhintergrund mit der definierten Farbe füllen
-
-  showGain();         // Lautstärkebereich anzeigen
-  showBrigthness();   // Helligkeitsbereich anzeigen
-  showSnoozeTime();   // Einschlafzeitbereich anzeigen
-  showStationList();  // Bereich zur Anzeige der Stationsliste anzeigen
-
-  DrawFooterButtons_Power_Sleep_Alarm();  // Schaltflächen für Power, Sleep und Alarm im Footer zeichnen
-
-  // Schaltfläche für das Radio zeichnen
-  tft.drawBitmap(192, 176, knopf_sym[4], 64, 64, COLOR_KNOEPFE, COLOR_KNOEPFE_BG);
-
-  // Schaltfläche zum Wechseln auf den Alarmbildschirm (Uhranzeige) zeichnen
-  tft.drawBitmap(256, 176, knopf_sym[7], 64, 64, COLOR_KNOEPFE, COLOR_KNOEPFE_BG);
-
-  start_conf = millis();  // Startzeit der Konfigurationsseite festhalten
+void showGain(void) {
+  ui_sync_all_gain_sliders();
+  cfg_sync_value_labels();
 }
 
-// Funktion zur Anzeige des vollständigen Radiobildschirms
-void showRadioPage() {
-  setBGLight(100);                   // Helligkeit des Hintergrundlichts auf 100% setzen
-  tft.fillScreen(COLOR_KNOEPFE_BG);  // Bildschirmhintergrund mit der definierten Knopffarbe füllen
-
-  showGain();         // Lautstärkebereich anzeigen
-  FavoriteButtons();  // Favoriten-Schaltflächen anzeigen
-  showStationList();  // Bereich zur Anzeige der Stationsliste anzeigen
-
-  DrawFooterButtons_Power_Sleep_Alarm();  // Schaltflächen für Power, Sleep und Alarm im Footer zeichnen
-
-  // Schaltfläche für das Radio zeichnen
-  tft.drawBitmap(192, 176, knopf_sym[4], 64, 64, COLOR_KNOEPFE, COLOR_KNOEPFE_BG);
-
-  // Schaltfläche zum Wechseln in die Einstellungen zeichnen
-  tft.drawBitmap(256, 176, knopf_sym[6], 64, 64, COLOR_KNOEPFE, COLOR_KNOEPFE_BG);
-
-  start_conf = millis();  // Startzeit der Radiokonfigurationsseite festhalten
+void showBrightness(void) {
+  ui_slider_internal = true;
+  if (sl_cfg_bright) lv_slider_set_value(sl_cfg_bright, bright, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  cfg_sync_value_labels();
 }
 
-// Funktion zur Anzeige des vollständigen Alarmbildschirms
-void showAlarmPage() {
-  // Aktualisieren der Alarmkonfiguration für den ersten Alarm
-  alarmConfig.alarmday_1 = alarmday1;  // Wochentag des ersten Alarms setzen
-  alarmConfig.h_1 = alarm1 / 60;       // Stundenwert des ersten Alarms berechnen und setzen
-  alarmConfig.m_1 = alarm1 % 60;       // Minutenwert des ersten Alarms berechnen und setzen
-
-  // Aktualisieren der Alarmkonfiguration für den zweiten Alarm
-  alarmConfig.alarmday_2 = alarmday2;  // Wochentag des zweiten Alarms setzen
-  alarmConfig.h_2 = alarm2 / 60;       // Stundenwert des zweiten Alarms berechnen und setzen
-  alarmConfig.m_2 = alarm2 % 60;       // Minutenwert des zweiten Alarms berechnen und setzen
-
-  setBGLight(100);                   // Helligkeit des Hintergrundlichts auf 100% setzen
-  tft.fillScreen(COLOR_KNOEPFE_BG);  // Bildschirmhintergrund mit der definierten Knopffarbe füllen
-
-  // Bereich für den ersten Alarm zeichnen
-  tft.fillRect(0, 0, 320, 88, COLOR_SETTING_BG);
-  tft.drawRect(0, 0, 320, 88, COLOR_SETTING_BORDER);
-
-  // Bereich für den zweiten Alarm zeichnen
-  tft.fillRect(0, 88, 320, 88, COLOR_SETTING_BG);
-  tft.drawRect(0, 88, 320, 88, COLOR_SETTING_BORDER);
-
-  // Schaltflächen für Stunden und Minuten des ersten Alarms zeichnen (hoch/runter)
-  tft.drawBitmap(0, 44, symbole[5], 50, 44, COLOR_SETTING_UP_DOWN);    // Stunde hoch
-  tft.drawBitmap(50, 44, symbole[4], 50, 44, COLOR_SETTING_UP_DOWN);   // Stunde runter
-  tft.drawBitmap(220, 44, symbole[5], 50, 44, COLOR_SETTING_UP_DOWN);  // Minute hoch
-  tft.drawBitmap(270, 44, symbole[4], 50, 44, COLOR_SETTING_UP_DOWN);  // Minute runter
-
-  // Schaltflächen für Stunden und Minuten des zweiten Alarms zeichnen (hoch/runter)
-  tft.drawBitmap(0, 132, symbole[5], 50, 44, COLOR_SETTING_UP_DOWN);    // Stunde hoch
-  tft.drawBitmap(50, 132, symbole[4], 50, 44, COLOR_SETTING_UP_DOWN);   // Stunde runter
-  tft.drawBitmap(220, 132, symbole[5], 50, 44, COLOR_SETTING_UP_DOWN);  // Minute hoch
-  tft.drawBitmap(270, 132, symbole[4], 50, 44, COLOR_SETTING_UP_DOWN);  // Minute runter
-
-  // Anzeige der Tage und Uhrzeiten für die Alarme
-  showAlarms_Day_and_Time();  // Erste und dritte Zeile (MO-SO-Schaltflächen) und zweite und vierte Zeile (Uhrzeit)
-
-  // Schaltflächen für Power, Sleep und Alarm im Footer zeichnen
-  DrawFooterButtons_Power_Sleep_Alarm();
-
-  // Schaltfläche zum Speichern der Alarmeinstellungen zeichnen
-  tft.drawBitmap(192, 176, knopf_sym[8], 64, 64, COLOR_KNOEPFE, COLOR_KNOEPFE_BG);
-
-  // Schaltfläche zum Wechseln zum Uhrenbildschirm zeichnen
-  tft.drawBitmap(256, 176, knopf_sym[5], 64, 64, COLOR_KNOEPFE, COLOR_KNOEPFE_BG);
-
-  start_conf = millis();  // Startzeit der Alarmkonfigurationsseite festhalten
+void showSnoozeTime(void) {
+  ui_slider_internal = true;
+  if (sl_cfg_snooze) lv_slider_set_value(sl_cfg_snooze, snoozeTime, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  cfg_sync_value_labels();
 }
 
-// Funktion zur Anzeige der Alarmtage und -zeiten
-void showAlarms_Day_and_Time() {
-  uint8_t mask;        // Bitmaske für Wochentage
-  uint16_t xPos;       // X-Position für die Anzeige
-  uint16_t color_txt;  // Farbvariable für Text (nicht verwendet, aber deklariert)
-  uint16_t color_bg;   // Farbvariable für Hintergrund
-  char buf[45];        // Puffer für die Zeitformatierung
+void showFavoritenPage(void) {
+  setBGLight(100);
+  startpage = false;
+  favoritenpage = true;
+  settingspage = false;
+  alarmpage = false;
+  showGain();
+  showBrightness();
+  showSnoozeTime();
+  showStationList();
+  lv_screen_load(scr_config);
+  ui_refresh_footer_icons();
+  start_conf = millis();
+}
 
-  // Schleife zur Anzeige der Wochentage für beide Alarme
-  for (uint8_t i = 1; i < 8; i++) {
-    xPos = 12 + (i - 1) * 44;  // Berechnung der X-Position für die Wochentage
+void showSettingsPage(void) {
+  setBGLight(100);
+  startpage = false;
+  favoritenpage = false;
+  settingspage = true;
+  alarmpage = false;
+  showGain();
+  rebuild_favorites();
+  showStationList();
+  lv_screen_load(scr_radio);
+  ui_refresh_footer_icons();
+  start_conf = millis();
+}
 
-    // Anzeige der Wochentage für alarmday_1
-    mask = 1 << (i % 7);  // Bitmaske für den aktuellen Wochentag
-    color_bg = ((alarmConfig.alarmday_1 & mask) == 0) ? COLOR_SETTING_BG : ILI9341_GREEN;
-    textInBox(xPos, 8, 32, 32, days_short[i % 7], ALIGNCENTER, false, ILI9341_BLACK, color_bg, 1);
-
-    // Anzeige der Wochentage für alarmday_2
-    mask = 1 << (i % 7);  // Bitmaske für den aktuellen Wochentag
-    color_bg = ((alarmConfig.alarmday_2 & mask) == 0) ? COLOR_SETTING_BG : ILI9341_GREEN;
-    textInBox(xPos, 96, 32, 32, days_short[i % 7], ALIGNCENTER, false, ILI9341_BLACK, color_bg, 1);
+void showAlarms_Day_and_Time(void) {
+  char buf[24];
+  for (uint8_t row = 0; row < 2; row++) {
+    uint8_t maskbyte = (row == 0) ? alarmConfig.alarmday_1 : alarmConfig.alarmday_2;
+    for (uint8_t col = 0; col < 7; col++) {
+      uint8_t m = day_mask_from_col(col);
+      bool on = (maskbyte & m) != 0;
+      lv_obj_set_style_bg_color(al_day_btn[row][col], on ? lv_palette_main(LV_PALETTE_GREEN) : rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
+    }
   }
-
-  // Anzeige der Zeit für alarm_1
-  sprintf(buf, "%02i : %02i\n", alarmConfig.h_1, alarmConfig.m_1);
-  textInBox(100, 52, 120, 32, buf, ALIGNCENTER, false, ILI9341_BLACK, COLOR_SETTING_BG, 1);
-
-  // Anzeige der Zeit für alarm_2
-  sprintf(buf, "%02i : %02i\n", alarmConfig.h_2, alarmConfig.m_2);
-  textInBox(100, 140, 120, 32, buf, ALIGNCENTER, false, ILI9341_BLACK, COLOR_SETTING_BG, 1);
+  snprintf(buf, sizeof(buf), "%02u : %02u", alarmConfig.h_1, alarmConfig.m_1);
+  lv_label_set_text(lbl_al_t1, buf);
+  snprintf(buf, sizeof(buf), "%02u : %02u", alarmConfig.h_2, alarmConfig.m_2);
+  lv_label_set_text(lbl_al_t2, buf);
 }
 
-// Schaltet einen Tag für den Alarm um
+void showAlarmPage(void) {
+  alarmConfig.alarmday_1 = alarmday1;
+  alarmConfig.h_1 = (uint8_t)(alarm1 / 60);
+  alarmConfig.m_1 = (uint8_t)(alarm1 % 60);
+  alarmConfig.alarmday_2 = alarmday2;
+  alarmConfig.h_2 = (uint8_t)(alarm2 / 60);
+  alarmConfig.m_2 = (uint8_t)(alarm2 % 60);
+  setBGLight(100);
+  startpage = false;
+  favoritenpage = false;
+  settingspage = false;
+  alarmpage = true;
+  showAlarms_Day_and_Time();
+  lv_screen_load(scr_alarm);
+  ui_refresh_footer_icons();
+  start_conf = millis();
+}
+
+static void ok_timer_cb(lv_timer_t *t) {
+  (void)t;
+  showStartPage();
+}
+
+void safeAlarmTime(void) {
+  start_conf -= 9000;
+  uint16_t alarmtime_1 = (uint16_t)(alarmConfig.h_1 * 60 + alarmConfig.m_1);
+  uint16_t alarmtime_2 = (uint16_t)(alarmConfig.h_2 * 60 + alarmConfig.m_2);
+  alarm1 = alarmtime_1;
+  alarmday1 = alarmConfig.alarmday_1;
+  pref.putUInt("alarm1", alarm1);
+  pref.putUShort("alarmday1", alarmday1);
+  alarm2 = alarmtime_2;
+  alarmday2 = alarmConfig.alarmday_2;
+  pref.putUInt("alarm2", alarm2);
+  pref.putUShort("alarmday2", alarmday2);
+  lv_obj_set_style_bg_color(scr_msg, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(scr_msg, LV_OPA_COVER, LV_PART_MAIN);
+  lv_label_set_text(msg_title, TXT_OK);
+  lv_obj_set_style_text_color(msg_title, lv_palette_main(LV_PALETTE_GREEN), LV_PART_MAIN);
+  lv_obj_set_style_text_font(msg_title, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_set_style_text_align(msg_title, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+  lv_label_set_text(msg_line2, "");
+  lv_label_set_text(msg_line3, "");
+  lv_screen_load(scr_msg);
+  findNextAlarm();
+  lv_timer_t *once = lv_timer_create(ok_timer_cb, 1500, NULL);
+  lv_timer_set_repeat_count(once, 1);
+}
+
 void toggleAlarmDay(uint16_t xPos, uint16_t yPos) {
-  uint8_t mask = 0B00000000;  // Initialisierung der Maske
-
-  // Bestimme die Maske basierend auf der X-Position
-  if (xPos < 50) mask = 0B00000010;                     // Mo
-  if ((xPos > 50) && (xPos < 96)) mask = 0B00000100;    // Di
-  if ((xPos > 96) && (xPos < 140)) mask = 0B00001000;   // Mi
-  if ((xPos > 140) && (xPos < 184)) mask = 0B00010000;  // Do
-  if ((xPos > 184) && (xPos < 228)) mask = 0B00100000;  // Fr
-  if ((xPos > 228) && (xPos < 272)) mask = 0B01000000;  // Sa
-  if (xPos > 272) mask = 0B00000001;                    // So
-
-  // Toggle für alarmday_1, wenn die Y-Position im Bereich von 0 bis 44 liegt
-  if ((yPos > 0) && (yPos < 44)) {
-    alarmConfig.alarmday_1 = alarmConfig.alarmday_1 ^ mask;
-  }
-  // Toggle für alarmday_2, wenn die Y-Position im Bereich von 88 bis 132 liegt
-  if ((yPos > 88) && (yPos < 132)) {
-    alarmConfig.alarmday_2 = alarmConfig.alarmday_2 ^ mask;
-  }
-
-  // Zeige die aktualisierten Alarmtage und -zeiten an
-  showAlarms_Day_and_Time();
+  (void)xPos;
+  (void)yPos;
 }
 
-// Inkrementiert oder dekrementiert die Alarm-Stunden
 void in_de_crementAlarmTimeHH(uint16_t xPos, uint16_t yPos) {
-  // In-/Dekrementierung für alarmtime_HH_1
-  if ((yPos > 44) && (yPos < 88)) {
-    // Inkrementierung der Stunden für alarmtime_HH_1
-    if (xPos < 50) alarmConfig.h_1 = (alarmConfig.h_1 + 1) % 24;
-    // Dekrementierung der Stunden für alarmtime_HH_1
-    if ((xPos > 50) && (xPos < 100)) {
-      if (alarmConfig.h_1 == 0) alarmConfig.h_1 = 24;  // Bei 0 Stunden auf 24 setzen
-      alarmConfig.h_1 = alarmConfig.h_1 - 1;
-    }
-  }
-  // In-/Dekrementierung für alarmtime_HH_2
-  if ((yPos > 132) && (yPos < 176)) {
-    // Inkrementierung der Stunden für alarmtime_HH_2
-    if (xPos < 50) alarmConfig.h_2 = (alarmConfig.h_2 + 1) % 24;
-    // Dekrementierung der Stunden für alarmtime_HH_2
-    if ((xPos > 50) && (xPos < 100)) {
-      if (alarmConfig.h_2 == 0) alarmConfig.h_2 = 24;  // Bei 0 Stunden auf 24 setzen
-      alarmConfig.h_2 = alarmConfig.h_2 - 1;
-    }
-  }
-  // Zeigt die aktualisierten Alarmtage und -zeiten an
-  showAlarms_Day_and_Time();
+  (void)xPos;
+  (void)yPos;
 }
 
-// Inkrementiert oder dekrementiert die Alarm-Minuten in 5-Minuten-Schritten
 void in_de_crementAlarmTimeMM(uint16_t xPos, uint16_t yPos) {
-  int8_t currentMinutes;
-  // Inkrementierung der Minuten
-  if ((xPos > 220) && (xPos < 270)) {
-    if ((yPos > 44) && (yPos < 88)) {  // Inkrementierung MM_1
-      // Berechne die Minuten in 5-Minuten-Schritten vorwärts
-      currentMinutes = alarmConfig.m_1;
-      if (currentMinutes % 5 == 0) {
-        currentMinutes += 5;  // Füge 5 Minuten hinzu, wenn der aktuelle Wert durch 5 teilbar ist
-      } else {
-        currentMinutes = ((currentMinutes + 4) / 5) * 5;  // Runde auf nächste durch 5 teilbare Zahl
-      }
-      if (currentMinutes >= 60) currentMinutes = 0;  // Setze auf 0 Minuten zurück, wenn 60 erreicht wird
-      // Trenne die Minuten in Zehner- und Einerstelle
-      alarmConfig.m_1 = currentMinutes;
-    }
-    if ((yPos > 132) && (yPos < 176)) {  // Inkrementierung MM_2
-      // Berechne die Minuten in 5-Minuten-Schritten vorwärts
-      int8_t currentMinutes = alarmConfig.m_2;
-      if (currentMinutes % 5 == 0) {
-        currentMinutes += 5;  // Füge 5 Minuten hinzu, wenn der aktuelle Wert durch 5 teilbar ist
-      } else {
-        currentMinutes = ((currentMinutes + 4) / 5) * 5;  // Runde auf nächste durch 5 teilbare Zahl
-      }
-      if (currentMinutes >= 60) currentMinutes = 0;  // Setze auf 0 Minuten zurück, wenn 60 erreicht wird
-      // Trenne die Minuten in Zehner- und Einerstelle
-      alarmConfig.m_2 = currentMinutes;
-    }
-  }
-
-  // Dekrementierung der Minuten
-  if (xPos > 270) {
-    if ((yPos > 44) && (yPos < 88)) {  // Dekrementierung MM_1
-      // Berechne die Minuten in 5-Minuten-Schritten rückwärts
-      currentMinutes = alarmConfig.m_1;
-      if (currentMinutes % 5 == 0) {
-        currentMinutes -= 5;  // Subtrahiere 5 Minuten, wenn der aktuelle Wert durch 5 teilbar ist
-      } else {
-        currentMinutes = ((currentMinutes - 1) / 5) * 5;  // Runde auf vorherige durch 5 teilbare Zahl
-      }
-      if (currentMinutes < 0) currentMinutes = 55;  // Setze auf 55 Minuten zurück, wenn < 0
-      // Trenne die Minuten in Zehner- und Einerstelle
-      alarmConfig.m_1 = currentMinutes;
-    }
-    if ((yPos > 132) && (yPos < 176)) {  // Dekrementierung MM_2
-      // Berechne die Minuten in 5-Minuten-Schritten rückwärts
-      currentMinutes = alarmConfig.m_2;
-      if (currentMinutes % 5 == 0) {
-        currentMinutes -= 5;  // Subtrahiere 5 Minuten, wenn der aktuelle Wert durch 5 teilbar ist
-      } else {
-        currentMinutes = ((currentMinutes - 1) / 5) * 5;  // Runde auf vorherige durch 5 teilbare Zahl
-      }
-      if (currentMinutes < 0) currentMinutes = 55;  // Setze auf 55 Minuten zurück, wenn < 0
-      // Trenne die Minuten in Zehner- und Einerstelle
-      alarmConfig.m_2 = currentMinutes;
-    }
-  }
-  // Zeigt die aktualisierten Alarmtage und -zeiten an
-  showAlarms_Day_and_Time();
+  (void)xPos;
+  (void)yPos;
 }
 
-// Speichert die geänderte Alarmzeit und zeigt 'OK' an
-void safeAlarmTime() {
-  start_conf -= 9000;  // Setzt den Startzeitstempel der Konfigurationsseite zurück
-
-  uint16_t alarmtime_1, alarmtime_2;
-  alarmtime_1 = alarmConfig.h_1 * 60 + alarmConfig.m_1;  // Berechnet die Minuten für Alarm 1
-  alarmtime_2 = alarmConfig.h_2 * 60 + alarmConfig.m_2;  // Berechnet die Minuten für Alarm 2
-
-  alarm1 = alarmtime_1;                    // Speichert die Alarmzeit 1
-  alarmday1 = alarmConfig.alarmday_1;      // Speichert die Alarmtage 1
-  pref.putUInt("alarm1", alarm1);          // Speichert die Alarmzeit 1 in den Einstellungen
-  pref.putUShort("alarmday1", alarmday1);  // Speichert die Alarmtage 1 in den Einstellungen
-
-  alarm2 = alarmtime_2;                    // Speichert die Alarmzeit 2
-  alarmday2 = alarmConfig.alarmday_2;      // Speichert die Alarmtage 2
-  pref.putUInt("alarm2", alarm2);          // Speichert die Alarmzeit 2 in den Einstellungen
-  pref.putUShort("alarmday2", alarmday2);  // Speichert die Alarmtage 2 in den Einstellungen
-
-  tft.fillScreen(COLOR_BG);                                                          // Bildschirmhintergrund zurücksetzen
-  textInBox(0, 0, 320, 240, TXT_OK, ALIGNCENTER, true, ILI9341_GREEN, COLOR_BG, 1);  // Zeigt 'OK' an
-
-  findNextAlarm();  // Findet den nächsten Alarm
+void showStation(void) {
+  if (lbl_station_big) lv_label_set_text(lbl_station_big, stationlist[actStation].name);
 }
 
-// Zeigt den Namen der aktiven Station auf dem TFT-Display an
-void showStation() {
-  textInBox(5, 122, 310, 30, stationlist[actStation].name, ALIGNCENTER, true, COLOR_STATION_NAME, COLOR_STATION_BOX_BG);
-}
-
-// Zeigt die aktuellen Metadaten auf dem TFT-Display an
-void showTitle() {
-  displayMessage(8, 152, 304, 57, title, ALIGNCENTER, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG, 2);
-}
-
-// Zeigt den Radio-Bereich auf dem Uhr-Bildschirm an
-void showRadio() {
-  if (radio) {
-    tft.fillRect(3, 117, 314, 93, COLOR_STATION_BOX_BG);      // Hintergrund des Radio-Bereichs füllen
-    tft.drawRect(3, 117, 314, 93, COLOR_STATION_BOX_BORDER);  // Rahmen des Radio-Bereichs zeichnen
-    showStation();                                            // Namen der aktiven Station anzeigen
-    showTitle();                                              // Titel der aktuellen Station anzeigen
-  } else {
-    tft.fillRect(3, 117, 314, 93, COLOR_BG);  // Hintergrund des Radio-Bereichs auf Hintergrundfarbe setzen, wenn Radio aus ist
+void showTitle(void) {
+  if (lbl_stream_title) {
+    lv_label_set_text(lbl_stream_title, title);
+    lv_obj_scroll_to_y(lbl_stream_title, 0, LV_ANIM_OFF);
   }
 }
 
-// Wenn ein Wecker aktiv ist, wird das nächste Alarmdatum und die nächste Alarmzeit angezeigt
-void showNextAlarm() {
-  uint16_t color_alarm;  // Farbvariable für das Alarm-Symbol
-  uint8_t symbol;        // Symbol-ID für das Alarm-Symbol
-  char txt[50] = "";     // Text für die Anzeige
-  uint8_t h, m;          // Stunden- und Minutenvariable für die Alarmzeit
-
-  if (clockmode) {
-    if (alarmday < 8) {                                          // Wenn der Wecker aktiviert ist
-      color_alarm = COLOR_ALARM_SYMBOL;                          // Farbe des Alarm-Symbols
-      symbol = 2;                                                // Symbol-ID für das Glocken-Symbol
-      h = alarmtime / 60;                                        // Stunden berechnen
-      m = alarmtime % 60;                                        // Minuten berechnen
-      sprintf(txt, "%s %02i:%02i", days_short[alarmday], h, m);  // Text für die Alarmzeit formatieren
-    } else {                                                     // Wenn der Wecker ausgeschaltet ist
-      color_alarm = ILI9341_RED;                                 // Farbe des Alarm-Symbols
-      symbol = 3;                                                // Symbol-ID für das durchgestrichene Glocken-Symbol
-      sprintf(txt, "AUS");                                       // Text für ausgeschalteten Wecker
-    }
-
-    tft.drawBitmap(0, 0, symbole[symbol], 17, 17, color_alarm, COLOR_BG);         // Alarm-Symbol zeichnen
-    textInBox(17, 0, 80, 17, txt, ALIGNCENTER, false, color_alarm, COLOR_BG, 1);  // Alarmtext anzeigen
-  }
+void showRadio(void) {
+  ui_refresh_mid_clock();
 }
 
-// Kann verwendet werden, um drei Ganzzahlen in der unteren Zeile des Displays anzuzeigen
-void showDebugInfo(int16_t v1, int16_t v2, int16_t v3) {
-  char txt[100] = "";                                                                      // Textpuffer für die Anzeige
-  if (clockmode) {                                                                         // Nur anzeigen, wenn der Clockmodus aktiv ist
-    sprintf(txt, "Info: v1 = %i, v2 = %i, v3 = %i", v1, v2, v3);                           // Formatierte Debug-Informationen erstellen
-    textInBox(0, 220, 320, 20, txt, ALIGNCENTER, false, ILI9341_WHITE, ILI9341_BLACK, 1);  // Debug-Informationen anzeigen
-  }
+void showNextAlarm(void) {
+  ui_refresh_header();
 }
 
-// Zeichne den Uhrbildschirm neu
-void showClock() {
-  start_conf = 0;            // Setze den Konfigurationsstartzeitpunkt zurück
-  setBGLight(bright);        // Setze die Hintergrundbeleuchtung auf die aktuelle Helligkeit
-  tft.fillScreen(COLOR_BG);  // Fülle den gesamten Bildschirm mit dem Hintergrundfarbwert
-  updateTime(true);          // Aktualisiere die Uhrzeit und zeige sie an
-  if (radio) showRadio();    // Zeige den Radiobereich, wenn der Radio-Modus aktiv ist
-  // showNextAlarm wurde zu updateTime verschoben (nur jede Minute nötig)
-  showGainMain();  // Zeige die aktuelle Lautstärke im Hauptbereich an
+void showStartPage(void) {
+  start_conf = 0;
+  startpage = true;
+  favoritenpage = false;
+  settingspage = false;
+  alarmpage = false;
+  setBGLight(bright);
+  lv_screen_load(scr_clock);
+  lastdate[0] = 0;
+  lasttime[0] = 0;
+  updateTime(true);
+  ui_refresh_mid_clock();
+  ui_refresh_header();
+  ui_sync_all_gain_sliders();
 }
 
-
-// Eine Abdeckfunktion für Text in der Box, die von anderen Unterfunktionen verwendet werden kann
-void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align, boolean big, uint16_t fc, uint16_t bg, uint8_t lines) {
-  textInBox(x, y, w, h, text, align, big, fc, bg, lines);  // Rufe die Funktion zum Zeichnen des Texts in der Box auf
+void FavoriteButtons(void) {
+  rebuild_favorites();
 }
 
-// Erstelle Favoriten-Buttons auf der Radioliste zwischen y44 und y132 und wechsle direkt zu ihnen
-void FavoriteButtons() {
-  int y = 44;           // Start-Y-Position für die Buttons
-  bool active = false;  // Statusvariable, ob der Button aktiv ist
-  int loopCount = 0;    // Zähler für die Schleife
-
-  for (int i = 0; i < STATIONS && loopCount < 10; i++) {
-    if (stationlist[i].enabled) {  // Prüfe, ob der Station-Button aktiviert ist
-      active = (actStation == i);  // Aktiviere Button für die aktuelle Station
-      tft.drawBitmap((loopCount % 5) * 64, y, num_64_44[loopCount], 64, 44,
-                     active ? COLOR_FAV_BUTTONS_AKTIV : COLOR_FAV_BUTTONS, COLOR_FAV_BUTTONS_BG);
-      loopCount++;               // Inkrementiere Schleifenzähler
-      if (loopCount % 5 == 0) {  // Wechsle zur nächsten Zeile alle 5 Buttons
-        y = 88;                  // Setze Y-Position für die nächste Reihe
-      }
-    }
-  }
-}
-
-// Funktion zum Zeichnen des Icons basierend auf dem Wettercode
-// Die Funktion nimmt die x- und y-Koordinaten zur flexiblen Positionierung entgegen
-void drawWeatherIcon(int weather_code, int x, int y) {
-    // Ruft die Funktion getWeatherIcon auf, um den passenden Icon-Index zu ermitteln
-    int iconIndex = getWeatherIcon(weather_code);
-    
-    // Überprüft, ob ein gültiger Icon-Index zurückgegeben wurde (kein -1)
-    if (iconIndex >= 0) { 
-        // Zeichnet das Icon auf dem TFT-Display an den gegebenen Koordinaten (x, y)
-        // weather_icons[iconIndex] enthält das Bitmap des passenden Icons
-        // 30 und 25 sind die Breite und Höhe des Icons
-        // COLOR_STATION_TITLE und COLOR_STATION_BOX_BG sind die Vordergrund- und Hintergrundfarben
-        tft.drawBitmap(x, y, weather_icons[iconIndex], 30, 25, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
-    } else {
-        // Falls der Wettercode ungültig ist, eine Meldung über die serielle Schnittstelle ausgeben
-        Serial.println("Ungültiger Wettercode: " + String(weather_code));
-    }
-}
-
-// Funktion zur Anzeige der Wetterdaten (zunächst auf Serial, später TFT)
 void displayWeather(String weatherData) {
   if (weatherData == "") {
-    Serial.println("Keine Wetterdaten empfangen.");
+    Serial.println(F("Keine Wetterdaten empfangen."));
     return;
   }
-
-  // JSON-Daten parsen
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, weatherData);
-
   if (error) {
-    Serial.print("Fehler beim Parsen von JSON: ");
+    Serial.print(F("Fehler beim Parsen von JSON: "));
     Serial.println(error.c_str());
     return;
   }
-
-  // Temperaturen und Wettercode für heute, morgen und übermorgen extrahieren
   float temp_min_today = doc["daily"]["temperature_2m_min"][0];
   float temp_max_today = doc["daily"]["temperature_2m_max"][0];
-  int weather_code_today = doc["daily"]["weathercode"][0];
-
   float temp_min_tomorrow = doc["daily"]["temperature_2m_min"][1];
   float temp_max_tomorrow = doc["daily"]["temperature_2m_max"][1];
-  int weather_code_tomorrow = doc["daily"]["weathercode"][1];
-
-  // Temperaturen und Wettercode aktual Werte extrahieren
   float temp_current_temp = doc["current"]["temperature_2m"];
   float temp_feels_like_temp = doc["current"]["apparent_temperature"];
-  int temp_current_weather_code = doc["current"]["weather_code"];
 
-  // Ausgabe auf die serielle Schnittstelle
-  Serial.println("aktuelle Wetterdaten:");
-  Serial.print("aktuelle Temperatur: ");
-  Serial.println(temp_current_temp);
-  Serial.print("gefühlte Temperatur: ");
-  Serial.println(temp_feels_like_temp);
-  Serial.print("aktuelle Wettercode: ");
-  Serial.println(temp_current_weather_code);
+  char line[48];
+  snprintf(line, sizeof(line), "%s %d C", TXT_TEMP, (int)temp_current_temp);
+  lv_label_set_text(w_lbl_now_t, line);
+  snprintf(line, sizeof(line), "%s %d C", TXT_FEELS, (int)temp_feels_like_temp);
+  lv_label_set_text(w_lbl_now_f, line);
+  snprintf(line, sizeof(line), "%s %d C", TXT_MIN, (int)temp_min_today);
+  lv_label_set_text(w_lbl_td_min, line);
+  snprintf(line, sizeof(line), "%s %d C", TXT_MAX, (int)temp_max_today);
+  lv_label_set_text(w_lbl_td_max, line);
+  snprintf(line, sizeof(line), "%s %d C", TXT_MIN, (int)temp_min_tomorrow);
+  lv_label_set_text(w_lbl_tm_min, line);
+  snprintf(line, sizeof(line), "%s %d C", TXT_MAX, (int)temp_max_tomorrow);
+  lv_label_set_text(w_lbl_tm_max, line);
+}
 
-  Serial.println("Wetterdaten für heute:");
-  Serial.print("Minimale Temperatur: ");
-  Serial.println(temp_min_today);
-  Serial.print("Maximale Temperatur: ");
-  Serial.println(temp_max_today);
-  Serial.print("Wettercode: ");
-  Serial.println(weather_code_today);
+void drawHeaderInfos(void) {
+  ui_refresh_header();
+}
 
-  Serial.println("\nWetterdaten für morgen:");
+void drawWifiInfo(void) {
+  ui_refresh_header();
+}
 
-  Serial.print("Minimale Temperatur: ");
-  Serial.println(temp_min_tomorrow);
-  Serial.print("Maximale Temperatur: ");
-  Serial.println(temp_max_tomorrow);
-  Serial.print("Wettercode: ");
-  Serial.println(weather_code_tomorrow);
+void drawSnoozeInfo(void) {
+  ui_refresh_header();
+}
 
-  // Anzeige Display
-  tft.fillRect(3, 117, 314, 93, COLOR_STATION_BOX_BG);      // Hintergrund des Radio-Bereichs füllen
+void HandleFavoriteButtons(int xpos, int ypos) {
+  (void)xpos;
+  (void)ypos;
+}
 
-  //aktuell
-  tft.drawRect(3, 117, 105, 93, COLOR_STATION_BOX_BORDER);  // Rahmen zeichnen  
-  displayMessage(9, 126, 60, 25, TXT_NOW, ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
-  drawWeatherIcon(temp_current_weather_code, 72, 126); 
-  String message = String(TXT_TEMP) + " " + String((int)temp_current_temp) + " C";
-  displayMessage(9, 153, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
-  message = String(TXT_FEELS) + " " + String((int)temp_feels_like_temp) + " C";
-  displayMessage(9, 179, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);  
-  //heute
-  tft.drawRect(108, 117, 105, 93, COLOR_STATION_BOX_BORDER);  // Rahmen zeichnen 
-  displayMessage(114, 126, 60, 25, TXT_TODAY, ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG); 
-  drawWeatherIcon(weather_code_today, 177, 126);
-  message = String(TXT_MIN) + " " + String((int)temp_min_today) + " C";
-  displayMessage(114, 153, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
-  message = String(TXT_MAX) + " " + String((int)temp_max_today) + " C";
-  displayMessage(114, 179, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG); 
-  //morgen
-  tft.drawRect(212, 117, 105, 93, COLOR_STATION_BOX_BORDER);  // Rahmen zeichnen   
-  displayMessage(219, 126, 60, 25, TXT_TOMMORROW, ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
-  drawWeatherIcon(weather_code_tomorrow, 282, 126);
-  message = String(TXT_MIN) + " " + String((int)temp_min_tomorrow) + " C";
-  displayMessage(219, 153, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);
-  message = String(TXT_MAX) + " " + String((int)temp_max_tomorrow) + " C";
-  displayMessage(219, 179, 93, 25, message.c_str(), ALIGNLEFT, false, COLOR_STATION_TITLE, COLOR_STATION_BOX_BG);   
+void DrawFooterButtons_Power_Sleep_Alarm(void) {
+  ui_refresh_footer_icons();
+}
 
+void onTouchClick(TS_Point p) {
+  (void)p;
 }

@@ -1,10 +1,21 @@
-#define RADIOVERSION "v4.0.3";
+#define RADIOVERSION "v5.0.0"
 #include "00_librarys.h"      //Lade alle benötigten Bibliotheken
 #include "00_pin_settings.h"  //Einstellungen der genutzten Pins
 #include "00_settings.h"      //einstellungen
 #include "00_texte.h"         //Strings
 #include "weather.h"
-//predefined function from modul tft_display.ino
+/* Kein #include <esp_bt.h>: spart Include-Kette + #pragma-Warnungen; Linker bindet die Funktion trotzdem. */
+#if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_IDF_TARGET_ESP32) && CONFIG_IDF_TARGET_ESP32
+extern "C" int esp_bt_controller_mem_release(int mode);
+#ifndef ESP_BT_MODE_BTDM
+#define ESP_BT_MODE_BTDM 3
+#endif
+#endif
+// Vor tft_display.ino (Arduino fügt die .ino alphabetisch danach ein)
+extern AudioGenerator *decoder;  // Definition in audio.ino
+void showStartPage(void);
+void toggleRadio(boolean off);
+// predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
 
 // Liest die aktuelle Uhrzeit und berechnet weekday/minutes
@@ -76,8 +87,10 @@ void findNextAlarm() {
 
 // Initialisierung des Systems
 void setup() {
-  // Starte die serielle Kommunikation mit einer Baudrate von 115200
   Serial.begin(115200);
+#if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_IDF_TARGET_ESP32) && CONFIG_IDF_TARGET_ESP32
+  esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);  /* klassischer ESP32: BT-RAM für App freigeben */
+#endif
   Serial.println("Load preferences");  // Debug-Ausgabe: "Lade Einstellungen"
 
   title[0] = 0;  // Setze das erste Zeichen des Titels auf 0 (leerer Titel)
@@ -98,7 +111,7 @@ void setup() {
 
 
   curGain = 50;                                              // Standardwert für Lautstärke
-  if (pref.isKey("gain")) curGain = pref.getUShort("gain");  // Abrufen des Lautstärkewerts
+  if (pref.isKey("gain")) curGain = (uint8_t)constrain((int)pref.getUShort("gain"), 0, 100);
 
   snoozeTime = 30;                                                  // Standardwert für Schlummerzeit in Minuten
   if (pref.isKey("snooze")) snoozeTime = pref.getUShort("snooze");  // Abrufen der Schlummerzeit
@@ -131,12 +144,18 @@ void setup() {
 
   // Debug-Ausgabe der aktuellen Station, Lautstärke, SSID und NTP-Server
   Serial.printf("station %i, gain %i, ssid %s, ntp %s\n", curStation, curGain, ssid.c_str(), ntp.c_str());
+  Serial.printf_P(PSTR("heap vor setup_audio: %u\n"), (unsigned)ESP.getFreeHeap());
 
   // Führe die Setup-Funktionen für Audio, Display und Senderliste aus
   setup_audio();       // Initialisiere die Audio-Streams
+  Serial.printf_P(PSTR("heap nach setup_audio: %u\n"), (unsigned)ESP.getFreeHeap());
+  Serial.println(F("setup_display…"));
   setup_display();     // Initialisiere die Display-Schnittstelle
+  Serial.printf_P(PSTR("heap nach setup_display: %u\n"), (unsigned)ESP.getFreeHeap());
+  Serial.println(F("setup_display OK"));
+  /* Audio-Puffer erst bei erstem startUrl: sonst ~70 KiB weniger Heap → LwIP/Wetter/TCP-Timeouts. */
   setup_senderList();  // Lade die Senderliste aus den Präferenzen
-  setGain(0);          // Setze die aktuelle Lautstärke
+  setGain(curGain);    // gespeicherte Lautstärke auf I2S (0 = dauerhaft stumm bis zum nächsten Slider-Zug)
 
   // Versuche, eine WLAN-Verbindung herzustellen und zeige den Fortschritt auf dem Display an
   displayClear();                                                                                          // Bildschirm löschen
@@ -163,9 +182,6 @@ void setup() {
 
     // Wenn der Alarm aktiviert ist, berechne das Datum und die Uhrzeit für den nächsten Alarm
     if (pref.isKey("alarmon") && pref.getBool("alarmon")) findNextAlarm();
-
-    // Zeige Uhrzeit und nächsten Alarm auf dem Display an
-    showClock();
   } else {  // Wenn die Verbindung nicht erfolgreich war
     // Es konnte keine Verbindung hergestellt werden. Eine entsprechende Nachricht wird auf dem Display angezeigt
     displayClear();                                                                                         // Bildschirm löschen
@@ -179,20 +195,26 @@ void setup() {
     discon = millis();
   }
 
+  /* Webserver vor Startseite (showStartPage): weniger Heap-Fragmentierung vor WebServer::begin(). */
   Serial.println("Start webserver");  // Debug-Ausgabe: "Starte Webserver"
+  setup_webserver();
+  setup_ota();
 
-  // Initialisiere den Webserver und das OTA-Update
-  setup_webserver();  // Initialisiere den Webserver
-  setup_ota();        // Initialisiere das OTA-Update
+  if (connected) {
+    showStartPage();
+  }
 
   start_conf = 0;  // Setze den Startwert für die Konfiguration
 }
 
 void loop() {
-  long rssi = WiFi.RSSI();  // Hole das Signalstärke- (RSSI) Level des WiFi
-
   // Überprüfe und verarbeite mögliche OTA-Updates
   ArduinoOTA.handle();
+
+  /* Audio vor Webserver/LVGL: weniger Pufferunderruns bei gleichzeitigem WLAN-Traffic und UI. */
+  if (connected && (radio || decoder)) {
+    audio_loop();
+  }
 
   // Verarbeite HTTP-Anfragen
   webserver_loop();
@@ -200,14 +222,18 @@ void loop() {
   // Überprüfe Touch-Ereignisse
   touch_loop();
 
-  // Nach 10 Sekunden im Konfigurationsmodus, zurück zum Uhrmodus wechseln
-  if (!clockmode && ((millis() - start_conf) > 10000)) {
-    showClock();       // Zeige die Uhrzeit an
-    clockmode = true;  // Setze den Modus auf Uhr
+  /* Nach LVGL: nochmal füttern — Screen-Wechsel kann lv_timer_handler länger blocken (Underruns/Knackser). */
+  if (connected && (radio || decoder)) {
+    audio_loop();
   }
 
-  // Zeige Metadaten an, wenn das Radio aktiv ist und wir im Uhrmodus sind
-  if (newTitle && radio && clockmode) {
+  // Nach 10 Sekunden nicht auf der Startseite → zurück (Favoriten/Einstellungen/Alarm)
+  if (!startpage && ((millis() - start_conf) > 10000)) {
+    showStartPage(); /* setzt u. a. startpage = true */
+  }
+
+  // Streamtitel nur auf der Startseite ins Widget übernehmen
+  if (newTitle && radio && startpage) {
     showTitle();       // Zeige den Titel des aktuellen Radiosenders an
     newTitle = false;  // Setze das Flag zurück
   }
@@ -224,15 +250,11 @@ void loop() {
   // Erkenne eine Wiederverbindung
   if (!connected && (WiFi.status() == WL_CONNECTED)) {
     connected = true;  // Setze die Verbindung auf true
+    lastWeatherUpdate = 0;  // Wetter nach Reconnect zeitnah neu holen (nicht bis Intervall warten)
     displayClear();    // Bildschirm löschen
     // Zeige eine Nachricht an, dass die Verbindung wiederhergestellt wurde
     displayMessage(5, 10, 310, 30, TXT_RECONNECTED, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);
     reconnected = true;
-  }
-
-  // Wenn das Radio eingeschaltet ist, hole neue Stream-Daten
-  if (connected && radio) {
-    audio_loop();  // Verarbeite Audiodaten
   }
 
   // Wenn die Helligkeit auf 0 gesetzt ist, wird die Helligkeit durch das Umgebungslicht gesteuert
@@ -241,21 +263,21 @@ void loop() {
     int16_t diff = lastldr - tmp;   // Berechne die Differenz zum vorherigen Wert
     diff = abs(diff);               // Nehme den absoluten Wert der Differenz
 
-    // Setze die Hintergrundbeleuchtung, wenn die Uhr angezeigt wird und eine signifikante Änderung des Umgebungslichts erkannt wurde
-    if (clockmode && (diff > 50)) {
+    // LDR-Helligkeit nur auf der Startseite anwenden
+    if (startpage && (diff > 50)) {
       setBGLight(bright);                                  // Setze die Hintergrundbeleuchtung
       Serial.printf("ldr %i letzter %i\n", tmp, lastldr);  // Debug-Ausgabe der aktuellen und letzten LDR-Werte
       lastldr = tmp;                                       // Merke den aktuellen LDR-Wert für die nächste Messung
     }
   }
 
-  // Wetterdaten beim ersten Durchlauf sofort abrufen (wenn lastWeatherUpdate == 0) oder alle 60 Sekunden
+  // Wetter nur bei echter WLAN-Verbindung (ohne STA z. B. nur AP → kein Internet → kein HTTP)
   if (millis() - lastWeatherUpdate > weatherUpdateInterval || lastWeatherUpdate == 0) {
-    if (!radio && clockmode) {
+    if (connected && !radio && startpage) {
       String weatherData = getWeatherData(LATITUDE, LONGITUDE, TIME_ZONE_IANA);
       displayWeather(weatherData);
     }
-    lastWeatherUpdate = millis();  // Zeitstempel für das nächste Update
+    lastWeatherUpdate = millis();
   }
 
   // Zeitgesteuertes Ereignis: Update der Anzeige alle 1 Sekunde
@@ -274,14 +296,14 @@ void loop() {
       minutes = ti.tm_hour * 60 + ti.tm_min;  // Berechne Minuten seit Mitternacht
       weekday = ti.tm_wday;                   // Wochentag (0 = Sonntag, 1 = Montag, usw.)
     }
-    // Setze die Hintergrundbeleuchtung, wenn die Uhr angezeigt wird
-    if (connected && clockmode) {
+    // Datum/Uhrzeit-Update nur auf der Startseite
+    if (connected && startpage) {
 
       if(!reconnected){
         setBGLight(bright);  // Setze die Hintergrundbeleuchtung
         displayDateTime();   // Zeige Datum und Uhrzeit an ohne komplettes Display neu zu zeichnen
       }else{
-        showClock();   // Zeige Datum und Uhrzeit mit komplett neu zu zeichnen
+        showStartPage();   // Zeige Datum und Uhrzeit mit komplett neu zu zeichnen
         reconnected = false;
       }
 

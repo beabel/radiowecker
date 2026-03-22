@@ -1,163 +1,259 @@
+# Internet-Radiowecker mit Touchscreen · **Version 5.0.0**
+
+ESP32-Webradio mit 2,8"-TFT (ILI9341), Touch (XPT2046), Wecker, Wetter, Web-Konfiguration und grafischer Oberfläche auf Basis von **LVGL 9**. Die Firmware meldet sich als **`v5.0.0`** (siehe `RADIOVERSION` in `radiowecker.ino`).
+
+| [:skull: Issues](https://github.com/beabel/radiowecker/issues) | [:speech_balloon: Diskussionen](https://github.com/beabel/radiowecker/discussions) | [:grey_question: Wiki](https://github.com/beabel/radiowecker/wiki) |
+|----------------------------------------------------------------|-----------------------------------------------------------------------------------|----------------------------------------------------------------------|
+
+---
+
+## Über dieses Projekt
+
+Dieses Repository ist die **aktuelle Hauptversion** des Radioweckers. Sie basiert auf dem AZ-Delivery-Artikel *[Internet Radiowecker mit Touchscreen](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen)* von **Gerald Lechner** und der weiteren Ausarbeitung für **AZ-Touch MOD** / ESP32.
+
+Was sich gegenüber den **älteren Releases** (z. B. der **4.x-Linie** wie [v4.0.3](https://github.com/beabel/radiowecker/releases)) unterscheidet — Oberfläche, Bibliotheken, Build, Partition — steht im nächsten Abschnitt.
+
+---
+
+## Änderungen gegenüber der Vorgängerversion
+
+Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafruit GFX** auf dem ILI9341 sowie die Bibliothek **TouchEvent** zur Touch-Auswertung. **v5.0.0** ersetzt die **Hauptoberfläche** durch **LVGL 9** (Widgets, Themes, Animationen). Darunter liegt weiterhin derselbe **ILI9341**-Treiber: LVGL schreibt in einen Puffer, der auf das TFT gezeichnet wird; für wenige Zustände (z. B. WLAN-Verbindungsdialog vor dem Start von LVGL) werden weiterhin **Adafruit_ILI9341**-Aufrufe genutzt.
+
+### Oberfläche und Touch
+
+| Vorher (typisch 4.x) | Ab v5.0.0 |
+|----------------------|-----------|
+| Touch über **TouchEvent** (Kalibrierung/Events in dieser Bibliothek) | Touch: Weiterhin **XPT2046_Touchscreen** (Rohpunkte), Eingabe wird an **LVGL** angebunden |
+| Statische Layouts, viel manuelles Zeichnen | **LVGL**-Screens: Uhr, Einstellungen, Favoriten, Wecker, Fußzeile u. a. |
+| Uhrzeit klassisch als Text/Grafik | **Flip-Uhr** (Ziffern mit Animation); **bei laufendem Stream** werden Updates bewusst **ohne aufwändige Flip-Animation** gesetzt, damit Audio, WLAN und Webserver nicht ausgebremst werden |
+| Senderwechsel u. a. über seitliche Streifen | Sender **Vor/Zurück** als Buttons im **Bereich unter der Uhr / beim Datum**, damit die Uhr frei bleibt |
+
+**TouchEvent** muss **nicht** mehr installiert werden.
+
+### Toolchain und Bibliotheken
+
+| Thema | Vorher | v5.0.0 |
+|-------|--------|--------|
+| **Arduino IDE** | häufig 1.x / 2.x, in der Doku teils IDE 1 beschrieben | **Arduino IDE 2.x** (Referenz 2.3.8) |
+| **ESP32-Arduino-Core** | in der README oft **2.0.17** empfohlen, weil mit **Standard-Partition** der Sketch bei neueren Cores **zu groß** wurde | **Aktueller Core** ist nutzbar, wenn die **Partition „No FS 4MB“** (oder gleichwertig große App-Partition) gesetzt ist |
+| **LVGL** | nicht Bestandteil des alten Stacks | **lvgl 9.5.x** zentral für die UI |
+| **ESP8266Audio** | z. B. 2.0.0 in der alten Liste | **2.4.1** (Referenz; wie immer Earle F. Philhower) |
+| **Adafruit GFX / ILI9341** | Kern der alten Anzeige | weiter installiert; GFX wird von ILI9341 mit eingebunden |
+
+### Flash, Partition und neue Dateien
+
+- **Partition Scheme:** Früher reichte oft das **Default-Layout mit SPIFFS** nicht mehr, sobald Core und Sketch wuchsen. **v5.0.0** setzt auf **„No FS 4MB“**: möglichst **große App-Partition**, kein großes Dateisystem — ausreichend Platz für LVGL, Web- und Audio-Code.  
+- **LVGL-Konfiguration:** Zusätzlich zum Sketch ist **`lv_conf.h`** identisch nach **`libraries/lvgl/src/lv_conf.h`** zu kopieren (siehe Abschnitt unten). Ohne diese Kopie fehlen oft Fonts/Features beim Bau der Library.  
+
+### Sonstiges im Code
+
+- Nicht genutzte Definitionen wurden bereinigt (z. B. **Buzzer-Pin** `BEEPER`, falls du ihn bei Bedarf wieder einfügen möchtest: in `00_pin_settings.h` ergänzen und ansteuern).
+
+Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Bibliotheken an die Tabelle anpassen, **Partition** umstellen, **`lv_conf.h`** doppelt pflegen, dann **vollständig flashen** (ggf. mit „Erase Flash“).
+
+---
+
+## Benötigte Hardware (Übersicht)
+
+| Komponente | Hinweis |
+|------------|---------|
+| **ESP32** | z. B. DevKit wie beim AZ-Touch-Set |
+| **Display** | ILI9341, 2,8" (beim AZ-Touch MOD integriert) |
+| **Touch** | XPT2046 (beim AZ-Touch MOD) |
+| **Audio** | I2S-Verstärker (z. B. MAX98357A) + Lautsprecher |
+| **Optional** | LDR (Helligkeit) laut `00_pin_settings.h` |
+
+**Pinbelegung** für Display, Touch, I2S und LDR: Datei **`radiowecker/00_pin_settings.h`**. Abweichende Boards: Pins dort anpassen.
+
+---
+
+## Software-Voraussetzungen
+
+### Arduino IDE
+
+- **Arduino IDE 2.3.8** (oder kompatible 2.x-Version)
+
+### ESP32-Boardsupport
+
+- Boardverwalter-URL:  
+  `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`  
+- Paket **esp32** von **Espressif Systems** installieren.
+
+### Bibliotheken (Referenzstände für v5.0.0)
+
+| Bibliothek | Version |
+|------------|---------|
+| **lvgl** | 9.5.0 |
+| **Adafruit GFX Library** | 1.12.5 |
+| **Adafruit ILI9341** | 1.6.3 |
+| **XPT2046_Touchscreen** | 1.4 |
+| **ESP8266Audio** (Earle F. Philhower) | 2.4.1 |
 
 
+**Touch:** Weiterhin **XPT2046_Touchscreen** installieren und einbinden (siehe `00_librarys.h` / `tft_display.ino`).
+---
 
-<div align="center">
+## Board-Einstellungen in der Arduino IDE
 
-|[:skull:ISSUE](https://github.com/beabel/radiowecker/issues?q=is%3Aissue)|[:speech_balloon: Forum /Discussion](https://github.com/beabel/radiowecker/discussions?discussions_q=)|[:grey_question:WiKi](https://github.com/beabel/radiowecker/wiki)|
-|--|--|--|
-|![GitHub issues](https://img.shields.io/github/issues/beabel/radiowecker)![GitHub closed issues](https://img.shields.io/github/issues-closed/beabel/radiowecker)|![GitHub Discussions](https://img.shields.io/github/discussions/beabel/radiowecker)![GitHub User's stars](https://img.shields.io/github/stars/beabel)|![GitHub release (with filter)](https://img.shields.io/github/v/release/beabel/radiowecker)
+Unter **Werkzeuge** u. a.:
 
+| Einstellung | Empfehlung |
+|-------------|------------|
+| **Board** | *ESP32 Dev Module* (oder passend zu deinem Modul) |
+| **Flash Size** | *4 MB* (wenn dein Chip 4 MB hat) |
+| **Partition Scheme** | **No FS 4MB** |
 
-</div>
+**Warum „No FS 4MB“?**  
+LVGL 9, Webserver, Audio und Einstellungen benötigen eine **große App-Partition**. Schemata mit großem SPIFFS/LittleFS lassen oft zu wenig Flash für den Sketch übrig und führen zu Link- oder Laufzeitproblemen.
 
+- **PSRAM:** nur *Enabled*, wenn dein Board **physikalisch PSRAM** hat.  
+- Nach Wechsel des Partitionsschemas ggf. einmal **„Erase All Flash Before Sketch Upload“** aktivieren und neu flashen.
 
-|This project is based on the blog article "[Internet clock radio with touchscreen](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen)" by Gerald Lechner / Az-Delivery. | Dieses Projekt basiert auf dem Blogartikel "[Internet Radiowecker mit Touchscreen](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/internet-radiowecker-mit-touchscreen)" von Gerald Lechner / Az-Delivery.  |
-|--|--|
+---
 
-> [!NOTE]  
-> **Instruction / Anleitung**
-> Eine detailierte Anleitung befindet sich [hier](https://github.com/beabel/radiowecker/wiki).
+## LVGL: Pflichtschritt `lv_conf.h`
 
-**Parts required: / Benötigte Teile:** 
+Die LVGL-Bibliothek wird mit einer zentralen **`lv_conf.h`** gebaut. Dieses Projekt liefert eine passende Datei im Sketch-Ordner. **Zusätzlich** muss **dieselbe Datei** in der installierten LVGL-Library liegen:
 
-||Pro|Cheap|Minimal|
-|--|--|--|--|
-|[1 x AZ-Touch MOD mit 2,8" Touchscreen](https://amzn.to/3srKxjE)|:white_check_mark:|:ballot_box_with_check:[1xTFT](https://amzn.to/3MEtdyy)|:x:|
-|[1 x ESP-32 Dev Kit C V4](https://amzn.to/40ApxUA)|:white_check_mark:|:white_check_mark:|:white_check_mark:|
-|[2 x I2S 3W MAX98357A](https://amzn.to/3QSHtGF)|:white_check_mark:|:white_check_mark:|:white_check_mark:(1x)|
-|[1 x Lautsprecher Set](https://amzn.to/3SSyQNR)|:white_check_mark:|:white_check_mark:|:white_check_mark:|
-|[1 x Widerstand 470 kOhm](https://amzn.to/3Sw17cL)|:white_check_mark:|:white_check_mark:|:white_check_mark:(1x470kOhm)|
-|[DC Einbaubuchse](https://amzn.to/47it0ZY)|:white_check_mark:|:x:|:x:|
-|[1 x LDR](https://amzn.to/3FQYCKq)|:white_check_mark:|:x:|:x:|
-||~95,-|~54,-|~37,-|
+| Aktion | Pfad |
+|--------|------|
+| Quelle | `radiowecker/lv_conf.h` |
+| Ziel (Kopie, Inhalt identisch) | `Arduino/libraries/lvgl/src/lv_conf.h` |
 
-[German Version below / Deutsche Version unten:point_down:](#german-version)
-----
-# Clock radio
+**Typische Pfade:**
 
-I have extended and adapted this project.
+- **Windows:** `Benutzer\<Name>\Documents\Arduino\libraries\lvgl\src\lv_conf.h`  
+- **macOS / Linux:** `~/Arduino/libraries/lvgl/src/lv_conf.h`
 
+**Wichtig:** Änderst du `lv_conf.h` im Projekt, die Kopie unter `libraries/lvgl/src/` **immer wieder mitüberschreiben**, sonst kompiliert die Library mit alter Konfiguration (fehlende Fonts/Features).
 
-At the time of publishing this blog article, a complete set was available for purchase from AZ-Delivery. Currently this is not offered, but all required parts can be ordered individually.
+### Kurz-Checkliste vor dem ersten Upload
 
+1. ESP32-Boardsupport installiert, Board & **No FS 4MB** eingestellt.  
+2. Bibliotheken laut Tabelle installiert.  
+3. `lv_conf.h` nach `libraries/lvgl/src/lv_conf.h` kopiert.  
+4. Sketch-Ordner `radiowecker/` vollständig geöffnet.  
+5. Kompilieren; bei Fehlern zu Montserrat/LVGL zuerst **`lvgl/src/lv_conf.h`** prüfen.
 
-**[Additional information::point_down:](#informationen)**
+---
 
-## [Screenshots:point_down:](#screenshots)
+## Ersteinrichtung: WLAN
 
-## German Version
+1. Gerät einschalten. Ohne bekanntes WLAN startet der **Konfigurations-Access-Point** mit der SSID **`radioweckerconf`**.  
+2. PC oder Smartphone mit diesem WLAN verbinden.  
+3. Browser öffnen: **`http://192.168.4.1`**  
+4. Heim-WLAN auswählen, Passwort eintragen, speichern. Das Gerät startet neu und verbindet sich mit dem gewählten Netz.
 
-# Radiowecker
+**Fehlerbehebung:** Keine Verbindung nach dem Speichern → erneut Konfigurationsmodus (wie in früheren Releases: ggf. Reset/Anleitung im Wiki oder in `DOKU/05_Bedienungsanleitung.md`).
 
-Ich habe dieses Projekt erweitert und angepasst.
+---
 
-Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges Set bei AZ-Delivery zu kaufen. Aktuell wird dies nicht angeboten, aber alle benötigten Teile können einzeln bestellt werden.
+## Bedienung: Touch-Display (Kurzüberblick)
 
-# Informationen
+1. **Obere Statuszeile**  
+   - Weckerstatus (nächste Weckzeit / deaktiviert)  
+   - IP-Adresse  
+   - Schlummer-Hinweis  
+   - WLAN-RSSI  
 
-**Boardverwalter URL:**
-[https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json](https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json)
-- ESP32 von Espressif Systems
+2. **Startseite**  
+   - Große **Uhrzeit** (Flip-Anzeige; bei laufendem Radio ohne aufwändige Animation, damit Stream und Web stabil bleiben)  
+   - **Datum**  
+   - **Sender vor/zurück:** seitliche Buttons im **Datumsbereich** (nicht über der Uhr)  
+   - **Wetter** bzw. **Radio-Infos** (Sender, Streamtitel) im mittleren Bereich  
+   - **Lautstärke:** Schieberegler unten  
 
-> [!IMPORTANT]  
-> **Hinweis:** Stelle sicher, dass du **Version 2.0.17** auswählst, da es zu Problemen mit größeren Versionen ab 3.x kommen kann.~~
+3. **Weitere Seiten**  
+   - Über den **mittleren Bereich** (transparenter Bereich) zur **Einstellungs-/Radio-Seite** wechseln (wie im bisherigen Konzept; Details in `DOKU/05_Bedienungsanleitung.md`).  
+   - **Favoriten**, **Einstellungen**, **Wecker** über Fußzeilen-Navigation.  
 
-|Boardverwalter Version|Sketchgröße|
-| ------------- | ------------- |
-|2.0.17|:white_check_mark: 1113105|
-|3.0.0|:x: 1288101|
-|3.0.5|:x: 1312869|
+4. **Web-Oberfläche**  
+   - Im Heimnetz über die im Display angezeigte **IP-Adresse** erreichbar: Stationen, Wecker, WLAN u. a. konfigurieren.
 
-**Bibliotheken:**
-- [Adafruit_ILI9341 by Adafruit Version 1.6.2](https://github.com/adafruit/Adafruit_ILI9341)
-- [Adafruit_GFX by Adafruit Version 1.12.1](https://github.com/adafruit/Adafruit-GFX-Library)
-- [XPT2046_Touchscreen by Paul Stoffregen Version 1.4.0](https://github.com/PaulStoffregen/XPT2046_Touchscreen)
-- [Touchevent by Gerald-Lechner Version 1.3.0](https://github.com/GerLech/TouchEvent)
-- [ESP8266Audio by Earle F. Philhower Version 2.0.0](https://github.com/earlephilhower/ESP8266Audio)
+SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Config_Screen_Raster.svg`**, **`DOKU/Alarm_Screen_Raster.svg`**.
 
-# Screenshots
+---
 
-![Main Screen](screenshot/result.jpg?raw=true "Hauptbildschirm")
+## Module im Sketch (Orientierung)
 
-![Wetter Anzeige](screenshot/wetter.jpg?raw=true "Wetter Anzeige")
+| Datei / Bereich | Inhalt (kurz) |
+|-----------------|---------------|
+| `radiowecker.ino` | Setup, Loop, Zeit, Alarmlogik |
+| `tft_display.ino` | LVGL-UI, Seiten, Uhr |
+| `audio.ino` | Stream, Decoder, I2S |
+| `wlan.ino` | WiFi, Verbindung |
+| `webserver.ino` | HTTP, API, `index.h` |
+| `stations.ino` | Senderliste, Preferences |
+| `ota.ino` | Over-the-Air-Updates |
 
-![Radio Screen](screenshot/radio.jpg?raw=true "Radiobildschirm")
+---
 
-![Setting Screen](screenshot/settings.jpg?raw=true "Einstellungen")
+## English summary (v5.0.0)
 
-![Alarm Screen](screenshot/alarm.jpg?raw=true "Alarm Einstellungen")
+- **ESP32** internet clock radio with **ILI9341** + **XPT2046** (library **XPT2046_Touchscreen** required for touch input to LVGL), **LVGL 9.5**, MP3 streams via **ESP8266Audio**, alarms, weather, and a built-in **web UI**. The old **TouchEvent** library is not used.  
+- **Arduino IDE 2.x**; install libraries listed above.  
+- Set **Partition Scheme** to **No FS 4MB** (large app partition).  
+- Copy **`radiowecker/lv_conf.h`** to **`Arduino/libraries/lvgl/src/lv_conf.h`** (must stay in sync). Keep **`build_opt.h`** and **`lv_font_de_supp_14.c`** in the sketch folder.  
+- First-time WiFi: join **`radioweckerconf`**, open **`http://192.168.4.1`**, configure home WiFi.
 
-![Color Setting](screenshot/settings_color.png?raw=true "Farbeinstellungen")
+**Compared to earlier releases (e.g. 4.x):** main UI moved from raw **Adafruit GFX** + **TouchEvent** to **LVGL 9**; **XPT2046_Touchscreen** remains; **ArduinoJson** is bundled in the sketch; **partition layout** must provide a large app region; add **`lv_conf.h`** copy under **`lvgl/src/`** and use **`build_opt.h`**.
 
-![Konfigurationswebsite](screenshot/website.png?raw=true "Musik")
+---
 
-![Konfigurationswebsite](screenshot/website_2.png?raw=true "Wecker")
+## Danksagung
 
-![Konfigurationswebsite](screenshot/website_3.png?raw=true "Radio")
+- **Gerald Lechner** und **AZ-Delivery** für die ursprüngliche Projektidee und Dokumentation.  
+- **Earle F. Philhower** (ESP8266Audio), **LVGL**, **Adafruit**, **Paul Stoffregen** (XPT2046) für die verwendeten Bibliotheken.
 
-![Konfigurationswebsite](screenshot/website_4.png?raw=true "WLAN")
+---
 
-![Info Tab](screenshot/info_tab.png?raw=true "Info Tab")
+## Screenshots — so sieht es aus
 
-# Bedienungsanleitung
+Fotos aus dem Ordner [`screenshot/`](screenshot/). **`display_*`** = TFT (LVGL), **`webseite_*`** = HTML-Ausgabe im Browser. Ausführliche Einordnung: [`DOKU/05_Bedienungsanleitung.md`](DOKU/05_Bedienungsanleitung.md).
 
-## Erste Schritte und Verbindung zum WLAN
+### TFT (Display)
 
-1. **Gerät einschalten**  
-   Nach dem ersten Start des DIY-Webradios oder wenn das Gerät kein bekanntes WLAN-Netzwerk findet, zeigt das Display die Meldung:
+**Startseite, Radio an**
 
-![IMG20240829222852](https://github.com/user-attachments/assets/b9cd9628-1b1a-47af-a4ec-16bbda20790b)
+![Startseite Radio an](screenshot/display_startseite_radio_on.jpg)
 
-2. **Verbindung mit dem Konfigurations-WLAN herstellen**  
-   Auf deinem Smartphone, Tablet oder Computer öffnest du die WLAN-Einstellungen und suchst nach verfügbaren Netzwerken. Wähle das Netzwerk mit der SSID (Netzwerkname) `radioweckerconf` aus, um dich mit dem Radiowecker zu verbinden. Dies ist ein temporäres Netzwerk, das das Radio erstellt, um die Konfiguration zu ermöglichen.
+**Startseite, Radio aus, Wetter**
 
-3. **Zugriff auf das Einstellungsmenü**  
-   Sobald die Verbindung hergestellt ist, öffne einen Webbrowser (z. B. Chrome, Firefox, Safari) und gib in der Adressleiste die IP-Adresse `192.168.4.1` ein. Diese IP-Adresse führt dich zur Einstellungsseite des Radios.
+![Startseite Radio aus, Wetter](screenshot/display_startseite_radio_off_weather_on.jpg)
 
-![Screenshot_2024-08-29-23-22-25-22_40deb401b9ffe8e1df2f1cc5ba480b12](https://github.com/user-attachments/assets/bfbfbaba-883e-4363-8fa7-d76cd5086622)
+**Einstellungen**
 
-4. **WLAN-Konfiguration**  
-   Auf der Einstellungsseite wirst du aufgefordert, das WLAN-Netzwerk auszuwählen, mit dem das Radio dauerhaft verbunden werden soll. Wähle dein gewünschtes WLAN-Netzwerk aus und gib das entsprechende Passwort ein. Speichere die Einstellungen.
+![Einstellungen](screenshot/display_settingspage.jpg)
 
-5. **Neustart des Geräts**  
-   Nach der erfolgreichen Konfiguration wird der Radiowecker das temporäre Netzwerk `radioweckerconf` beenden und sich mit dem neu konfigurierten WLAN-Netzwerk verbinden. Das Radio sollte nun betriebsbereit sein und du kannst Sender auswählen und abspielen.
+**Wecker**
 
-## Fehlerbehebung
+![Wecker](screenshot/display_alarmpage.jpg)
 
-- **Verbindung fehlgeschlagen**  
-   Falls das DIY-Webradio nach der Konfiguration keine Verbindung zum gewünschten WLAN herstellen kann, wird erneut die Meldung "Nicht verbunden" angezeigt. In diesem Fall wiederhole den Verbindungsprozess.
+**Favoriten**
 
-- **WLAN-Netzwerkwechsel**  
-   Solltest du das WLAN-Netzwerk wechseln müssen, kannst du das Gerät zurücksetzen oder einen ähnlichen Prozess durchlaufen, um das temporäre Netzwerk wiederherzustellen und eine neue Konfiguration vorzunehmen.
+![Favoriten](screenshot/display_favoritenseite.jpg)
 
-![IMG20240829222947](https://github.com/user-attachments/assets/173331b3-420c-48e5-8cce-321bdef13102)
+### Webseite (HTML im Browser)
 
-## Anzeige auf dem TFT-Display
+**Startseite**
 
-1. **Statusleiste (oben im Display):**
-   - **Weckerstatus**: Ein Symbol zeigt an, ob der Wecker aktiviert oder deaktiviert ist. Ein Glockensymbol, das bei aktivem Wecker orange ist und die nächste Weckzeit anzeigt. Bei deaktiviertem Wecker ist ein rotes, durchgestrichenes Symbol sichtbar.
-   - **Einschlaftimer**: Ein weiteres Symbol zeigt den Status des Einschlaftimers an. Ist der Timer aktiv, erscheint ein "Bett"-Symbol. Wenn der Timer nicht aktiv ist, ist dieses Symbol ausgeblendet.
-   - **IP-Adresse**: Die aktuelle IP-Adresse des Geräts wird angezeigt, um bei Bedarf eine direkte Verbindung oder weitere Einstellungen zu ermöglichen.
-   - **WLAN-Signalstärke**: Die Signalstärke des WLANs wird sowohl als numerischer Wert als auch als farbiges Symbol dargestellt:
-     - **Grün**: Starkes Signal
-     - **Gelb**: Mittelmäßiges Signal
-     - **Rot**: Schwaches Signal
+![Web Startseite](screenshot/webseite_1_startseite.png)
 
-2. **Hauptanzeige (mittig im Display):**
-   - **Aktuelle Uhrzeit**: Die aktuelle Uhrzeit wird prominent angezeigt, damit sie leicht ablesbar ist.
-   - **Aktuelles Datum**: Unter der Uhrzeit wird das aktuelle Datum angezeigt, damit du sowohl die Zeit als auch das Datum im Blick hast.
+**Wecker**
 
-3. **Lautstärkeregler (unten im Display):**
-   - Ein Schieberegler für die Lautstärke befindet sich am unteren Rand des Displays. Du kannst den Regler nach links oder rechts schieben, um die Lautstärke des Webradios anzupassen.
+![Web Wecker](screenshot/webseite_2_alarmpage.png)
 
-4. **Radio:**
-   - **Sendername und Titel**: Wenn ein Sender gerade läuft, werden hier die Informationen des Senders und des Titels angezeigt.
-   - **Senderwechsel**: Ab Version 3.0.5 ist es möglich, rechts und links zum nächsten aktivierten Sender zu springen, ohne erst auf eine Unterseite schalten zu müssen. Dies erfolgt durch Berührung an den Seiten, 40px jeweils von den Rändern.
+**Radiosender**
 
-5. **Anzeige Einstellungs-Seiten:**
-   - **Unterseiten**: Durch eine Berührung in die Mitte des Touchscreens wird die Unterseite Radio-Einstellungen angezeigt. Wenn keine Berührung mehr registriert wird, schaltet es automatisch zurück zur Hauptanzeige.
+![Web Radiosender](screenshot/webseite_3_radiestations.png)
 
-![Menu_Struktur_Bedienung](https://github.com/user-attachments/assets/11992ce4-75e4-4e49-ab48-89516053c784)
+**Einstellungen**
+
+![Web Einstellungen](screenshot/webseite_4_settings.png)
+
+**Info**
+
+![Web Info](screenshot/webseite_5_info.png)
 
 ---
 
@@ -165,8 +261,7 @@ Zum Zeitpunkt der Veröffentlichung des Blogartikels gab es ein vollständiges S
 [![Pulse 107](https://github.com/user-attachments/assets/02919e84-bc1d-4336-82cd-6e2b9bc36ce8)](https://www.pulse107.com/pulse-107) 
 [![Strobe Radio](https://github.com/user-attachments/assets/a911f569-5a28-416c-8ecd-8053fa2392ae)](https://www.pulse107.com/the-strobe-radio)
 
+---
 
-
-
-
+**Radiowecker · Version 5.0.0**
 
