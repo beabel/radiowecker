@@ -43,84 +43,12 @@ static lv_obj_t *scr_msg;
 static lv_obj_t *scr_ota;
 
 static lv_obj_t *lbl_date;
-static lv_obj_t *flip_time_bar;
-static lv_obj_t *flip_cell[4];
-static lv_obj_t *flip_lbl[4];
-static lv_obj_t *flip_colon;
+/* Uhrzeit: vier Ziffern-Kacheln + Doppelpunkt (ohne Flip-Animation — spart CPU/LVGL-Last auf dem ESP32) */
+static lv_obj_t *clock_time_bar;
+static lv_obj_t *clock_digit_cell[4];
+static lv_obj_t *clock_digit_lbl[4];
+static lv_obj_t *clock_colon;
 
-/* Flip-Clock: Ziffer klappt per transform_scale_y (256 = 100 %, 0 = „zu“) */
-#ifndef FLIP_CLOCK_ANIM_MS
-#define FLIP_CLOCK_ANIM_MS 140
-#endif
-static char s_flip_last[4];
-static char s_flip_pending[4];
-static bool s_flip_ready;
-
-static void flip_apply_scale_y(void *var, int32_t v) {
-  lv_obj_t *o = (lv_obj_t *)var;
-  if (!o) return;
-  lv_obj_set_style_transform_scale_y(o, v, LV_PART_MAIN);
-}
-
-static void flip_grow_done_cb(lv_anim_t *a);
-
-/* Nicht im Anim-completed_cb direkt neue Anims starten / lv_label ändern — Reentrancy → Crash (EXCVADDR 0). */
-static void flip_async_begin_grow(void *ud) {
-  uintptr_t u = (uintptr_t)ud;
-  if (u > 3) return;
-  uint8_t idx = (uint8_t)u;
-  lv_obj_t *lbl = flip_lbl[idx];
-  if (!lbl) return;
-  char s[2] = {s_flip_pending[idx], '\0'};
-  lv_label_set_text(lbl, s);
-  lv_anim_t an;
-  lv_anim_init(&an);
-  lv_anim_set_var(&an, lbl);
-  lv_anim_set_user_data(&an, (void *)u);
-  lv_anim_set_exec_cb(&an, flip_apply_scale_y);
-  lv_anim_set_values(&an, 0, 256);
-  lv_anim_set_time(&an, FLIP_CLOCK_ANIM_MS);
-  lv_anim_set_path_cb(&an, lv_anim_path_ease_out);
-  lv_anim_set_completed_cb(&an, flip_grow_done_cb);
-  lv_anim_start(&an);
-}
-
-static void flip_shrink_done_cb(lv_anim_t *a) {
-  void *ud = lv_anim_get_user_data(a);
-  if (!ud) return;
-  uintptr_t u = (uintptr_t)ud;
-  if (u > 3) return;
-  lv_async_call(flip_async_begin_grow, ud);
-}
-
-static void flip_grow_done_cb(lv_anim_t *a) {
-  void *ud = lv_anim_get_user_data(a);
-  if (!ud) return;
-  uintptr_t u = (uintptr_t)ud;
-  if (u > 3) return;
-  uint8_t idx = (uint8_t)u;
-  s_flip_last[idx] = s_flip_pending[idx];
-}
-
-static void flip_cancel_digit_async(uint8_t idx) {
-  lv_async_call_cancel(flip_async_begin_grow, (void *)(uintptr_t)idx);
-}
-
-static void flip_start_digit_anim(uint8_t idx) {
-  if (idx > 3 || !flip_lbl[idx]) return;
-  flip_cancel_digit_async(idx);
-  lv_anim_delete(flip_lbl[idx], NULL);
-  lv_anim_t an;
-  lv_anim_init(&an);
-  lv_anim_set_var(&an, flip_lbl[idx]);
-  lv_anim_set_user_data(&an, (void *)(uintptr_t)idx);
-  lv_anim_set_exec_cb(&an, flip_apply_scale_y);
-  lv_anim_set_values(&an, 256, 0);
-  lv_anim_set_time(&an, FLIP_CLOCK_ANIM_MS);
-  lv_anim_set_path_cb(&an, lv_anim_path_ease_in);
-  lv_anim_set_completed_cb(&an, flip_shrink_done_cb);
-  lv_anim_start(&an);
-}
 static lv_obj_t *lbl_alarm_hdr;
 static lv_obj_t *lbl_ip;
 static lv_obj_t *lbl_rssi;
@@ -766,62 +694,53 @@ static void build_clock_screen(void) {
   lv_obj_t *btn_l;
   lv_obj_t *btn_r;
 
-  /* Flip-Uhr: Montserrat 24 (lv_conf.h muss in …/lvgl/src/lv_conf.h liegen) + große Kacheln. */
+  /* Uhr: Montserrat 24 (lv_conf.h muss in …/lvgl/src/lv_conf.h liegen) + große Ziffern-Kacheln. */
   const lv_coord_t clock_top = 26;
-  const lv_coord_t flip_bar_h = 70;
-  const lv_coord_t flip_cell_w = 56;
-  const lv_coord_t flip_cell_h = 64;
-  const lv_coord_t date_below_flip = 6;
+  const lv_coord_t clock_bar_h = 70;
+  const lv_coord_t clock_digit_w = 56;
+  const lv_coord_t clock_digit_h = 64;
+  const lv_coord_t date_below_clock = 6;
   const lv_coord_t date_row_h = 36;
   const lv_coord_t gap_date_to_mid = 0;
 
-  flip_time_bar = lv_obj_create(scr_clock);
-  lv_obj_remove_style_all(flip_time_bar);
-  lv_obj_set_size(flip_time_bar, 320, flip_bar_h);
-  lv_obj_align(flip_time_bar, LV_ALIGN_TOP_MID, 0, clock_top);
-  lv_obj_set_flex_flow(flip_time_bar, LV_FLEX_FLOW_ROW);
-  lv_obj_set_flex_align(flip_time_bar, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_set_style_pad_column(flip_time_bar, 10, LV_PART_MAIN);
-  lv_obj_clear_flag(flip_time_bar, LV_OBJ_FLAG_SCROLLABLE);
+  clock_time_bar = lv_obj_create(scr_clock);
+  lv_obj_remove_style_all(clock_time_bar);
+  lv_obj_set_size(clock_time_bar, 320, clock_bar_h);
+  lv_obj_align(clock_time_bar, LV_ALIGN_TOP_MID, 0, clock_top);
+  lv_obj_set_flex_flow(clock_time_bar, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(clock_time_bar, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_column(clock_time_bar, 10, LV_PART_MAIN);
+  lv_obj_clear_flag(clock_time_bar, LV_OBJ_FLAG_SCROLLABLE);
 
-  auto mk_flip_cell = [&](int idx) {
-    flip_cell[idx] = lv_obj_create(flip_time_bar);
-    lv_obj_set_size(flip_cell[idx], flip_cell_w, flip_cell_h);
-    lv_obj_set_style_bg_color(flip_cell[idx], rgb565_to_lv(COLOR_BG), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(flip_cell[idx], LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_border_color(flip_cell[idx], rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
-    lv_obj_set_style_border_width(flip_cell[idx], 3, LV_PART_MAIN);
-    lv_obj_set_style_radius(flip_cell[idx], 10, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(flip_cell[idx], 0, LV_PART_MAIN);
-    lv_obj_set_style_shadow_width(flip_cell[idx], 0, LV_PART_MAIN);
-    flip_lbl[idx] = lv_label_create(flip_cell[idx]);
-    lv_label_set_text(flip_lbl[idx], "0");
-    lv_obj_set_style_text_font(flip_lbl[idx], &font_clock_time, LV_PART_MAIN);
-    lv_obj_set_style_text_color(flip_lbl[idx], rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
-    lv_obj_set_style_text_letter_space(flip_lbl[idx], 4, LV_PART_MAIN);
-    lv_obj_center(flip_lbl[idx]);
+  auto mk_digit_cell = [&](int idx) {
+    clock_digit_cell[idx] = lv_obj_create(clock_time_bar);
+    lv_obj_set_size(clock_digit_cell[idx], clock_digit_w, clock_digit_h);
+    lv_obj_set_style_bg_color(clock_digit_cell[idx], rgb565_to_lv(COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(clock_digit_cell[idx], LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_color(clock_digit_cell[idx], rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
+    lv_obj_set_style_border_width(clock_digit_cell[idx], 3, LV_PART_MAIN);
+    lv_obj_set_style_radius(clock_digit_cell[idx], 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(clock_digit_cell[idx], 0, LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(clock_digit_cell[idx], 0, LV_PART_MAIN);
+    clock_digit_lbl[idx] = lv_label_create(clock_digit_cell[idx]);
+    lv_label_set_text(clock_digit_lbl[idx], "0");
+    lv_obj_set_style_text_font(clock_digit_lbl[idx], &font_clock_time, LV_PART_MAIN);
+    lv_obj_set_style_text_color(clock_digit_lbl[idx], rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
+    lv_obj_set_style_text_letter_space(clock_digit_lbl[idx], 4, LV_PART_MAIN);
+    lv_obj_center(clock_digit_lbl[idx]);
   };
 
-  mk_flip_cell(0);
-  mk_flip_cell(1);
-  flip_colon = lv_label_create(flip_time_bar);
-  lv_label_set_text(flip_colon, ":");
-  lv_obj_set_style_text_font(flip_colon, &font_clock_time, LV_PART_MAIN);
-  lv_obj_set_style_text_color(flip_colon, rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
-  lv_obj_set_style_pad_top(flip_colon, 2, LV_PART_MAIN);
-  mk_flip_cell(2);
-  mk_flip_cell(3);
+  mk_digit_cell(0);
+  mk_digit_cell(1);
+  clock_colon = lv_label_create(clock_time_bar);
+  lv_label_set_text(clock_colon, ":");
+  lv_obj_set_style_text_font(clock_colon, &font_clock_time, LV_PART_MAIN);
+  lv_obj_set_style_text_color(clock_colon, rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
+  lv_obj_set_style_pad_top(clock_colon, 2, LV_PART_MAIN);
+  mk_digit_cell(2);
+  mk_digit_cell(3);
 
-  lv_obj_update_layout(flip_time_bar);
-  for (int fi = 0; fi < 4; fi++) {
-    lv_coord_t pw = lv_obj_get_width(flip_lbl[fi]) / 2;
-    lv_coord_t ph = lv_obj_get_height(flip_lbl[fi]) / 2;
-    if (pw < 1) pw = 1;
-    if (ph < 1) ph = 1;
-    lv_obj_set_style_transform_pivot_x(flip_lbl[fi], pw, LV_PART_MAIN);
-    lv_obj_set_style_transform_pivot_y(flip_lbl[fi], ph, LV_PART_MAIN);
-    lv_obj_set_style_transform_scale_y(flip_lbl[fi], 256, LV_PART_MAIN);
-  }
+  lv_obj_update_layout(clock_time_bar);
 
   lbl_date = lv_label_create(scr_clock);
   lv_obj_set_width(lbl_date, 308);
@@ -830,9 +749,9 @@ static void build_clock_screen(void) {
   lv_obj_set_style_text_color(lbl_date, rgb565_to_lv(COLOR_DATE), LV_PART_MAIN);
   lv_obj_set_style_text_font(lbl_date, &font_clock_date, LV_PART_MAIN);
   lv_obj_set_style_text_line_space(lbl_date, 2, LV_PART_MAIN);
-  lv_obj_align(lbl_date, LV_ALIGN_TOP_MID, 0, clock_top + flip_bar_h + date_below_flip);
+  lv_obj_align(lbl_date, LV_ALIGN_TOP_MID, 0, clock_top + clock_bar_h + date_below_clock);
 
-  const lv_coord_t mid_y = clock_top + flip_bar_h + date_below_flip + date_row_h + gap_date_to_mid;
+  const lv_coord_t mid_y = clock_top + clock_bar_h + date_below_clock + date_row_h + gap_date_to_mid;
 
   mid_weather = lv_obj_create(scr_clock);
   lv_obj_remove_style_all(mid_weather);
@@ -926,9 +845,9 @@ static void build_clock_screen(void) {
   lv_obj_clear_flag(lbl_stream_title, LV_OBJ_FLAG_SCROLLABLE);
   lv_label_set_text(lbl_stream_title, "");
 
-  /* Sender vor/zurück: unter der Flip-Uhr im Datumsband (nicht über der Uhr), Breite wie zuvor. */
+  /* Sender vor/zurück: unter der Uhr im Datumsband (nicht über der Uhr), Breite wie zuvor. */
   const lv_coord_t clock_nav_w = 34;
-  const lv_coord_t clock_nav_y = clock_top + flip_bar_h + date_below_flip;
+  const lv_coord_t clock_nav_y = clock_top + clock_bar_h + date_below_clock;
   const lv_coord_t clock_nav_h = date_row_h;
   btn_l = lv_button_create(scr_clock);
   lv_obj_set_size(btn_l, clock_nav_w, clock_nav_h);
@@ -1476,32 +1395,16 @@ void textInBox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char *text,
   displayMessage(x, y, w, h, text, align, big, fc, bg, 1);
 }
 
-static void ui_flip_clock_set(uint8_t hour, uint8_t minute, bool instant) {
-  if (!flip_lbl[0]) return;
+static void ui_clock_digits_set(uint8_t hour, uint8_t minute) {
+  if (!clock_digit_lbl[0]) return;
   char newd[4];
   newd[0] = (char)('0' + (hour / 10) % 10);
   newd[1] = (char)('0' + hour % 10);
   newd[2] = (char)('0' + (minute / 10) % 10);
   newd[3] = (char)('0' + minute % 10);
-
-  if (instant || !s_flip_ready) {
-    for (int i = 0; i < 4; i++) {
-      flip_cancel_digit_async((uint8_t)i);
-      lv_anim_delete(flip_lbl[i], NULL);
-      char s[2] = {newd[i], '\0'};
-      lv_label_set_text(flip_lbl[i], s);
-      lv_obj_set_style_transform_scale_y(flip_lbl[i], 256, LV_PART_MAIN);
-      s_flip_last[i] = newd[i];
-    }
-    s_flip_ready = true;
-    return;
-  }
-
   for (int i = 0; i < 4; i++) {
-    if (newd[i] != s_flip_last[i]) {
-      s_flip_pending[i] = newd[i];
-      flip_start_digit_anim((uint8_t)i);
-    }
+    char s[2] = {newd[i], '\0'};
+    lv_label_set_text(clock_digit_lbl[i], s);
   }
 }
 
@@ -1523,9 +1426,7 @@ void updateTime(boolean redraw) {
   if (redraw || strcmp(tim, lasttime) != 0) {
     strncpy(lasttime, tim, sizeof(lasttime) - 1);
     lasttime[sizeof(lasttime) - 1] = 0;
-    /* Kein Flip während Stream: Animation + LVGL frisst CPU → TCP/Audio/Web hängen */
-    const bool flip_instant = redraw || radio || (decoder != nullptr);
-    ui_flip_clock_set((uint8_t)ti.tm_hour, (uint8_t)ti.tm_min, flip_instant);
+    ui_clock_digits_set((uint8_t)ti.tm_hour, (uint8_t)ti.tm_min);
     ui_refresh_header();
   }
   ui_refresh_footer_icons();

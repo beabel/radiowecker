@@ -69,7 +69,7 @@ Schematische Raster-Übersichten (ohne Fotos): [`Main_Screen_Raster.svg`](Main_S
 
 4. **Radio / Wetter / Infos:**
    - **Sendername und Titel**: Wenn ein Sender gerade läuft, werden hier die Informationen des Senders und des Titels angezeigt.
-   - **Senderwechsel (ab Firmware v5.0.0, LVGL):** Vor/Zurück erfolgt über **Buttons im Datumsbereich** unter der Uhr (nicht mehr über schmale seitliche Touch-Streifen wie in älteren Versionen).
+   - **Senderwechsel (ab Firmware v5.0.1, LVGL):** Vor/Zurück erfolgt über **Buttons im Datumsbereich** unter der Uhr (nicht mehr über schmale seitliche Touch-Streifen wie in älteren Versionen).
 
 ![Display: Startseite, Radio aus, Wetter sichtbar](../screenshot/display_startseite_radio_off_weather_on.jpg)
 
