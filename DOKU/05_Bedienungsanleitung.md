@@ -1,9 +1,5 @@
 # Bedienungsanleitung
 
-Aktuelle **Screenshots** liegen im Repository unter [`screenshot/`](../screenshot/). **Namenskonvention:**
-- **`display_*`** — Fotos vom **TFT** (Hardware-Display, LVGL-Oberfläche)
-- **`webseite_*`** — Fotos der **HTML-Ausgabe** des Webservers (Ansicht im Browser, z. B. `192.168.4.1` im Konfigurationsmodus oder die Geräte-IP im Heimnetz)
-
 ## Erste Schritte und Verbindung zum WLAN
 
 1. **Gerät einschalten**  
@@ -37,6 +33,17 @@ Weitere Bereiche derselben Webseite (Navigation je nach Aufbau der HTML-Oberflä
 
 ![Display: Startseite mit laufendem Radio (Beispiel nach Einrichtung)](../screenshot/display_startseite_radio_on.jpg)
 
+## Firmware-Update über die Web-Oberfläche
+
+Wenn das Gerät **im Heim-WLAN** online ist:
+
+1. Im Browser die **IP-Adresse** des Radioweckers öffnen (wie im Display in der Kopfzeile angezeigt).
+2. Zum Tab **Info** wechseln. Die Seite zeigt u. a. die **installierte Version** und prüft über die GitHub-API, ob ein **neueres Release** existiert.
+3. Ist eine neuere Version verfügbar, erscheint ein Button **„Per Web installieren…“** (zusätzlich zum Link zur Release-Seite). Ein Klick öffnet einen **Bestätigungsdialog** mit Hinweisen (Ziel-Version, erwarteter Dateiname der Firmware-Datei, freier OTA-Slot).
+4. Nach Bestätigung startet das Gerät den Download der Datei **`radiowecker-firmware.bin`** vom passenden GitHub-Release und zeigt den **Fortschritt auf dem TFT** (gleiche OTA-Ansicht wie beim Update aus der Arduino-IDE). Anschließend startet es neu.
+
+**Ohne Heim-WLAN** (nur Konfigurations-AP) ist diese Funktion nicht nutzbar; dort bleibt das Flashen per USB oder **ArduinoOTA** aus der IDE.
+
 ## Fehlerbehebung
 
 - **Verbindung fehlgeschlagen**  
@@ -69,7 +76,7 @@ Schematische Raster-Übersichten (ohne Fotos): [`Main_Screen_Raster.svg`](Main_S
 
 4. **Radio / Wetter / Infos:**
    - **Sendername und Titel**: Wenn ein Sender gerade läuft, werden hier die Informationen des Senders und des Titels angezeigt.
-   - **Senderwechsel (ab Firmware v5.0.1, LVGL):** Vor/Zurück erfolgt über **Buttons im Datumsbereich** unter der Uhr (nicht mehr über schmale seitliche Touch-Streifen wie in älteren Versionen).
+   - **Senderwechsel (ab Firmware v5.0.2, LVGL):** Vor/Zurück erfolgt über **Buttons im Datumsbereich** unter der Uhr (nicht mehr über schmale seitliche Touch-Streifen wie in älteren Versionen).
 
 ![Display: Startseite, Radio aus, Wetter sichtbar](../screenshot/display_startseite_radio_off_weather_on.jpg)
 

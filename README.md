@@ -1,6 +1,6 @@
-# Internet-Radiowecker mit Touchscreen · **Version 5.0.1**
+# Internet-Radiowecker mit Touchscreen · **Version 5.0.2**
 
-ESP32-Webradio mit 2,8"-TFT (ILI9341), Touch (XPT2046), Wecker, Wetter, Web-Konfiguration und grafischer Oberfläche auf Basis von **LVGL 9**. Die Firmware meldet sich als **`v5.0.1`** (siehe `RADIOVERSION` in `radiowecker.ino`).
+ESP32-Webradio mit 2,8"-TFT (ILI9341), Touch (XPT2046), Wecker, Wetter, Web-Konfiguration und grafischer Oberfläche auf Basis von **LVGL 9**. Die Firmware meldet sich als **`v5.0.2`** (siehe `RADIOVERSION` in `radiowecker.ino`).
 
 | [:skull: Issues](https://github.com/beabel/radiowecker/issues) | [:speech_balloon: Diskussionen](https://github.com/beabel/radiowecker/discussions) | [:grey_question: Wiki](https://github.com/beabel/radiowecker/wiki) |
 |----------------------------------------------------------------|-----------------------------------------------------------------------------------|----------------------------------------------------------------------|
@@ -17,11 +17,11 @@ Was sich gegenüber den **älteren Releases** (z. B. der **4.x-Linie** wie [v4.0
 
 ## Änderungen gegenüber der Vorgängerversion
 
-Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafruit GFX** auf dem ILI9341 sowie die Bibliothek **TouchEvent** zur Touch-Auswertung. **v5.0.1** ersetzt die **Hauptoberfläche** durch **LVGL 9** (Widgets, Themes, Animationen). Darunter liegt weiterhin derselbe **ILI9341**-Treiber: LVGL schreibt in einen Puffer, der auf das TFT gezeichnet wird; für wenige Zustände (z. B. WLAN-Verbindungsdialog vor dem Start von LVGL) werden weiterhin **Adafruit_ILI9341**-Aufrufe genutzt.
+Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafruit GFX** auf dem ILI9341 sowie die Bibliothek **TouchEvent** zur Touch-Auswertung. **v5.0.2** ersetzt die **Hauptoberfläche** durch **LVGL 9** (Widgets, Themes, Animationen). Darunter liegt weiterhin derselbe **ILI9341**-Treiber: LVGL schreibt in einen Puffer, der auf das TFT gezeichnet wird; für wenige Zustände (z. B. WLAN-Verbindungsdialog vor dem Start von LVGL) werden weiterhin **Adafruit_ILI9341**-Aufrufe genutzt.
 
 ### Oberfläche und Touch
 
-| Vorher (typisch 4.x) | Ab v5.0.1 |
+| Vorher (typisch 4.x) | Ab v5.0.2 |
 |----------------------|-----------|
 | Touch über **TouchEvent** (Kalibrierung/Events in dieser Bibliothek) | Touch: Weiterhin **XPT2046_Touchscreen** (Rohpunkte), Eingabe wird an **LVGL** angebunden |
 | Statische Layouts, viel manuelles Zeichnen | **LVGL**-Screens: Uhr, Einstellungen, Favoriten, Wecker, Fußzeile u. a. |
@@ -32,7 +32,7 @@ Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafrui
 
 ### Toolchain und Bibliotheken
 
-| Thema | Vorher | v5.0.1 |
+| Thema | Vorher | v5.0.2 |
 |-------|--------|--------|
 | **Arduino IDE** | häufig 1.x / 2.x, in der Doku teils IDE 1 beschrieben | **Arduino IDE 2.x** (Referenz 2.3.8) |
 | **ESP32-Arduino-Core** | in der README oft **2.0.17** empfohlen, weil mit **Standard-Partition** der Sketch bei neueren Cores **zu groß** wurde | **Aktueller Core** ist nutzbar, wenn die **Partition „No FS 4MB“** (oder gleichwertig große App-Partition) gesetzt ist |
@@ -42,7 +42,7 @@ Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafrui
 
 ### Flash, Partition und neue Dateien
 
-- **Partition Scheme:** Früher reichte oft das **Default-Layout mit SPIFFS** nicht mehr, sobald Core und Sketch wuchsen. **v5.0.1** setzt auf **„No FS 4MB“**: möglichst **große App-Partition**, kein großes Dateisystem — ausreichend Platz für LVGL, Web- und Audio-Code.  
+- **Partition Scheme:** Früher reichte oft das **Default-Layout mit SPIFFS** nicht mehr, sobald Core und Sketch wuchsen. **v5.0.2** setzt auf **„No FS 4MB“**: möglichst **große App-Partition**, kein großes Dateisystem — ausreichend Platz für LVGL, Web- und Audio-Code.  
 - **LVGL-Konfiguration:** Zusätzlich zum Sketch ist **`lv_conf.h`** identisch nach **`libraries/lvgl/src/lv_conf.h`** zu kopieren (siehe Abschnitt unten). Ohne diese Kopie fehlen oft Fonts/Features beim Bau der Library.  
 
 ### Sonstiges im Code
@@ -77,9 +77,9 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 
 - Boardverwalter-URL:  
   `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`  
-- Paket **esp32** von **Espressif Systems** installieren.
+- Paket **esp32** von **Espressif Systems** installieren. (Version 3.3.7)
 
-### Bibliotheken (Referenzstände für v5.0.1)
+### Bibliotheken (Referenzstände für v5.0.2)
 
 | Bibliothek | Version |
 |------------|---------|
@@ -89,8 +89,6 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 | **XPT2046_Touchscreen** | 1.4 |
 | **ESP8266Audio** (Earle F. Philhower) | 2.4.1 |
 
-
-**Touch:** Weiterhin **XPT2046_Touchscreen** installieren und einbinden (siehe `00_librarys.h` / `tft_display.ino`).
 ---
 
 ## Board-Einstellungen in der Arduino IDE
@@ -172,6 +170,17 @@ Die LVGL-Bibliothek wird mit einer zentralen **`lv_conf.h`** gebaut. Dieses Proj
 
 SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Config_Screen_Raster.svg`**, **`DOKU/Alarm_Screen_Raster.svg`**.
 
+### Firmware-Updates (Live Webupdate ab Version 5.0.2)
+
+| Weg | Beschreibung |
+|-----|----------------|
+| **Web-UI (HTTP-OTA)** | Tab **Info**: Vergleich mit dem neuesten GitHub-Release; bei neuerer Version erscheint **„Per Web installieren…“**. Nach Bestätigung lädt das Gerät die Firmware von GitHub und startet neu. Fortschritt wie bei ArduinoOTA auf dem **TFT** (LVGL-OTA-Screen). |
+| **ArduinoOTA** | Weiterhin möglich (Hostname/Passwort in `00_settings.h`: `OTA_HOSTNAME`, `OTA_PASSWORD`) — Upload z. B. aus der **Arduino IDE** über den Netzwerk-Port. |
+
+**Voraussetzungen für HTTP-OTA**
+
+- **Partition:** weiterhin **„No FS 4MB“** (zwei OTA-App-Slots à ca. 2 MB).
+
 ---
 
 ## Module im Sketch (Orientierung)
@@ -184,17 +193,19 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 | `wlan.ino` | WiFi, Verbindung |
 | `webserver.ino` | HTTP, API, `index.h` |
 | `stations.ino` | Senderliste, Preferences |
-| `ota.ino` | Over-the-Air-Updates |
+| `ota.ino` | ArduinoOTA (Upload aus der IDE / Netzwerk) |
+| `http_update.ino` | HTTP-OTA aus der Web-UI (GitHub-Release-Binary) |
 
 ---
 
-## English summary (v5.0.1)
+## English summary (v5.0.2)
 
 - **ESP32** internet clock radio with **ILI9341** + **XPT2046** (library **XPT2046_Touchscreen** required for touch input to LVGL), **LVGL 9.5**, MP3 streams via **ESP8266Audio**, alarms, weather, and a built-in **web UI**. The old **TouchEvent** library is not used.  
 - **Arduino IDE 2.x**; install libraries listed above.  
 - Set **Partition Scheme** to **No FS 4MB** (large app partition).  
 - Copy **`radiowecker/lv_conf.h`** to **`Arduino/libraries/lvgl/src/lv_conf.h`** (must stay in sync). Keep **`build_opt.h`** and **`lv_font_de_supp_14.c`** in the sketch folder.  
 - First-time WiFi: join **`radioweckerconf`**, open **`http://192.168.4.1`**, configure home WiFi.
+- **Optional firmware update from the browser:** on the **Info** tab, if GitHub has a newer release, use **“Per Web installieren…”** (device downloads **`radiowecker-firmware.bin`** from the matching release tag). 
 
 **Compared to earlier releases (e.g. 4.x):** main UI moved from raw **Adafruit GFX** + **TouchEvent** to **LVGL 9**; **XPT2046_Touchscreen** remains; **ArduinoJson** is bundled in the sketch; **partition layout** must provide a large app region; add **`lv_conf.h`** copy under **`lvgl/src/`** and use **`build_opt.h`**.
 
@@ -263,5 +274,5 @@ Fotos aus dem Ordner [`screenshot/`](screenshot/). **`display_*`** = TFT (LVGL),
 
 ---
 
-**Radiowecker · Version 5.0.1**
+**Radiowecker · Version 5.0.2**
 
