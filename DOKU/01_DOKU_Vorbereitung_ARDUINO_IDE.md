@@ -1,4 +1,4 @@
-# Arduino IDE Setup für ESP32 und benötigte Bibliotheken (Firmware v5.0.0)
+# Arduino IDE Setup für ESP32 und benötigte Bibliotheken (Firmware v5.0.1)
 
 Nachdem die Arduino IDE installiert ist, folgen die Schritte zur Integration des ESP32-Boards und der benötigten Bibliotheken.
 
@@ -24,7 +24,7 @@ https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32
 3. Wähle **esp32 by Espressif Systems** und installiere eine **aktuelle 3.x-Version** des Pakets (oder die neueste stabile Version, die der Boardverwalter anbietet).
 
 > [!NOTE]
-> **Früher** (ältere 4.x-Firmware) wurde oft **ESP32-Arduino-Core 2.0.17** empfohlen, weil der Sketch mit **Standard-Partition** und neuerem Core zu groß wurde. **Ab v5.0.0** ist ein **aktueller Core** vorgesehen, sofern unter **Werkzeuge** das **Partitionsschema „No FS 4MB“** (oder vergleichbar große App-Partition) gewählt ist — siehe [`02_DOKU_Bord_Auswahl.md`](02_DOKU_Bord_Auswahl.md).
+> **Früher** (ältere 4.x-Firmware) wurde oft **ESP32-Arduino-Core 2.0.17** empfohlen, weil der Sketch mit **Standard-Partition** und neuerem Core zu groß wurde. **Ab v5.0.1** ist ein **aktueller Core** vorgesehen, sofern unter **Werkzeuge** das **Partitionsschema „No FS 4MB“** (oder vergleichbar große App-Partition) gewählt ist — siehe [`02_DOKU_Bord_Auswahl.md`](02_DOKU_Bord_Auswahl.md).
 
 4. Warte, bis die Installation abgeschlossen ist.
 
@@ -32,7 +32,7 @@ Nach der Installation sollte **ESP32** unter `Werkzeuge` > `Board` auswählbar s
 
 ## 3. Benötigte Bibliotheken installieren
 
-Installiere die Bibliotheken über `Sketch` > `Include Library` > `Library Manager`. **Referenzstände** (v5.0.0):
+Installiere die Bibliotheken über `Sketch` > `Include Library` > `Library Manager`. **Referenzstände** (v5.0.1):
 
 | Bibliothek | Version (Referenz) |
 |------------|-------------------|
@@ -59,7 +59,7 @@ Etwas neuere Patch-Versionen derselben Major/Minor-Linie sind in der Regel unkri
 1. Nach **XPT2046_Touchscreen** (Paul Stoffregen) suchen.
 2. Version **1.4** installieren.
 
-**Hinweis:** Die Bibliothek **TouchEvent** wird in **v5.0.0 nicht** mehr verwendet — **nicht** installieren.
+**Hinweis:** Die Bibliothek **TouchEvent** wird in **v5.0.1 nicht** mehr verwendet — **nicht** installieren.
 
 ### 3.4 lvgl (LVGL 9)
 
