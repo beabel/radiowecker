@@ -2,6 +2,8 @@
 #include "index.h"
 #include "ArduinoJson.h"
 
+void handleStartHttpUpdate(void);
+
 WebServer server(80);
 
 // Konfiguriert den Webserver und richtet die Routen für verschiedene HTTP-Anfragen ein
@@ -37,6 +39,7 @@ void setup_webserver() {
 
   // Info-Tab: Definiert die Route für das Abrufen von Systeminformationen
   server.on("/cmd/getInfo", getInfo);  // Ruft allgemeine Systeminformationen ab
+  server.on("/cmd/startHttpUpdate", handleStartHttpUpdate);
 
   // Startet den Webserver
   server.begin();
@@ -517,10 +520,12 @@ void getCurrentStatus() {
 //   - Chip-Modell
 void getInfo() {
   // Erstellen eines JSON-Dokuments für die Antwort
-  StaticJsonDocument<384> jsonDoc;
+  StaticJsonDocument<512> jsonDoc;
 
   // Installierte Radio-Version
   jsonDoc["radioversion"] = RADIOVERSION;
+  jsonDoc["httpOtaAsset"] = HTTP_OTA_FIRMWARE_FILENAME;
+  jsonDoc["httpOtaFreeBytes"] = ESP.getFreeSketchSpace();
 
   // Erstellen eines Unterobjekts für ESP-Board-Informationen
   JsonObject ESP_INFO = jsonDoc.createNestedObject("ESP_INFO");

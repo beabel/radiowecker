@@ -28,7 +28,7 @@ Nachdem alle Vorbereitungen getroffen sind, folgt hier die Anleitung, wie du das
 
 2. **Überprüfung des Projekts:**
    - Sobald der Sketch in der Arduino IDE geöffnet ist, überprüfe, ob alle Bibliotheken, die im Sketch verwendet werden, bereits installiert sind (du kannst dies durch Kompilieren des Sketches prüfen, indem du auf das Häkchen-Symbol oben links klickst).
-   - **v5.0.1:** Bibliotheken, Partition **No FS 4MB** und die Kopie von **`lv_conf.h`** nach `libraries/lvgl/src/` sind Voraussetzung — siehe [`01_DOKU_Vorbereitung_ARDUINO_IDE.md`](01_DOKU_Vorbereitung_ARDUINO_IDE.md) und [`README.md`](../README.md).
+   - **v5.0.2:** Bibliotheken, Partition **No FS 4MB** und die Kopie von **`lv_conf.h`** nach `libraries/lvgl/src/` sind Voraussetzung — siehe [`01_DOKU_Vorbereitung_ARDUINO_IDE.md`](01_DOKU_Vorbereitung_ARDUINO_IDE.md) und [`README.md`](../README.md).
    - Falls Fehler auftreten, stelle sicher, dass alle benötigten Bibliotheken, die in den vorherigen Schritten installiert wurden, korrekt integriert sind.
 
 ## 3. Sketch hochladen

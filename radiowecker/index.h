@@ -455,11 +455,49 @@ function getInfo() {
         "Firmware: " + usedSketch + " B (" + sketchUsedPct.toFixed(2) + "%) von " + totalSketch + " B · frei für nächstes Update: " + freeSketch + " B"
       );
 
+      window._otaAssetName = data.httpOtaAsset;
+      window._otaFreeSketch = data.httpOtaFreeBytes;
+
       checkForUpdate(data.radioversion);                
     },
     error: function () {
       alert("Fehler beim Abrufen der Daten.");
     },
+  });
+}
+
+function confirmAndStartHttpOta(tag) {
+  if (!tag) return;
+  var asset = window._otaAssetName || ($("#httpOtaAsset").length ? $("#httpOtaAsset").text() : "") || "radiowecker-firmware.bin";
+  var freeB = window._otaFreeSketch;
+  var msg = "Firmware auf " + tag + " aktualisieren?\n\n";
+  msg += "Im GitHub-Release muss die Datei angehängt sein:\n" + asset + "\n";
+  if (typeof freeB === "number") msg += "\nFreier OTA-Slot (ungefähr): " + freeB + " Byte\n";
+  msg += "\nDas Radio wird gestoppt; der Fortschritt erscheint auf dem Display. Anschließend startet das Gerät neu.\n\nFortfahren?";
+  if (!confirm(msg)) return;
+  $.ajax({
+    type: "POST",
+    url: "/cmd/startHttpUpdate",
+    contentType: "application/json; charset=utf-8",
+    dataType: "json",
+    data: JSON.stringify({ tag: tag }),
+    success: function (r) {
+      if (r && r.ok) {
+        alert("Update gestartet. Der Radiowecker zeigt den Fortschritt — diese Seite verliert ggf. die Verbindung.");
+      } else {
+        alert("Unerwartete Antwort vom Gerät.");
+      }
+    },
+    error: function (xhr) {
+      var t = "Anfrage fehlgeschlagen.";
+      if (xhr.responseText) {
+        try {
+          var j = JSON.parse(xhr.responseText);
+          if (j.error) t += " (" + j.error + ")";
+        } catch (e1) { /* ignore */ }
+      }
+      alert(t);
+    }
   });
 }
 
@@ -494,8 +532,14 @@ function checkForUpdate(currentVersion) {
       var comparisonResult = compareVersions(currentVersion, latestVersion);
 
       if (comparisonResult < 0) {
-        // Wenn die neueste Version größer ist, zeige eine Update-Benachrichtigung
-        $("#githubVersion").html('<i class="fas fa-exclamation-triangle" style="color: red;"></i> <a href="' + data.html_url + '" target="_blank">Neue Version verfügbar (' + latestVersion + ')</a>');
+        $("#githubVersion").html(
+          '<i class="fas fa-exclamation-triangle" style="color: red;"></i> Neue Version: <strong>' + latestVersion + '</strong><br/>' +
+          '<button type="button" id="btn_fw_update" style="margin-top:6px;">Per Web installieren…</button> ' +
+          '<a href="' + data.html_url + '" target="_blank">Release-Seite</a>'
+        );
+        $("#btn_fw_update").off("click").on("click", function () {
+          confirmAndStartHttpOta(latestVersion);
+        });
       } else if (comparisonResult > 0) {
         // Wenn die aktuelle Version größer ist, zeige eine Meldung, dass diese neuer ist
         $("#githubVersion").html('<i class="fas fa-code" style="color: blue;"></i> Du verwendest eine neuere Version (' + currentVersion + ') als die neueste offizielle Version (' + latestVersion + ').');
@@ -826,7 +870,9 @@ input {
     <div id="info">
       <label for="radioversion">Version:
         <span id="radioversion"></span><br />
-        <span id="githubVersion"></span>        
+        <span id="githubVersion"></span>
+        <span id="httpOtaAsset" style="display:none"></span>
+        <span id="httpOtaFreeBytes" style="display:none"></span>
       </label>
       <hr />
       

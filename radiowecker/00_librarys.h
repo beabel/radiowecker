@@ -1,5 +1,7 @@
 // Bibliotheken für WiFi und Over-the-Air (OTA) Updates
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <HTTPUpdate.h>
 #include <ArduinoOTA.h>
 
 // TFT, Touch & LVGL 9.x — lv_conf.h zuerst laden (setzt LV_CONF_H), dann lvgl.h

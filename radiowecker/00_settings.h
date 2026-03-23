@@ -74,6 +74,13 @@ bool alarmTriggered = false;
 // OTA-Konfiguration
 #define OTA_HOSTNAME "radiowecker"   // Definiert den Hostnamen für OTA Update
 #define OTA_PASSWORD "weckerupdate"  // Definiert das Passwort für OTA Update
+
+// HTTP-OTA (Weboberfläche): Release-Asset muss exakt diesen Dateinamen haben
+#define HTTP_OTA_GITHUB_OWNER "beabel"
+#define HTTP_OTA_GITHUB_REPO "radiowecker"
+#define HTTP_OTA_FIRMWARE_FILENAME "radiowecker-firmware.bin"
+/** Mindestens freier Platz im inaktiven OTA-Slot (Bytes), sonst Abbruch vor Download */
+#define HTTP_OTA_MIN_FREE_BYTES 524288u
 //############## WETTER ##############################################################
 // Globale Variable, um den Zeitpunkt des letzten Wetterupdates zu speichern
 unsigned long lastWeatherUpdate = 0;

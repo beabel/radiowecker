@@ -1,4 +1,4 @@
-#define RADIOVERSION "v5.0.1"
+#define RADIOVERSION "v5.0.2"
 #include "00_librarys.h"      //Lade alle benötigten Bibliotheken
 #include "00_pin_settings.h"  //Einstellungen der genutzten Pins
 #include "00_settings.h"      //einstellungen
@@ -15,8 +15,10 @@ extern "C" int esp_bt_controller_mem_release(int mode);
 extern AudioGenerator *decoder;  // Definition in audio.ino
 void showStartPage(void);
 void toggleRadio(boolean off);
+void httpOtaTryConsume(void);
 // predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
+void setBGLight(uint8_t prct);
 
 // Liest die aktuelle Uhrzeit und berechnet weekday/minutes
 void updateCurrentTime() {
@@ -208,6 +210,9 @@ void setup() {
 }
 
 void loop() {
+  /* HTTP-Firmware-Update (blockiert bis Reboot oder Fehler) — vor allem anderen */
+  httpOtaTryConsume();
+
   // Überprüfe und verarbeite mögliche OTA-Updates
   ArduinoOTA.handle();
 
