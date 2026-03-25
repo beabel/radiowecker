@@ -25,7 +25,7 @@ Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafrui
 |----------------------|-----------|
 | Touch über **TouchEvent** (Kalibrierung/Events in dieser Bibliothek) | Touch: Weiterhin **XPT2046_Touchscreen** (Rohpunkte), Eingabe wird an **LVGL** angebunden |
 | Statische Layouts, viel manuelles Zeichnen | **LVGL**-Screens: Uhr, Einstellungen, Favoriten, Wecker, Fußzeile u. a. |
-| Uhrzeit klassisch als Text/Grafik | **Große Ziffern-Uhr** in Kacheln (LVGL, nur Text-Updates — geringe CPU-Last) |
+| Uhrzeit klassisch als Text/Grafik | **Große Ziffern-Uhr** (LVGL, eigene 1-bpp-Schrift nur `0–9` und `:` in `lv_font_clock_digits.c` — geringe CPU-Last) |
 | Senderwechsel u. a. über seitliche Streifen | Sender **Vor/Zurück** als Buttons im **Bereich unter der Uhr / beim Datum**, damit die Uhr frei bleibt |
 
 **TouchEvent** muss **nicht** mehr installiert werden.
@@ -118,6 +118,8 @@ Die LVGL-Bibliothek wird mit einer zentralen **`lv_conf.h`** gebaut. Dieses Proj
 | Quelle | `radiowecker/lv_conf.h` |
 | Ziel (Kopie, Inhalt identisch) | `Arduino/libraries/lvgl/src/lv_conf.h` |
 
+Die **Uhrzeit-Schrift** (`lv_font_clock_digits.c`) liegt im Sketch-Ordner;
+
 **Typische Pfade:**
 
 - **Windows:** `Benutzer\<Name>\Documents\Arduino\libraries\lvgl\src\lv_conf.h`  
@@ -189,6 +191,7 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 |-----------------|---------------|
 | `radiowecker.ino` | Setup, Loop, Zeit, Alarmlogik |
 | `tft_display.ino` | LVGL-UI, Seiten, Uhr |
+| `lv_font_clock_digits.c` | Minimale Bitmap-Schrift für die Uhrzeit (generierbar mit `tools/gen_clock_font.ps1` / `.py`) |
 | `audio.ino` | Stream, Decoder, I2S |
 | `wlan.ino` | WiFi, Verbindung |
 | `webserver.ino` | HTTP, API, `index.h` |

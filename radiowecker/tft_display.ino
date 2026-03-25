@@ -1,4 +1,5 @@
 #include "tft_color_setting.h"
+#include "lv_font_clock_digits.h"
 #include "ArduinoJson.h"
 
 class AudioGenerator;
@@ -43,7 +44,7 @@ static lv_obj_t *scr_msg;
 static lv_obj_t *scr_ota;
 
 static lv_obj_t *lbl_date;
-/* Uhrzeit: vier Ziffern-Kacheln + Doppelpunkt (ohne Flip-Animation — spart CPU/LVGL-Last auf dem ESP32) */
+/* Uhrzeit: vier Ziffern + Doppelpunkt, eigene 1-bpp-Schrift (nur 0–9 und :) — ohne Kachelrahmen */
 static lv_obj_t *clock_time_bar;
 static lv_obj_t *clock_digit_cell[4];
 static lv_obj_t *clock_digit_lbl[4];
@@ -85,8 +86,8 @@ static lv_obj_t *lbl_cfg_bright_val;
 static lv_obj_t *lbl_cfg_snooze_val;
 
 static lv_font_t font_ui_primary;
-static lv_font_t font_clock_time;   /* große Uhr (Ziffern) */
-static lv_font_t font_clock_date;   /* großes Datum inkl. Umlaute (Fallback de_supp) */
+static const lv_font_t *font_clock_digits; /* lv_font_clock_digits.c — nur Ziffern + Doppelpunkt */
+static lv_font_t font_clock_date;          /* großes Datum inkl. Umlaute (Fallback de_supp) */
 static lv_font_t font_radio_meta;   /* Sender + Streamtitel größer */
 static lv_obj_t *lbl_station_radio;
 static lv_obj_t *lbl_station_cfg;
@@ -694,12 +695,12 @@ static void build_clock_screen(void) {
   lv_obj_t *btn_l;
   lv_obj_t *btn_r;
 
-  /* Uhr: Montserrat 24 (lv_conf.h muss in …/lvgl/src/lv_conf.h liegen) + große Ziffern-Kacheln. */
+  /* Uhr: 7-Segment-Bitmaps 72×78 px, volle Zeilenbreite ~4×72 + Doppelpunkt (tools/gen_clock_font.ps1) */
   const lv_coord_t clock_top = 26;
-  const lv_coord_t clock_bar_h = 70;
-  const lv_coord_t clock_digit_w = 56;
-  const lv_coord_t clock_digit_h = 64;
-  const lv_coord_t date_below_clock = 6;
+  const lv_coord_t clock_bar_h = 86;
+  const lv_coord_t clock_digit_w = 72;
+  const lv_coord_t clock_digit_h = 82;
+  const lv_coord_t date_below_clock = 4;
   const lv_coord_t date_row_h = 36;
   const lv_coord_t gap_date_to_mid = 0;
 
@@ -709,24 +710,21 @@ static void build_clock_screen(void) {
   lv_obj_align(clock_time_bar, LV_ALIGN_TOP_MID, 0, clock_top);
   lv_obj_set_flex_flow(clock_time_bar, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(clock_time_bar, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_set_style_pad_column(clock_time_bar, 10, LV_PART_MAIN);
+  lv_obj_set_style_pad_column(clock_time_bar, 2, LV_PART_MAIN);
   lv_obj_clear_flag(clock_time_bar, LV_OBJ_FLAG_SCROLLABLE);
 
   auto mk_digit_cell = [&](int idx) {
     clock_digit_cell[idx] = lv_obj_create(clock_time_bar);
+    lv_obj_remove_style_all(clock_digit_cell[idx]);
     lv_obj_set_size(clock_digit_cell[idx], clock_digit_w, clock_digit_h);
-    lv_obj_set_style_bg_color(clock_digit_cell[idx], rgb565_to_lv(COLOR_BG), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(clock_digit_cell[idx], LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_border_color(clock_digit_cell[idx], rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
-    lv_obj_set_style_border_width(clock_digit_cell[idx], 3, LV_PART_MAIN);
-    lv_obj_set_style_radius(clock_digit_cell[idx], 10, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(clock_digit_cell[idx], LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(clock_digit_cell[idx], LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_pad_all(clock_digit_cell[idx], 0, LV_PART_MAIN);
-    lv_obj_set_style_shadow_width(clock_digit_cell[idx], 0, LV_PART_MAIN);
     clock_digit_lbl[idx] = lv_label_create(clock_digit_cell[idx]);
     lv_label_set_text(clock_digit_lbl[idx], "0");
-    lv_obj_set_style_text_font(clock_digit_lbl[idx], &font_clock_time, LV_PART_MAIN);
+    lv_obj_set_style_text_font(clock_digit_lbl[idx], font_clock_digits, LV_PART_MAIN);
     lv_obj_set_style_text_color(clock_digit_lbl[idx], rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
-    lv_obj_set_style_text_letter_space(clock_digit_lbl[idx], 4, LV_PART_MAIN);
+    lv_obj_set_style_text_letter_space(clock_digit_lbl[idx], 0, LV_PART_MAIN);
     lv_obj_center(clock_digit_lbl[idx]);
   };
 
@@ -734,9 +732,9 @@ static void build_clock_screen(void) {
   mk_digit_cell(1);
   clock_colon = lv_label_create(clock_time_bar);
   lv_label_set_text(clock_colon, ":");
-  lv_obj_set_style_text_font(clock_colon, &font_clock_time, LV_PART_MAIN);
+  lv_obj_set_style_text_font(clock_colon, font_clock_digits, LV_PART_MAIN);
   lv_obj_set_style_text_color(clock_colon, rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
-  lv_obj_set_style_pad_top(clock_colon, 2, LV_PART_MAIN);
+  lv_obj_set_style_pad_top(clock_colon, 0, LV_PART_MAIN);
   mk_digit_cell(2);
   mk_digit_cell(3);
 
@@ -1303,7 +1301,7 @@ void setup_display(void) {
   font_ui_primary = lv_font_montserrat_14;
   font_ui_primary.fallback = &lv_font_de_supp_14;
 
-  font_clock_time = lv_font_montserrat_24;
+  font_clock_digits = &lv_font_clock_digits;
   font_clock_date = lv_font_montserrat_18;
   font_clock_date.fallback = &lv_font_de_supp_14;
   font_radio_meta = lv_font_montserrat_18;
