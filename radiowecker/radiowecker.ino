@@ -156,7 +156,9 @@ void setup() {
   Serial.printf_P(PSTR("heap nach setup_display: %u\n"), (unsigned)ESP.getFreeHeap());
   Serial.println(F("setup_display OK"));
   /* Audio-Puffer erst bei erstem startUrl: sonst ~70 KiB weniger Heap → LwIP/Wetter/TCP-Timeouts. */
+  Serial.printf_P(PSTR("heap vor setup_senderList: %u\n"), (unsigned)ESP.getFreeHeap());
   setup_senderList();  // Lade die Senderliste aus den Präferenzen
+  Serial.printf_P(PSTR("heap nach setup_senderList: %u\n"), (unsigned)ESP.getFreeHeap());
   setGain(curGain);    // gespeicherte Lautstärke auf I2S (0 = dauerhaft stumm bis zum nächsten Slider-Zug)
 
   // Versuche, eine WLAN-Verbindung herzustellen und zeige den Fortschritt auf dem Display an
