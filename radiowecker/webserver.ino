@@ -40,7 +40,8 @@ void setup_webserver() {
 
   // Info-Tab: Definiert die Route für das Abrufen von Systeminformationen
   server.on("/cmd/getInfo", getInfo);  // Ruft allgemeine Systeminformationen ab
-  server.on("/cmd/startHttpUpdate", handleStartHttpUpdate);
+  /* Kein Upload-Callback: sonst nimmt WebServer 3.x den RAW-Pfad, arg("plain") bleibt leer (JSON-OTA schlägt fehl). */
+  server.on("/cmd/startHttpUpdate", HTTP_POST, handleStartHttpUpdate, nullptr);
 
   // Startet den Webserver
   server.begin();

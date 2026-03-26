@@ -15,10 +15,11 @@ extern "C" int esp_bt_controller_mem_release(int mode);
 extern AudioGenerator *decoder;  // Definition in audio.ino
 void showStartPage(void);
 void toggleRadio(boolean off);
-void httpOtaTryConsume(void);
+void httpOtaRunDeferredBoot(void);
 // predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
 void setBGLight(uint8_t prct);
+boolean initWiFi(const char *wifiSsid, const char *wifiPkey);  /* wlan.ino — Hauptsketch steht vor alphabetischen .ino */
 
 // Liest die aktuelle Uhrzeit und berechnet weekday/minutes
 void updateCurrentTime() {
@@ -99,8 +100,8 @@ void setup() {
 
   // Lade die gespeicherten Präferenzen aus dem EEPROM des ESP32
   // Die Präferenzen werden in zwei Themen gespeichert: "radio" und "senderliste"
-  // Beide Themen werden hier geladen
   pref.begin("radio", false);
+
   sender.begin("senderlist", false);
 
   // Werte aus den gespeicherten Präferenzen abrufen, falls vorhanden
@@ -155,6 +156,12 @@ void setup() {
   setup_display();     // Initialisiere die Display-Schnittstelle
   Serial.printf_P(PSTR("heap nach setup_display: %u\n"), (unsigned)ESP.getFreeHeap());
   Serial.println(F("setup_display OK"));
+
+  /* HTTP-OTA: nach setup_display → gleicher OTA-Screen (Balken/Text) wie bei ArduinoOTA. */
+  if (pref.getUChar(PREF_HTTP_OTA_PEND, 0) != 0) {
+    httpOtaRunDeferredBoot();
+  }
+
   /* Audio-Puffer erst bei erstem startUrl: sonst ~70 KiB weniger Heap → LwIP/Wetter/TCP-Timeouts. */
   Serial.printf_P(PSTR("heap vor setup_senderList: %u\n"), (unsigned)ESP.getFreeHeap());
   setup_senderList();  // Lade die Senderliste aus den Präferenzen
@@ -212,9 +219,6 @@ void setup() {
 }
 
 void loop() {
-  /* HTTP-Firmware-Update (blockiert bis Reboot oder Fehler) — vor allem anderen */
-  httpOtaTryConsume();
-
   // Überprüfe und verarbeite mögliche OTA-Updates
   ArduinoOTA.handle();
 

@@ -87,6 +87,9 @@ bool alarmTriggered = false;
 #define HTTP_OTA_FIRMWARE_FILENAME "radiowecker-firmware.bin"
 /** Mindestens freier Platz im inaktiven OTA-Slot (Bytes), sonst Abbruch vor Download */
 #define HTTP_OTA_MIN_FREE_BYTES 524288u
+/** NVS (Namespace „radio“): HTTP-OTA nach Neustart — Key-Namen ≤15 Zeichen */
+#define PREF_HTTP_OTA_PEND "http_otapend"
+#define PREF_HTTP_OTA_TAG "http_otatag"
 //############## WETTER ##############################################################
 // Globale Variable, um den Zeitpunkt des letzten Wetterupdates zu speichern
 unsigned long lastWeatherUpdate = 0;

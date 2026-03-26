@@ -473,7 +473,8 @@ function confirmAndStartHttpOta(tag) {
   var msg = "Firmware auf " + tag + " aktualisieren?\n\n";
   msg += "Im GitHub-Release muss die Datei angehängt sein:\n" + asset + "\n";
   if (typeof freeB === "number") msg += "\nFreier OTA-Slot (ungefähr): " + freeB + " Byte\n";
-  msg += "\nDas Radio wird gestoppt; der Fortschritt erscheint auf dem Display. Anschließend startet das Gerät neu.\n\nFortfahren?";
+  msg += "\nDas Radio wird gestoppt; der Fortschritt erscheint auf dem Display. Anschließend startet das Gerät neu.\n\n";
+  msg += "Diese Webseite verliert danach die Verbindung zum Gerät (erwartet) — es erscheint kein weiteres Meldungsfenster.\n\nFortfahren?";
   if (!confirm(msg)) return;
   $.ajax({
     type: "POST",
@@ -483,20 +484,11 @@ function confirmAndStartHttpOta(tag) {
     data: JSON.stringify({ tag: tag }),
     success: function (r) {
       if (r && r.ok) {
-        alert("Update gestartet. Der Radiowecker zeigt den Fortschritt — diese Seite verliert ggf. die Verbindung.");
-      } else {
-        alert("Unerwartete Antwort vom Gerät.");
+        /* Kein Alert: Gerät startet sofort neu, Verbindungsabbruch wäre ohnehin der Normalfall. */
       }
     },
-    error: function (xhr) {
-      var t = "Anfrage fehlgeschlagen.";
-      if (xhr.responseText) {
-        try {
-          var j = JSON.parse(xhr.responseText);
-          if (j.error) t += " (" + j.error + ")";
-        } catch (e1) { /* ignore */ }
-      }
-      alert(t);
+    error: function () {
+      /* Kein Alert: nach Neustart bricht die Verbindung ab — das wirkt wie ein Fehler, ist aber erwartet. */
     }
   });
 }
