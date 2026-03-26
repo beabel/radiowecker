@@ -119,7 +119,7 @@ static void audio_recover_or_stop(void) {
   stopPlaying();
   if (radio && connected && actStation < STATIONS) {
     Serial.printf_P(PSTR("Stream unterbrochen — Reconnect %s\n"), stationlist[actStation].name);
-    if (startUrl(String(stationlist[actStation].url))) {
+    if (startUrl(stationlist[actStation].url)) {
       DrawFooterButtons_Power_Sleep_Alarm();
       return;
     }
@@ -258,9 +258,14 @@ void stopPlaying() {
 #endif
 }
 
-// Startet das Abspielen eines Streams von der angegebenen Station
-bool startUrl(String url) {
+// Startet das Abspielen eines Streams von der angegebenen Station (URL aus stationlist[].url o. Ä.)
+bool startUrl(const char *url) {
   stopPlaying();  // Zuerst bestehende Streams schließen
+
+  if (!url || !*url) {
+    Serial.println(F("startUrl: leere URL"));
+    return false;
+  }
 
   if (!out || !ensure_audio_prealloc()) {
     Serial.println(F("startUrl: kein I2S oder Audio-Puffer-Allokation fehlgeschlagen"));
@@ -270,9 +275,9 @@ bool startUrl(String url) {
   Serial.printf_P(PSTR("startUrl: heap=%u vor open\n"), (unsigned)ESP.getFreeHeap());
   yield();
 
-  Serial.printf("Active station %s\n", url.c_str());
+  Serial.printf("Active station %s\n", url);
   file = new AudioFileSourceICYStream();
-  if (!file->open(url.c_str())) {
+  if (!file->open(url)) {
     Serial.printf_P(PSTR("startUrl: open fehlgeschlagen heap=%u\n"), (unsigned)ESP.getFreeHeap());
     delete file;
     file = NULL;

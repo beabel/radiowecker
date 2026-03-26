@@ -1557,7 +1557,7 @@ void toggleRadio(boolean off) {
     radio = false;
   } else {
     if (connected) {
-      if (startUrl(String(stationlist[actStation].url))) {
+      if (startUrl(stationlist[actStation].url)) {
         radio = true;
         setGain(curGain);
       } else {
@@ -1598,7 +1598,7 @@ void startSnooze(void) {
 void changeStation(void) {
   actStation = curStation;
   pref.putUShort("station", curStation);
-  if (startUrl(String(stationlist[actStation].url))) {
+  if (startUrl(stationlist[actStation].url)) {
     radio = true;
   } else {
     radio = false;

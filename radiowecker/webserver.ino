@@ -348,7 +348,7 @@ void testStation() {
   // Überprüft, ob das URL-Argument vorhanden ist
   if (server.hasArg("url")) {
     // Versucht, die URL zu starten und speichert das Ergebnis
-    ret = startUrl(server.arg("url"));
+    ret = startUrl(server.arg("url").c_str());
   }
 
   // Sendet eine Bestätigung bei Erfolg oder eine Fehlermeldung bei Misserfolg
@@ -357,7 +357,7 @@ void testStation() {
     server.send(200, "text/plain", "OK");
   } else {
     // Bei Misserfolg: Wechselt zurück zur aktuellen Station und sendet "ERROR"
-    startUrl(String(stationlist[actStation].url));
+    startUrl(stationlist[actStation].url);
     server.send(300, "text/plain", "ERROR");
   }
 }
@@ -365,7 +365,7 @@ void testStation() {
 // Verarbeitet den AJAX-Befehl /cmd/endtest, um den Test zu beenden
 void endTest() {
   // Wechselt zurück zur aktuellen Station, um den Test zu beenden
-  startUrl(String(stationlist[actStation].url));
+  startUrl(stationlist[actStation].url);
 
   // Sendet eine Bestätigung, dass der Test beendet wurde
   server.send(200, "text/plain", "OK");
