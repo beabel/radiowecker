@@ -245,6 +245,16 @@ void ui_sync_all_gain_sliders(void) {
 
 static void cfg_sync_value_labels(void);
 
+/* Touch: 1–4 % am Schieberegler schwer treffbar → auf 0 % (LDR) schnappen; von 0 % aus 1–4 → 5 % (symmetrisch hoch). */
+static const int BRIGHT_SNAP_EDGE = 4;
+static const int BRIGHT_MANUAL_MIN = 5;
+
+static int bright_slider_snap(int raw, uint8_t prev_bright) {
+  if (raw <= 0) return 0;
+  if (raw > BRIGHT_SNAP_EDGE) return raw;
+  return (prev_bright == 0) ? BRIGHT_MANUAL_MIN : 0;
+}
+
 static void on_gain_slider(lv_event_t *e) {
   if (ui_slider_internal) return;
   lv_obj_t *sl = (lv_obj_t *)lv_event_get_target(e);
@@ -259,7 +269,13 @@ static void on_gain_slider(lv_event_t *e) {
 static void on_bright_slider(lv_event_t *e) {
   if (ui_slider_internal) return;
   (void)e;
-  int v = (int)lv_slider_get_value(sl_cfg_bright);
+  int raw = (int)lv_slider_get_value(sl_cfg_bright);
+  int v = bright_slider_snap(raw, bright);
+  if (v != raw) {
+    ui_slider_internal = true;
+    lv_slider_set_value(sl_cfg_bright, v, LV_ANIM_OFF);
+    ui_slider_internal = false;
+  }
   bright = (uint8_t)constrain(v, 0, 100);
   pref.putUShort("bright", bright);
   setBGLight(bright == 0 ? 0 : bright);
@@ -1496,16 +1512,23 @@ void setSnoozeTime(uint16_t value) {
 
 void setBGLight(uint8_t prct) {
   uint16_t ledb;
+  /* LDR (prct==0): nicht bei jedem Loop/Tick neu schreiben → weniger Flackern; Intervall ~10 s.
+     Direkt nach Wechsel von fester Helligkeit → 0 % aber sofort anwenden (sonst wirkte LDR oft „tot“). */
+  static unsigned long prevLdrMs = 0;
+  static bool lastWasManualBright = true;
   if (prct == 0) {
-    static unsigned long prevMillis = -20000UL;
-    if (millis() - prevMillis < 10000) return;
-    prevMillis = millis();
+    bool enteringLdr = lastWasManualBright;
+    if (!enteringLdr && (millis() - prevLdrMs < 10000UL)) return;
+    prevLdrMs = millis();
+    lastWasManualBright = false;
     ledb = (uint16_t)(analogRead(LDR) * 255 / 4096);
   } else {
+    lastWasManualBright = true;
     ledb = (uint16_t)(255 * prct / 100);
   }
   if (ledb > 255) ledb = 255;
-  if (ledb < 3) ledb = 3;
+  /* Mindest-PWM nur bei fester Prozent-Helligkeit; LDR soll auch sehr dunkel dürfen. */
+  if (prct != 0 && ledb < 3) ledb = 3;
   if (LED_ON == 0) ledb = (uint16_t)(255 - ledb);
   if (ledb != lastLedb) {
     Serial.printf("percent = %i LED = %i\n", prct, ledb);
