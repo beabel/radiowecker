@@ -1,6 +1,7 @@
 #include "tft_color_setting.h"
 #include "lv_font_clock_digits.h"
-#include "ArduinoJson.h"
+#include "00_texte.h"
+#include "weather.h"
 
 class AudioGenerator;
 extern AudioGenerator *decoder;
@@ -828,6 +829,13 @@ static void build_clock_screen(void) {
   lv_label_set_text(t0a, TXT_NOW);
   lv_label_set_text(t1a, TXT_TODAY);
   lv_label_set_text(t2a, TXT_TOMMORROW);
+  /* LVGL 9 + LV_WIDGETS_HAS_DEFAULT_VALUE: leere Labels heißen sonst "Text" bis displayWeather läuft. */
+  lv_label_set_text(t0b, TXT_TEMP " -- C");
+  lv_label_set_text(t0c, TXT_FEELS " -- C");
+  lv_label_set_text(t1b, TXT_MIN " -- C");
+  lv_label_set_text(t1c, TXT_MAX " -- C");
+  lv_label_set_text(t2b, TXT_MIN " -- C");
+  lv_label_set_text(t2c, TXT_MAX " -- C");
 
   mid_radio = lv_obj_create(scr_clock);
   lv_obj_remove_style_all(mid_radio);
@@ -1780,38 +1788,22 @@ void FavoriteButtons(void) {
   rebuild_favorites();
 }
 
-void displayWeather(String weatherData) {
-  if (weatherData == "") {
-    Serial.println(F("Keine Wetterdaten empfangen."));
-    return;
-  }
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, weatherData);
-  if (error) {
-    Serial.print(F("Fehler beim Parsen von JSON: "));
-    Serial.println(error.c_str());
-    return;
-  }
-  float temp_min_today = doc["daily"]["temperature_2m_min"][0];
-  float temp_max_today = doc["daily"]["temperature_2m_max"][0];
-  float temp_min_tomorrow = doc["daily"]["temperature_2m_min"][1];
-  float temp_max_tomorrow = doc["daily"]["temperature_2m_max"][1];
-  float temp_current_temp = doc["current"]["temperature_2m"];
-  float temp_feels_like_temp = doc["current"]["apparent_temperature"];
+void displayWeather(const OpenMeteoTemps *t) {
+  if (!t) return;
 
-  char line[48];
-  snprintf(line, sizeof(line), "%s %d C", TXT_TEMP, (int)temp_current_temp);
-  lv_label_set_text(w_lbl_now_t, line);
-  snprintf(line, sizeof(line), "%s %d C", TXT_FEELS, (int)temp_feels_like_temp);
-  lv_label_set_text(w_lbl_now_f, line);
-  snprintf(line, sizeof(line), "%s %d C", TXT_MIN, (int)temp_min_today);
-  lv_label_set_text(w_lbl_td_min, line);
-  snprintf(line, sizeof(line), "%s %d C", TXT_MAX, (int)temp_max_today);
-  lv_label_set_text(w_lbl_td_max, line);
-  snprintf(line, sizeof(line), "%s %d C", TXT_MIN, (int)temp_min_tomorrow);
-  lv_label_set_text(w_lbl_tm_min, line);
-  snprintf(line, sizeof(line), "%s %d C", TXT_MAX, (int)temp_max_tomorrow);
-  lv_label_set_text(w_lbl_tm_max, line);
+  char lt[48], lf[48], dmin[48], dmax[48], mmin[48], mmax[48];
+  snprintf(lt, sizeof(lt), "%s %d C", TXT_TEMP, (int)t->current_c);
+  snprintf(lf, sizeof(lf), "%s %d C", TXT_FEELS, (int)t->feels_c);
+  snprintf(dmin, sizeof(dmin), "%s %d C", TXT_MIN, (int)t->today_min);
+  snprintf(dmax, sizeof(dmax), "%s %d C", TXT_MAX, (int)t->today_max);
+  snprintf(mmin, sizeof(mmin), "%s %d C", TXT_MIN, (int)t->tomorrow_min);
+  snprintf(mmax, sizeof(mmax), "%s %d C", TXT_MAX, (int)t->tomorrow_max);
+  lv_label_set_text(w_lbl_now_t, lt);
+  lv_label_set_text(w_lbl_now_f, lf);
+  lv_label_set_text(w_lbl_td_min, dmin);
+  lv_label_set_text(w_lbl_td_max, dmax);
+  lv_label_set_text(w_lbl_tm_min, mmin);
+  lv_label_set_text(w_lbl_tm_max, mmax);
 }
 
 void drawHeaderInfos(void) {

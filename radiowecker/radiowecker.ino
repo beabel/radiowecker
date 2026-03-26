@@ -279,8 +279,8 @@ void loop() {
   // Wetter nur bei echter WLAN-Verbindung (ohne STA z. B. nur AP → kein Internet → kein HTTP)
   if (millis() - lastWeatherUpdate > weatherUpdateInterval || lastWeatherUpdate == 0) {
     if (connected && !radio && startpage) {
-      String weatherData = getWeatherData(LATITUDE, LONGITUDE, TIME_ZONE_IANA);
-      displayWeather(weatherData);
+      OpenMeteoTemps wt;
+      if (fetchOpenMeteoWeather(&wt, LATITUDE, LONGITUDE, TIME_ZONE_IANA.c_str())) displayWeather(&wt);
     }
     lastWeatherUpdate = millis();
   }
