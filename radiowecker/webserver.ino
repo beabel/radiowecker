@@ -1,4 +1,5 @@
 //home page and templatefor options
+#include <string.h>
 #include "index.h"
 #include "ArduinoJson.h"
 
@@ -67,14 +68,16 @@ void handleRoot() {
 
     // Speichern der SSID in den Einstellungen, falls vorhanden
     if (server.hasArg("conf_ssid")) {
-      pref.putString("ssid", server.arg("conf_ssid"));
-      Serial.println(server.arg("conf_ssid"));
+      strlcpy(ssid, server.arg("conf_ssid").c_str(), sizeof(ssid));
+      pref.putString("ssid", ssid);
+      Serial.println(ssid);
     }
 
     // Speichern des PKEY in den Einstellungen, falls vorhanden
     if (server.hasArg("conf_pkey")) {
-      pref.putString("pkey", server.arg("conf_pkey"));
-      Serial.println(server.arg("conf_pkey"));
+      strlcpy(pkey, server.arg("conf_pkey").c_str(), sizeof(pkey));
+      pref.putString("pkey", pkey);
+      Serial.println(pkey);
     }
 
     // Falls das Reset-Argument vorhanden ist, starte das System neu
@@ -122,25 +125,25 @@ void setAccessData() {
 
   // Speichere die SSID, wenn vorhanden
   if (server.hasArg("ssid")) {
-    ssid = server.arg("ssid");
+    strlcpy(ssid, server.arg("ssid").c_str(), sizeof(ssid));
     pref.putString("ssid", ssid);
   }
 
   // Speichere den Pre-Shared Key (PKEY), wenn vorhanden
   if (server.hasArg("pkey")) {
-    pkey = server.arg("pkey");
+    strlcpy(pkey, server.arg("pkey").c_str(), sizeof(pkey));
     pref.putString("pkey", pkey);
   }
 
   // Speichere die NTP-Server-Adresse, wenn vorhanden
   if (server.hasArg("ntp")) {
-    ntp = server.arg("ntp");
+    strlcpy(ntp, server.arg("ntp").c_str(), sizeof(ntp));
     pref.putString("ntp", ntp);
   }
 
   // Speichere die Timezone, wenn vorhanden
   if (server.hasArg("TIME_ZONE_IANA")) {
-    TIME_ZONE_IANA = server.arg("TIME_ZONE_IANA");
+    strlcpy(TIME_ZONE_IANA, server.arg("TIME_ZONE_IANA").c_str(), sizeof(TIME_ZONE_IANA));
     pref.putString("TIME_ZONE_IANA", TIME_ZONE_IANA);
   }
 
@@ -163,10 +166,9 @@ if (server.hasArg("LONGITUDE")) {
 // Bearbeitet AJAX-Befehle für "/cmd/getaccess"
 // Sendet Zugangsdaten als Textnachricht
 void getAccessData() {
-  // Erstelle eine Nachricht mit den Zugangsdaten, getrennt durch Zeilenumbrüche
-  String msg = String(ssid) + "\n" + String(pkey) + "\n" + String(ntp) + "\n" + String(TIME_ZONE_IANA) + "\n" + String(LATITUDE, 6) + "\n" + String(LONGITUDE, 6);
-
-  // Antworte mit den Zugangsdaten
+  char msg[384];
+  snprintf(msg, sizeof(msg), "%s\n%s\n%s\n%s\n%.6f\n%.6f\n", ssid, pkey, ntp, TIME_ZONE_IANA, (double)LATITUDE,
+           (double)LONGITUDE);
   server.send(200, "text/plain", msg);
 }
 

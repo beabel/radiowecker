@@ -21,10 +21,16 @@ typedef struct {
 // Globale Variablen
 Station stationlist[STATIONS];  // Liste der verfügbaren Stationen
 
+/* Konfiguration als char[] statt Arduino-String: kein Heap für SSID/NTP/TZ, weniger Fragmentierung. */
+#define CFG_SSID_MAX 33         /* 802.11: SSID max. 32 Zeichen + NUL */
+#define CFG_WPA_PSK_MAX 65      /* WPA-PSK: max. 63 ASCII + NUL */
+#define CFG_NTP_HOST_MAX 96     /* Hostname (weit unter DNS-253) */
+#define CFG_TZ_IANA_MAX 64      /* z. B. America/Argentina/ComodRivadavia */
+
 // Variablen zur Speicherung von Konfigurationsdaten
-String ssid = "";                // SSID für die WLAN-Verbindung
-String pkey = "";                // Passwort für die WLAN-Verbindung
-String ntp = "de.pool.ntp.org";  // URL des NTP-Servers zur Zeitabgleich
+char ssid[CFG_SSID_MAX] = "";
+char pkey[CFG_WPA_PSK_MAX] = "";
+char ntp[CFG_NTP_HOST_MAX] = "de.pool.ntp.org";
 uint8_t curStation = 0;          // Index der aktuell ausgewählten Station in der stationlist
 uint8_t curGain = 50;            // Aktuelle Lautstärke 0–100 (Slider)
 uint8_t snoozeTime = 30;         // Schlummerzeit in Minuten
@@ -88,4 +94,4 @@ const unsigned long weatherUpdateInterval = 60000;  // 60 Sekunden
 // Definiere Latitude, Longitude und Zeitzone
 float LATITUDE = 52.520645;
 float LONGITUDE = 13.409779;
-String TIME_ZONE_IANA = "Europe/Berlin";  // Zeitzone dynamisch setzen
+char TIME_ZONE_IANA[CFG_TZ_IANA_MAX] = "Europe/Berlin";

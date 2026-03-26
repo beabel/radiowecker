@@ -104,10 +104,10 @@ void setup() {
   sender.begin("senderlist", false);
 
   // Werte aus den gespeicherten Präferenzen abrufen, falls vorhanden
-  if (pref.isKey("ssid")) ssid = pref.getString("ssid");  // SSID für WLAN-Verbindung
-  if (pref.isKey("pkey")) pkey = pref.getString("pkey");  // Passkey für WLAN-Verbindung
-  if (pref.isKey("ntp")) ntp = pref.getString("ntp");     // NTP-Server-URL für die Zeitabgleich
-  if (pref.isKey("TIME_ZONE_IANA")) TIME_ZONE_IANA = pref.getString("TIME_ZONE_IANA");  // Zeitzone abrufen
+  if (pref.isKey("ssid")) pref.getString("ssid", ssid, sizeof(ssid));
+  if (pref.isKey("pkey")) pref.getString("pkey", pkey, sizeof(pkey));
+  if (pref.isKey("ntp")) pref.getString("ntp", ntp, sizeof(ntp));
+  if (pref.isKey("TIME_ZONE_IANA")) pref.getString("TIME_ZONE_IANA", TIME_ZONE_IANA, sizeof(TIME_ZONE_IANA));
   if (pref.isKey("LATITUDE")) LATITUDE = pref.getFloat("LATITUDE");   // Latitude für die Wetterdaten
   if (pref.isKey("LONGITUDE")) LONGITUDE = pref.getFloat("LONGITUDE");  // Longitude für die Wetterdaten
 
@@ -145,7 +145,7 @@ void setup() {
   actStation = curStation;  // Setze die aktive Station auf die aktuelle Station
 
   // Debug-Ausgabe der aktuellen Station, Lautstärke, SSID und NTP-Server
-  Serial.printf("station %i, gain %i, ssid %s, ntp %s\n", curStation, curGain, ssid.c_str(), ntp.c_str());
+  Serial.printf("station %i, gain %i, ssid %s, ntp %s\n", curStation, curGain, ssid, ntp);
   Serial.printf_P(PSTR("heap vor setup_audio: %u\n"), (unsigned)ESP.getFreeHeap());
 
   // Führe die Setup-Funktionen für Audio, Display und Senderliste aus
@@ -164,7 +164,7 @@ void setup() {
   // Versuche, eine WLAN-Verbindung herzustellen und zeige den Fortschritt auf dem Display an
   displayClear();                                                                                          // Bildschirm löschen
   displayMessage(5, 10, 310, 30, TXT_CONNECTING_TO, ALIGNCENTER, true, ILI9341_YELLOW, ILI9341_BLACK, 1);  // Zeige "Verbinden zu" auf dem Display an
-  displayMessage(5, 50, 310, 30, ssid.c_str(), ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);        // Zeige die SSID auf dem Display an
+  displayMessage(5, 50, 310, 30, ssid, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);  // SSID auf dem Display
   Serial.println("Connect WiFi");                                                                          // Debug-Ausgabe: "Verbinde zu WiFi"
 
   // Versuche, sich mit dem WLAN zu verbinden
@@ -173,7 +173,7 @@ void setup() {
   // Wenn die Verbindung erfolgreich war
   if (connected) {
     // Konfiguriere die Echtzeituhr mit der Zeitzone und dem NTP-Server
-    configTzTime(TIME_ZONE, ntp.c_str());
+    configTzTime(TIME_ZONE, ntp);
 
     // Zeige Datum und Uhrzeit sowie den Namen der Station an
     delay(500);  // Kurze Verzögerung für die Anzeige
@@ -282,7 +282,7 @@ void loop() {
   if (millis() - lastWeatherUpdate > weatherUpdateInterval || lastWeatherUpdate == 0) {
     if (connected && !radio && startpage) {
       OpenMeteoTemps wt;
-      if (fetchOpenMeteoWeather(&wt, LATITUDE, LONGITUDE, TIME_ZONE_IANA.c_str())) displayWeather(&wt);
+      if (fetchOpenMeteoWeather(&wt, LATITUDE, LONGITUDE, TIME_ZONE_IANA)) displayWeather(&wt);
     }
     lastWeatherUpdate = millis();
   }

@@ -1,5 +1,5 @@
-// Initialisiert das WiFi-Modul mit den angegebenen SSID und Passkey
-boolean initWiFi(String ssid, String pkey) {
+// Initialisiert das WiFi-Modul mit den angegebenen SSID und Passkey (C-Strings)
+boolean initWiFi(const char *wifiSsid, const char *wifiPkey) {
   boolean connected = false;  // Variable zur Verfolgung des Verbindungsstatus
 
   // Zuerst trennen alle bestehenden Verbindungen
@@ -14,13 +14,13 @@ boolean initWiFi(String ssid, String pkey) {
   WiFi.mode(WIFI_STA);              // Setzt den WiFi-Modus auf Station (Client)
 
   Serial.print(TXT_CONNECTING_TO);           // Debug-Ausgabe, dass eine Verbindung zu einer SSID aufgebaut wird
-  Serial.print(ssid);                        // Gibt die SSID auf der Konsole aus
+  Serial.print(wifiSsid);                    // Gibt die SSID auf der Konsole aus
   Serial.println(TXT_CONNECTING_ESTABLISH);  // Debug-Ausgabe, dass die Verbindung aufgebaut wird
-  Serial.println(pkey);                      // Gibt den Passkey auf der Konsole aus (Hinweis: Passkey nicht sicher in der Konsole ausgeben)
+  Serial.println(wifiPkey);                  // Gibt den Passkey auf der Konsole aus (Hinweis: Passkey nicht sicher in der Konsole ausgeben)
 
   // Wenn eine SSID angegeben wurde, versuche eine Verbindung herzustellen
-  if (ssid != "") {
-    WiFi.begin(ssid.c_str(), pkey.c_str());  // Beginnt den Verbindungsversuch zur angegebenen SSID mit dem Passkey
+  if (wifiSsid && wifiSsid[0] != '\0') {
+    WiFi.begin(wifiSsid, wifiPkey ? wifiPkey : "");
     uint8_t cnt = 0;                         // Zähler für die Anzahl der Versuche
     // Versuche bis zu 20 Mal, sich zu verbinden
     while ((WiFi.status() != WL_CONNECTED) && (cnt < 20)) {
