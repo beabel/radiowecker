@@ -202,20 +202,16 @@ void getAlarms() {
 
   buf[40] = 0;  // Null-Terminierung des Strings
 
-  // Antwort mit den Alarmdaten als Textnachricht
-  server.send(200, "text/plain", String(buf));
+  // Antwort mit den Alarmdaten als Textnachricht (kein String(buf): spart Heap-Kopie)
+  server.send(200, "text/plain", buf);
 }
 
-// Berechnet die Gesamtanzahl der Minuten aus einer Stunden- und Minutenangabe im Format "HH:MM"
-// Gibt die Minuten als uint16_t zurück
-uint16_t stringToMinutes(String val) {
-  uint8_t h, m;
-  // Extrahiere die Stunden aus den ersten zwei Zeichen des Strings und konvertiere sie in eine Ganzzahl
-  h = val.substring(0, 2).toInt();
-  // Extrahiere die Minuten aus den Zeichen nach dem Doppelpunkt und konvertiere sie in eine Ganzzahl
-  m = val.substring(3).toInt();
-  // Berechne die Gesamtanzahl der Minuten und gebe sie zurück
-  return h * 60 + m;
+// Berechnet die Gesamtanzahl der Minuten aus "HH:MM" ohne Arduino-String/substring-Allokationen
+static uint16_t stringToMinutes(const char *val) {
+  int h, m;
+  if (!val || sscanf(val, "%d:%d", &h, &m) != 2) return 0;
+  if (h < 0 || h > 23 || m < 0 || m > 59) return 0;
+  return (uint16_t)(h * 60 + m);
 }
 
 // Verarbeitet den AJAX-Befehl /cmd/setalarms zum Setzen der Alarmzeiten
@@ -227,7 +223,7 @@ void setAlarms() {
 
   // Überprüfe, ob der Parameter "al0" vorhanden ist und setze alarm1
   if (server.hasArg("al0")) {
-    alarm1 = stringToMinutes(server.arg("al0"));  // Konvertiere die Zeit in Minuten
+    alarm1 = stringToMinutes(server.arg("al0").c_str());  // Konvertiere die Zeit in Minuten
     RADIO_SERIAL(Serial.print(server.arg("al0")));              // Debug-Ausgabe der übergebenen Zeit
     RADIO_SERIAL(Serial.printf(" = %i\n", alarm1));             // Debug-Ausgabe des berechneten Alarmwerts
     pref.putUInt("alarm1", alarm1);               // Speichere den Alarmwert in den Einstellungen
@@ -235,7 +231,7 @@ void setAlarms() {
 
   // Überprüfe, ob der Parameter "al8" vorhanden ist und setze alarm2
   if (server.hasArg("al8")) {
-    alarm2 = stringToMinutes(server.arg("al8"));  // Konvertiere die Zeit in Minuten
+    alarm2 = stringToMinutes(server.arg("al8").c_str());  // Konvertiere die Zeit in Minuten
     RADIO_SERIAL(Serial.print(server.arg("al8")));              // Debug-Ausgabe der übergebenen Zeit
     RADIO_SERIAL(Serial.printf(" = %i\n", alarm2));             // Debug-Ausgabe des berechneten Alarmwerts
     pref.putUInt("alarm2", alarm2);               // Speichere den Alarmwert in den Einstellungen
@@ -284,10 +280,11 @@ void getStationData() {
     // Wenn die Station-ID außerhalb des gültigen Bereichs liegt, setze sie auf die letzte Station
     if (i >= STATIONS) i = STATIONS - 1;
 
-    // Erstelle eine Nachricht mit dem Namen, der URL und dem Aktivierungsstatus der Station, getrennt durch neue Zeilen
-    String msg = String(stationlist[i].name) + "\n" + String(stationlist[i].url) + "\n" + String(stationlist[i].enabled) + "\n" + String(i + 1);
+    /* Festpuffer statt String-Ketten (4× weniger dynamische Allokation pro Request) */
+    char msg[32 + 150 + 16];
+    snprintf(msg, sizeof(msg), "%s\n%s\n%u\n%u", stationlist[i].name, stationlist[i].url, (unsigned)stationlist[i].enabled,
+             (unsigned)(i + 1));
 
-    // Sende die Nachricht als Antwort
     server.send(200, "text/plain", msg);
   } else {
     // Wenn der Parameter fehlt oder ungültig ist, sende eine Fehlermeldung
