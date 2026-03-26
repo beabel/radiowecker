@@ -31,7 +31,7 @@ void updateCurrentTime() {
 
 // Sucht den nächsten gültigen Alarm
 void findNextAlarm() {
-  Serial.println("Search next alarm time");
+  RADIO_SERIAL(Serial.println("Search next alarm time"));
 
   if (!getLocalTime(&ti)) return; // keine Zeit verfügbar
 
@@ -78,23 +78,23 @@ void findNextAlarm() {
 
   // Ausgabe
   if (alarmday != 8) {
-    Serial.printf(
+    RADIO_SERIAL(Serial.printf(
       "Next alarm: %02d:%02d on %s\n",
       alarmtime / 60, alarmtime % 60,
       days_short[alarmday]
-    );
+    ));
   } else {
-    Serial.println("No alarm found");
+    RADIO_SERIAL(Serial.println("No alarm found"));
   }
 }
 
 // Initialisierung des Systems
 void setup() {
-  Serial.begin(115200);
+  RADIO_SERIAL(Serial.begin(115200));
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_IDF_TARGET_ESP32) && CONFIG_IDF_TARGET_ESP32
   esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);  /* klassischer ESP32: BT-RAM für App freigeben */
 #endif
-  Serial.println("Load preferences");  // Debug-Ausgabe: "Lade Einstellungen"
+  RADIO_SERIAL(Serial.println("Load preferences"));  // Debug-Ausgabe: "Lade Einstellungen"
 
   title[0] = 0;  // Setze das erste Zeichen des Titels auf 0 (leerer Titel)
 
@@ -146,16 +146,16 @@ void setup() {
   actStation = curStation;  // Setze die aktive Station auf die aktuelle Station
 
   // Debug-Ausgabe der aktuellen Station, Lautstärke, SSID und NTP-Server
-  Serial.printf("station %i, gain %i, ssid %s, ntp %s\n", curStation, curGain, ssid, ntp);
-  Serial.printf_P(PSTR("heap vor setup_audio: %u\n"), (unsigned)ESP.getFreeHeap());
+  RADIO_SERIAL(Serial.printf("station %i, gain %i, ssid %s, ntp %s\n", curStation, curGain, ssid, ntp));
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap vor setup_audio: %u\n"), (unsigned)ESP.getFreeHeap()));
 
   // Führe die Setup-Funktionen für Audio, Display und Senderliste aus
   setup_audio();       // Initialisiere die Audio-Streams
-  Serial.printf_P(PSTR("heap nach setup_audio: %u\n"), (unsigned)ESP.getFreeHeap());
-  Serial.println(F("setup_display…"));
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap nach setup_audio: %u\n"), (unsigned)ESP.getFreeHeap()));
+  RADIO_SERIAL(Serial.println(F("setup_display…")));
   setup_display();     // Initialisiere die Display-Schnittstelle
-  Serial.printf_P(PSTR("heap nach setup_display: %u\n"), (unsigned)ESP.getFreeHeap());
-  Serial.println(F("setup_display OK"));
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap nach setup_display: %u\n"), (unsigned)ESP.getFreeHeap()));
+  RADIO_SERIAL(Serial.println(F("setup_display OK")));
 
   /* HTTP-OTA: nach setup_display → gleicher OTA-Screen (Balken/Text) wie bei ArduinoOTA. */
   if (pref.getUChar(PREF_HTTP_OTA_PEND, 0) != 0) {
@@ -163,16 +163,16 @@ void setup() {
   }
 
   /* Audio-Puffer erst bei erstem startUrl: sonst ~70 KiB weniger Heap → LwIP/Wetter/TCP-Timeouts. */
-  Serial.printf_P(PSTR("heap vor setup_senderList: %u\n"), (unsigned)ESP.getFreeHeap());
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap vor setup_senderList: %u\n"), (unsigned)ESP.getFreeHeap()));
   setup_senderList();  // Lade die Senderliste aus den Präferenzen
-  Serial.printf_P(PSTR("heap nach setup_senderList: %u\n"), (unsigned)ESP.getFreeHeap());
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap nach setup_senderList: %u\n"), (unsigned)ESP.getFreeHeap()));
   setGain(curGain);    // gespeicherte Lautstärke auf I2S (0 = dauerhaft stumm bis zum nächsten Slider-Zug)
 
   // Versuche, eine WLAN-Verbindung herzustellen und zeige den Fortschritt auf dem Display an
   displayClear();                                                                                          // Bildschirm löschen
   displayMessage(5, 10, 310, 30, TXT_CONNECTING_TO, ALIGNCENTER, true, ILI9341_YELLOW, ILI9341_BLACK, 1);  // Zeige "Verbinden zu" auf dem Display an
   displayMessage(5, 50, 310, 30, ssid, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);  // SSID auf dem Display
-  Serial.println("Connect WiFi");                                                                          // Debug-Ausgabe: "Verbinde zu WiFi"
+  RADIO_SERIAL(Serial.println("Connect WiFi"));                                                                          // Debug-Ausgabe: "Verbinde zu WiFi"
 
   // Versuche, sich mit dem WLAN zu verbinden
   connected = initWiFi(ssid, pkey);
@@ -189,7 +189,7 @@ void setup() {
     minutes = ti.tm_hour * 60 + ti.tm_min;  // Berechne Minuten seit Mitternacht
     weekday = ti.tm_wday;                   // Wochentag (0 = Sonntag, 1 = Montag, usw.)
 
-    Serial.println("Start");  // Debug-Ausgabe: "Start"
+    RADIO_SERIAL(Serial.println("Start"));  // Debug-Ausgabe: "Start"
 
     // Wenn der Alarm aktiviert ist, berechne das Datum und die Uhrzeit für den nächsten Alarm
     if (pref.isKey("alarmon") && pref.getBool("alarmon")) findNextAlarm();
@@ -207,7 +207,7 @@ void setup() {
   }
 
   /* Webserver vor Startseite (showStartPage): weniger Heap-Fragmentierung vor WebServer::begin(). */
-  Serial.println("Start webserver");  // Debug-Ausgabe: "Starte Webserver"
+  RADIO_SERIAL(Serial.println("Start webserver"));  // Debug-Ausgabe: "Starte Webserver"
   setup_webserver();
   setup_ota();
 
@@ -277,7 +277,7 @@ void loop() {
     // LDR-Helligkeit nur auf der Startseite anwenden
     if (startpage && (diff > 50)) {
       setBGLight(bright);                                  // Setze die Hintergrundbeleuchtung
-      Serial.printf("ldr %i letzter %i\n", tmp, lastldr);  // Debug-Ausgabe der aktuellen und letzten LDR-Werte
+      RADIO_SERIAL(Serial.printf("ldr %i letzter %i\n", tmp, lastldr));  // Debug-Ausgabe der aktuellen und letzten LDR-Werte
       lastldr = tmp;                                       // Merke den aktuellen LDR-Wert für die nächste Messung
     }
   }

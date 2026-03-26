@@ -61,29 +61,31 @@ void handleRoot() {
   } else {
     // Wenn nicht verbunden, sende die Konfigurationsseite
     // Parameter werden als Argumente im HTML-Request übergeben
-    Serial.println("Got config:");
-    uint8_t a = server.args();  // Anzahl der Argumente im Request
-    Serial.print(a);
-    Serial.println(" Arguments");
-    for (uint8_t i = 0; i < a; i++) Serial.println(server.arg(i));  // Ausgabe aller Argumente
+    RADIO_SERIAL({
+      Serial.println("Got config:");
+      uint8_t a = server.args();  // Anzahl der Argumente im Request
+      Serial.print(a);
+      Serial.println(" Arguments");
+      for (uint8_t i = 0; i < a; i++) Serial.println(server.arg(i));  // Ausgabe aller Argumente
+    });
 
     // Speichern der SSID in den Einstellungen, falls vorhanden
     if (server.hasArg("conf_ssid")) {
       strlcpy(ssid, server.arg("conf_ssid").c_str(), sizeof(ssid));
       pref.putString("ssid", ssid);
-      Serial.println(ssid);
+      RADIO_SERIAL(Serial.println(ssid));
     }
 
     // Speichern des PKEY in den Einstellungen, falls vorhanden
     if (server.hasArg("conf_pkey")) {
       strlcpy(pkey, server.arg("conf_pkey").c_str(), sizeof(pkey));
       pref.putString("pkey", pkey);
-      Serial.println(pkey);
+      RADIO_SERIAL(Serial.println(pkey));
     }
 
     // Falls das Reset-Argument vorhanden ist, starte das System neu
     if (server.hasArg("reset")) {
-      Serial.println("Restart!");
+      RADIO_SERIAL(Serial.println("Restart!"));
       ESP.restart();
     }
 
@@ -221,21 +223,21 @@ void setAlarms() {
   char txt[10];
 
   // Debug-Ausgabe: Beginn des Setzens der Alarme
-  Serial.println("Set alarms start");
+  RADIO_SERIAL(Serial.println("Set alarms start"));
 
   // Überprüfe, ob der Parameter "al0" vorhanden ist und setze alarm1
   if (server.hasArg("al0")) {
     alarm1 = stringToMinutes(server.arg("al0"));  // Konvertiere die Zeit in Minuten
-    Serial.print(server.arg("al0"));              // Debug-Ausgabe der übergebenen Zeit
-    Serial.printf(" = %i\n", alarm1);             // Debug-Ausgabe des berechneten Alarmwerts
+    RADIO_SERIAL(Serial.print(server.arg("al0")));              // Debug-Ausgabe der übergebenen Zeit
+    RADIO_SERIAL(Serial.printf(" = %i\n", alarm1));             // Debug-Ausgabe des berechneten Alarmwerts
     pref.putUInt("alarm1", alarm1);               // Speichere den Alarmwert in den Einstellungen
   }
 
   // Überprüfe, ob der Parameter "al8" vorhanden ist und setze alarm2
   if (server.hasArg("al8")) {
     alarm2 = stringToMinutes(server.arg("al8"));  // Konvertiere die Zeit in Minuten
-    Serial.print(server.arg("al8"));              // Debug-Ausgabe der übergebenen Zeit
-    Serial.printf(" = %i\n", alarm2);             // Debug-Ausgabe des berechneten Alarmwerts
+    RADIO_SERIAL(Serial.print(server.arg("al8")));              // Debug-Ausgabe der übergebenen Zeit
+    RADIO_SERIAL(Serial.printf(" = %i\n", alarm2));             // Debug-Ausgabe des berechneten Alarmwerts
     pref.putUInt("alarm2", alarm2);               // Speichere den Alarmwert in den Einstellungen
   }
 
@@ -263,7 +265,7 @@ void setAlarms() {
   pref.putUShort("alarmday2", alarmday2);
 
   // Debug-Ausgabe der Wochentags-Flags
-  Serial.printf("days1 %x days2 %x\n", alarmday1, alarmday2);
+  RADIO_SERIAL(Serial.printf("days1 %x days2 %x\n", alarmday1, alarmday2));
 
   // Nächster Alarm berechnen; Kopfzeile nur aktualisieren, wenn Startseite sichtbar ist
   findNextAlarm();
@@ -326,7 +328,7 @@ void setStationData() {
     if (server.hasArg("position")) {
       int16_t newpos = server.arg("position").toInt();
       newpos--;
-      Serial.printf("Move %i to position %i\n", i + 1, newpos + 1);
+      RADIO_SERIAL(Serial.printf("Move %i to position %i\n", i + 1, newpos + 1));
       if ((i != newpos) && (newpos >= 0) && (newpos < STATIONS)) {
         reorder(i, newpos);  // Ändert die Position der Station in der Liste
         saveList();          // Speichert die aktualisierte Liste
@@ -410,8 +412,10 @@ void GainSlider() {
     server.send(200, "text/plain", "OK");
 
     // Gibt den Wert für Debugging-Zwecke aus
-    Serial.print("GainValue: ");
-    Serial.println(floatWert);
+    RADIO_SERIAL({
+      Serial.print("GainValue: ");
+      Serial.println(floatWert);
+    });
   } else {
     // Antwortet mit einem Fehlercode, wenn der Parameter fehlt
     server.send(400, "text/plain", "ERROR");

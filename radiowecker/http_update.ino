@@ -33,8 +33,8 @@ void httpOtaRunDeferredBoot(void) {
 
   pref.putUChar(PREF_HTTP_OTA_PEND, 0);
 
-  Serial.println(F("HTTP-OTA: Boot-Modus (Display + WLAN + Download)"));
-  Serial.printf_P(PSTR("heap zu OTA-Start: %u\n"), (unsigned)ESP.getFreeHeap());
+  RADIO_SERIAL(Serial.println(F("HTTP-OTA: Boot-Modus (Display + WLAN + Download)")));
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap zu OTA-Start: %u\n"), (unsigned)ESP.getFreeHeap()));
 
   setBGLight(100);
   ota_ui_begin("HTTP Firmware-Update");
@@ -42,7 +42,7 @@ void httpOtaRunDeferredBoot(void) {
   showProgress(0);
 
   if (!http_ota_tag_ok(tag)) {
-    Serial.println(F("HTTP-OTA: ungültiger/leerer Tag in NVS — Neustart normal"));
+    RADIO_SERIAL(Serial.println(F("HTTP-OTA: ungültiger/leerer Tag in NVS — Neustart normal")));
     ota_ui_begin("Update abgebrochen");
     ota_ui_set_sub("Ungültiger Tag");
     delay(2500);
@@ -50,11 +50,11 @@ void httpOtaRunDeferredBoot(void) {
     return;
   }
 
-  Serial.printf_P(PSTR("HTTP-OTA: Tag %s\n"), tag);
+  RADIO_SERIAL(Serial.printf_P(PSTR("HTTP-OTA: Tag %s\n"), tag));
 
   ota_ui_set_sub("WLAN verbinden …");
   if (!initWiFi(ssid, pkey)) {
-    Serial.println(F("HTTP-OTA: WLAN fehlgeschlagen — Neustart normal"));
+    RADIO_SERIAL(Serial.println(F("HTTP-OTA: WLAN fehlgeschlagen — Neustart normal")));
     ota_ui_begin("Update fehlgeschlagen");
     ota_ui_set_sub("Kein WLAN");
     delay(3000);
@@ -69,7 +69,7 @@ void httpOtaRunDeferredBoot(void) {
   int urllen = snprintf(url, sizeof(url), "https://github.com/%s/%s/releases/download/%s/%s", HTTP_OTA_GITHUB_OWNER,
                         HTTP_OTA_GITHUB_REPO, tag, HTTP_OTA_FIRMWARE_FILENAME);
   if (urllen <= 0 || (size_t)urllen >= sizeof(url)) {
-    Serial.println(F("HTTP-OTA: URL-Puffer zu klein"));
+    RADIO_SERIAL(Serial.println(F("HTTP-OTA: URL-Puffer zu klein")));
     ota_ui_begin("Update fehlgeschlagen");
     ota_ui_set_sub("URL zu lang");
     delay(3000);
@@ -93,12 +93,12 @@ void httpOtaRunDeferredBoot(void) {
     static uint32_t s_last = 999;
     if (prc / 5u != s_last / 5u) {
       s_last = prc;
-      Serial.printf_P(PSTR("HTTP-OTA: %u%%\n"), (unsigned)prc);
+      RADIO_SERIAL(Serial.printf_P(PSTR("HTTP-OTA: %u%%\n"), (unsigned)prc));
     }
     yield();
   });
 
-  Serial.printf_P(PSTR("HTTP OTA: %s\n"), url);
+  RADIO_SERIAL(Serial.printf_P(PSTR("HTTP OTA: %s\n"), url));
   t_httpUpdate_return ret = httpOta.update(client, url);
 
   /* Bibliothek rebootet oft selbst; falls nicht, nach OK nachziehen */
@@ -111,7 +111,7 @@ void httpOtaRunDeferredBoot(void) {
   }
 
   String detail = httpOta.getLastErrorString();
-  Serial.printf_P(PSTR("HTTP OTA Fehler ret=%d %s\n"), (int)ret, detail.c_str());
+  RADIO_SERIAL(Serial.printf_P(PSTR("HTTP OTA Fehler ret=%d %s\n"), (int)ret, detail.c_str()));
   ota_ui_begin("Update fehlgeschlagen");
   {
     char line[48];

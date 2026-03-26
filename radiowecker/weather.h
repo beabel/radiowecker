@@ -5,9 +5,24 @@
 #include <string.h>
 #include "ArduinoJson.h"
 
+#ifndef RADIO_SERIAL
+#ifndef RADIO_DEBUG_SERIAL
+#define RADIO_DEBUG_SERIAL 1
+#endif
+#if RADIO_DEBUG_SERIAL
+#define RADIO_SERIAL(x) \
+  do {                    \
+    x;                    \
+  } while (0)
+#else
+#define RADIO_SERIAL(x) ((void)0)
+#endif
+#endif
+
 /**
  * Nur die sechs Werte, die die UI aus Open-Meteo braucht (vgl. API-Antwort).
  * Kein großer JSON-Puffer in .bss — Parsing mit Filter → kleines JsonDocument.
+ * Serial-Diagnose: RADIO_DEBUG_SERIAL in 00_settings.h (alle Wetter-Logs nutzen RADIO_SERIAL).
  */
 struct OpenMeteoTemps {
   float current_c;
@@ -65,14 +80,16 @@ inline bool fetchOpenMeteoWeather(OpenMeteoTemps *out, float latitude, float lon
       (double)latitude, (double)longitude, tzenc);
   if (n <= 0 || (size_t)n >= sizeof(url)) return false;
 
-  Serial.println(F("Wetter-URL (Browser):"));
-  Serial.println(url);
+  RADIO_SERIAL({
+    Serial.println(F("Wetter-URL (Browser):"));
+    Serial.println(url);
+  });
 
   HTTPClient http;
   http.setTimeout(20000);
   http.setReuse(false);
   if (!http.begin(url)) {
-    Serial.println(F("Wetter: http.begin fehlgeschlagen"));
+    RADIO_SERIAL(Serial.println(F("Wetter: http.begin fehlgeschlagen")));
     return false;
   }
 
@@ -80,7 +97,7 @@ inline bool fetchOpenMeteoWeather(OpenMeteoTemps *out, float latitude, float lon
 
   int code = http.GET();
   if (code != HTTP_CODE_OK) {
-    Serial.printf_P(PSTR("Wetter: HTTP-Code %d\n"), code);
+    RADIO_SERIAL(Serial.printf_P(PSTR("Wetter: HTTP-Code %d\n"), code));
     http.end();
     return false;
   }
@@ -89,12 +106,12 @@ inline bool fetchOpenMeteoWeather(OpenMeteoTemps *out, float latitude, float lon
   http.end();
 
   if (body.length() == 0) {
-    Serial.println(F("Keine Wetterdaten empfangen."));
+    RADIO_SERIAL(Serial.println(F("Keine Wetterdaten empfangen.")));
     return false;
   }
 
   if (body.length() >= 2 && (unsigned char)body[0] == 0x1f && (unsigned char)body[1] == 0x8b) {
-    Serial.println(F("Wetter: Antwort gzip-komprimiert."));
+    RADIO_SERIAL(Serial.println(F("Wetter: Antwort gzip-komprimiert.")));
     return false;
   }
 
@@ -109,21 +126,23 @@ inline bool fetchOpenMeteoWeather(OpenMeteoTemps *out, float latitude, float lon
   JsonDocument doc;
   DeserializationError err = deserializeJson(doc, body, DeserializationOption::Filter(filterSpec));
   if (err) {
-    Serial.print(F("Fehler beim Parsen von JSON: "));
-    Serial.println(err.c_str());
-    Serial.print(F("Wetter JSON-Anfang (max. 160 Zeichen): "));
-    for (size_t i = 0; i < 160 && (size_t)i < (size_t)body.length(); i++) {
-      char c = body[i];
-      if (c >= 32 && c < 127)
-        Serial.print(c);
-      else
-        Serial.printf(" \\x%02X", (unsigned char)c);
-    }
-    Serial.println();
+    RADIO_SERIAL({
+      Serial.print(F("Fehler beim Parsen von JSON: "));
+      Serial.println(err.c_str());
+      Serial.print(F("Wetter JSON-Anfang (max. 160 Zeichen): "));
+      for (size_t i = 0; i < 160 && (size_t)i < (size_t)body.length(); i++) {
+        char c = body[i];
+        if (c >= 32 && c < 127)
+          Serial.print(c);
+        else
+          Serial.printf(" \\x%02X", (unsigned char)c);
+      }
+      Serial.println();
+    });
     return false;
   }
   if (doc.overflowed()) {
-    Serial.println(F("Wetter: JsonDocument overflow nach Filter."));
+    RADIO_SERIAL(Serial.println(F("Wetter: JsonDocument overflow nach Filter.")));
     return false;
   }
 
@@ -134,7 +153,7 @@ inline bool fetchOpenMeteoWeather(OpenMeteoTemps *out, float latitude, float lon
   out->tomorrow_min = doc["daily"]["temperature_2m_min"][1].as<float>();
   out->tomorrow_max = doc["daily"]["temperature_2m_max"][1].as<float>();
 
-  Serial.printf_P(PSTR("Wetter: %u B empfangen, 6 Werte übernommen\n"), (unsigned)body.length());
+  RADIO_SERIAL(Serial.printf_P(PSTR("Wetter: %u B empfangen, 6 Werte übernommen\n"), (unsigned)body.length()));
   return true;
 }
 

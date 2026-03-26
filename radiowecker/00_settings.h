@@ -18,6 +18,24 @@ typedef struct {
 #define AUDIO_GAIN_MAX 0.42f
 #endif
 
+/**
+ * Serielle Diagnose für den gesamten Sketch (inkl. Wetter-URL/JSON).
+ * 0: kein Serial.begin(), alle RADIO_SERIAL(...) werden wegpräpariert — weniger Blockierzeit an der UART,
+ *    weniger Flash durch Debug-Strings; USB-Upload zum Flashen bleibt unabhängig davon möglich.
+ * 1: bisheriges Verhalten. Build: -DRADIO_DEBUG_SERIAL=0
+ */
+#ifndef RADIO_DEBUG_SERIAL
+#define RADIO_DEBUG_SERIAL 0
+#endif
+#if RADIO_DEBUG_SERIAL
+#define RADIO_SERIAL(x) \
+  do {                    \
+    x;                    \
+  } while (0)
+#else
+#define RADIO_SERIAL(x) ((void)0)
+#endif
+
 // Globale Variablen
 Station stationlist[STATIONS];  // Liste der verfügbaren Stationen
 

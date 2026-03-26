@@ -331,7 +331,7 @@ bool station_navigate_prev(void) {
     attempts++;
     if (attempts >= STATIONS) {
       curStation = STATIONS - 1;
-      Serial.println(F("Keine aktive Station gefunden."));
+      RADIO_SERIAL(Serial.println(F("Keine aktive Station gefunden.")));
       return false;
     }
   } while (!stationlist[curStation].enabled);
@@ -347,7 +347,7 @@ bool station_navigate_next(void) {
     attempts++;
     if (attempts >= STATIONS) {
       curStation = 0;
-      Serial.println(F("Keine aktive Station gefunden."));
+      RADIO_SERIAL(Serial.println(F("Keine aktive Station gefunden.")));
       return false;
     }
   } while (!stationlist[curStation].enabled);
@@ -1539,7 +1539,7 @@ void setBGLight(uint8_t prct) {
   if (prct != 0 && ledb < 3) ledb = 3;
   if (LED_ON == 0) ledb = (uint16_t)(255 - ledb);
   if (ledb != lastLedb) {
-    Serial.printf("percent = %i LED = %i\n", prct, ledb);
+    RADIO_SERIAL(Serial.printf("percent = %i LED = %i\n", prct, ledb));
     analogWrite(TFT_LED, ledb);
     lastLedb = ledb;
   }
@@ -1562,7 +1562,7 @@ void toggleRadio(boolean off) {
         setGain(curGain);
       } else {
         radio = false;
-        Serial.println(F("toggleRadio: Stream-Start fehlgeschlagen"));
+        RADIO_SERIAL(Serial.println(F("toggleRadio: Stream-Start fehlgeschlagen")));
       }
     }
   }
@@ -1602,7 +1602,7 @@ void changeStation(void) {
     radio = true;
   } else {
     radio = false;
-    Serial.println(F("changeStation: Stream-Start fehlgeschlagen (Sender unverändert gespeichert)."));
+    RADIO_SERIAL(Serial.println(F("changeStation: Stream-Start fehlgeschlagen (Sender unverändert gespeichert).")));
   }
   startpage = true;
   showStartPage();
