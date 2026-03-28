@@ -15,6 +15,11 @@ extern "C" int esp_bt_controller_mem_release(int mode);
 extern AudioGenerator *decoder;  // Definition in audio.ino
 void showStartPage(void);
 void toggleRadio(boolean off, boolean keepAlarmSnoozePending = false);
+void alarm_action_stop(void);
+void alarm_action_snooze(void);
+
+static void setup_alarm_hw_buttons(void);
+static void poll_alarm_hw_buttons(void);
 void httpOtaRunDeferredBoot(void);
 // predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
@@ -218,6 +223,8 @@ void setup() {
     showStartPage();
   }
 
+  setup_alarm_hw_buttons();
+
   start_conf = 0;  // Setze den Startwert für die Konfiguration
 }
 
@@ -235,6 +242,8 @@ void loop() {
 
   // Überprüfe Touch-Ereignisse
   touch_loop();
+
+  poll_alarm_hw_buttons();
 
   /* Nach LVGL: nochmal füttern — Screen-Wechsel kann lv_timer_handler länger blocken (Underruns/Knackser). */
   if (connected && (radio || decoder)) {
@@ -351,4 +360,45 @@ if (minutes != alarmtime) {
 
   // Starte einen Neustart, wenn das Gerät mehr als 5 Minuten getrennt war
   if (!connected && ((millis() - discon) > 300000)) ESP.restart();
+}
+
+static void setup_alarm_hw_buttons(void) {
+  if (ALARM_HW_BTN_STOP_PIN >= 0)
+    pinMode((uint8_t)ALARM_HW_BTN_STOP_PIN, INPUT_PULLUP);
+  if (ALARM_HW_BTN_SNOOZE_PIN >= 0)
+    pinMode((uint8_t)ALARM_HW_BTN_SNOOZE_PIN, INPUT_PULLUP);
+}
+
+static void poll_alarm_hw_buttons(void) {
+  if (ALARM_HW_BTN_STOP_PIN < 0 && ALARM_HW_BTN_SNOOZE_PIN < 0) return;
+
+  if (ALARM_HW_BTN_STOP_PIN >= 0) {
+    static uint8_t stop_wait_release;
+    int lv = digitalRead(ALARM_HW_BTN_STOP_PIN);
+    if (stop_wait_release == 0) {
+      if (lv == LOW) {
+        alarm_action_stop();
+        stop_wait_release = 1;
+      }
+    } else if (lv != LOW) {
+      stop_wait_release = 0;
+    }
+  }
+
+  if (ALARM_HW_BTN_SNOOZE_PIN >= 0) {
+    static uint8_t snooze_wait_release;
+    int lv = digitalRead(ALARM_HW_BTN_SNOOZE_PIN);
+    if (snooze_wait_release == 0) {
+      if (lv == LOW) {
+        if (alarmActionsVisible) {
+          alarm_action_snooze();
+          snooze_wait_release = 1;
+        } else {
+          snooze_wait_release = 2;
+        }
+      }
+    } else if (lv != LOW) {
+      snooze_wait_release = 0;
+    }
+  }
 }
