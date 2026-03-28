@@ -77,17 +77,37 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 
 - Boardverwalter-URL:  
   `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`  
-- Paket **esp32** von **Espressif Systems** installieren. (Version 3.3.7)
+- Paket **esp32** von **Espressif Systems** installieren. (Version siehe Tabelle)
+
+1. Gehe zu `Werkzeuge` > `Board` > `Boardverwalter`.
+2. Suche nach **ESP32** im Suchfeld.
+3. Wähle **ESP32 by Espressif Systems** aus und klicke auf **Installieren**.
+
+> [!IMPORTANT]  
+> **Hinweis:** Stelle sicher, dass du je nach radiowecker Version die richtige **Version 2.0.17 oder > 3.0** auswählst, da es zu Problemen kommen kann.~~
+
+|Radio Version|Boardverwalter|Partition|
+| ------------- | ------------- | ------------- |
+|<= 4.0.3|2.0.17|default|
+|>= 5.x|3.3.7|No FS 4MB|
 
 ### Bibliotheken (Referenzstände für v5.0.4)
 
-| Bibliothek | Version |
-|------------|---------|
-| **lvgl** | 9.5.0 |
-| **Adafruit GFX Library** | 1.12.5 |
-| **Adafruit ILI9341** | 1.6.3 |
-| **XPT2046_Touchscreen** | 1.4 |
-| **ESP8266Audio** (Earle F. Philhower) | 2.4.1 |
+1. Gehe zu `Sketch` > `Include Library` > `Library Manager`.
+2. Suche nach **Bibliothek Name**.
+3. Wähle die **Version xxx** aus dem Dropdown-Menü und klicke auf **Installieren**.
+
+> [!IMPORTANT]  
+> **Hinweis:** Stelle sicher, dass du je nach radiowecker Version die richtige **Version** auswählst, da es zu Problemen kommen kann.~~
+
+| Bibliothek |Radio Version <= v4.0.3 |Radio Version >= v5.x |
+|------------|-----------|--------|
+| Adafruit_ILI9341 | 1.6.2 | 1.6.3 |
+| Adafruit_GFX | 1.12.1 | 1.12.5 |
+| XPT2046_Touchscreen | 1.4 | 1.4 |
+| ESP8266Audio by Earle F. Philhower | 2.0.0 | 2.4.1 |
+| Touchevent by Gerald-Lechner | 1.3.0 | :x: |
+| lvgl | :x: | 9.5.0 |
 
 ---
 
