@@ -14,7 +14,7 @@ extern "C" int esp_bt_controller_mem_release(int mode);
 // Vor tft_display.ino (Arduino fügt die .ino alphabetisch danach ein)
 extern AudioGenerator *decoder;  // Definition in audio.ino
 void showStartPage(void);
-void toggleRadio(boolean off);
+void toggleRadio(boolean off, boolean keepAlarmSnoozePending = false);
 void httpOtaRunDeferredBoot(void);
 // predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
@@ -116,8 +116,11 @@ void setup() {
   curGain = 50;                                              // Standardwert für Lautstärke
   if (pref.isKey("gain")) curGain = (uint8_t)constrain((int)pref.getUShort("gain"), 0, 100);
 
-  snoozeTime = 30;                                                  // Standardwert für Schlummerzeit in Minuten
-  if (pref.isKey("snooze")) snoozeTime = pref.getUShort("snooze");  // Abrufen der Schlummerzeit
+  snoozeTime = 30;                                                  // Standardwert für Einschlafzeit in Minuten
+  if (pref.isKey("snooze")) snoozeTime = (uint8_t)constrain((int)pref.getUShort("snooze"), 0, 60);
+
+  alarmSnoozeMin = 0;
+  if (pref.isKey("alm_snooze")) alarmSnoozeMin = (uint8_t)constrain((int)pref.getUShort("alm_snooze"), 0, 10);
 
   bright = 80;                                                  // Standardwert für Helligkeit in Prozent
   if (pref.isKey("bright")) bright = pref.getUShort("bright");  // Abrufen des Helligkeitswerts
@@ -295,11 +298,18 @@ void loop() {
   if ((millis() - lastUpdate) > 1000) {
     lastUpdate = millis();  // Aktualisiere den Zeitstempel
 
-    // Regelmäßige Prüfung der Schlummerzeit
+    // Einschlafzeit (Sleep-Timer): Ende → Radio aus
     if (millis() > snoozeTimeEnd && snoozeTimeEnd > 0) {
       snoozeTimeEnd = 0;  // Setze den Schlummermodus zurück
       toggleRadio(true);  // Schalte das Radio aus
       showRadio();        // Zeige Radio-Status an
+    }
+
+    // Wecker-Schlummer: Ende → Radio wieder an, UI wie beim ersten Wecken
+    if (alarmSnoozeUntil != 0 && millis() >= alarmSnoozeUntil) {
+      alarmSnoozeUntil = 0;
+      alarmActionsVisible = true;
+      toggleRadio(false);
     }
 
     // Hole das Datum und die Uhrzeit
@@ -324,9 +334,8 @@ void loop() {
     if ((alarmday < 8) && getLocalTime(&ti)) {
       // Wenn der Alarmtag und die Zeit erreicht sind, schalte das Radio ein und berechne die Werte für den nächsten erwarteten Alarm
       if ((alarmday == weekday) && (minutes == alarmtime) && !alarmTriggered) {
-        // Test Beeper#####################
         alarmTriggered = true;  // verhindert mehrfaches Auslösen
-        // Test Beeper#####################
+        alarmActionsVisible = true;
         toggleRadio(false);  // Schalte das Radio an
         showRadio();         // Zeige Radio-Informationen an
         findNextAlarm();     // Berechne den nächsten Alarm

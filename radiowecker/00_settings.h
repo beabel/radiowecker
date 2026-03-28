@@ -51,7 +51,8 @@ char pkey[CFG_WPA_PSK_MAX] = "";
 char ntp[CFG_NTP_HOST_MAX] = "de.pool.ntp.org";
 uint8_t curStation = 0;          // Index der aktuell ausgewählten Station in der stationlist
 uint8_t curGain = 50;            // Aktuelle Lautstärke 0–100 (Slider)
-uint8_t snoozeTime = 30;         // Schlummerzeit in Minuten
+uint8_t snoozeTime = 30;         // Einschlafzeit (Sleep-Timer) in Minuten
+uint8_t alarmSnoozeMin = 0;      // Wecker-Schlummer 0–10 min (0 = Funktion aus)
 uint16_t alarm1 = 390;           // Erste Alarmzeit (6:30 Uhr in Minuten nach Mitternacht)
 uint8_t alarmday1 = 0B00111110;  // Gültige Wochentage für den ersten Alarm (Beispiel: 00111110 = Montag bis Freitag)
 uint16_t alarm2 = 480;           // Zweite Alarmzeit (8:00 Uhr in Minuten nach Mitternacht)
@@ -61,7 +62,9 @@ uint8_t bright = 25;             // Helligkeit in Prozent. 0 bedeutet, dass der 
 
 // Weitere globale Variablen
 uint32_t lastchange = 0;       // Zeitpunkt der letzten Auswahländerung
-uint32_t snoozeTimeEnd = 0;    // Zeitpunkt zum Beenden des Schlummermodus
+uint32_t snoozeTimeEnd = 0;    // Einschlafzeit (Sleep-Timer): Ende → Radio aus
+uint32_t alarmSnoozeUntil = 0; // Wecker-Schlummer: millis() bis Radio wieder an (0 = inaktiv)
+bool alarmActionsVisible = false; // Stop/Schlummer-Buttons: true bei Weckstart und nach Schlummer-Ende (Radio wieder an)
 uint16_t alarmtime = 0;        // Nächste relevante Alarmzeit
 uint8_t alarmday = 8;          // Wochentag für den nächsten relevanten Alarm oder 8 bedeutet Alarm deaktiviert
 char title[128];               // Stream-Titel (UTF-8 nach Normalisierung aus ICY-Metadaten)
