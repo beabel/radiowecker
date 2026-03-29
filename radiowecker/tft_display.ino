@@ -787,10 +787,13 @@ static void build_clock_screen(void) {
   lv_obj_align(lbl_date, LV_ALIGN_TOP_MID, 0, clock_top + clock_bar_h + date_below_clock);
 
   const lv_coord_t mid_y = clock_top + clock_bar_h + date_below_clock + date_row_h + gap_date_to_mid;
+  /* Wetter/Radio: kompakte Zeilenabstände + etwas niedrigere Box → Abstand zum Lautstärke-Slider unten */
+  const lv_coord_t mid_block_h = 62;
+  const lv_coord_t weather_col_h = mid_block_h - 4;
 
   mid_weather = lv_obj_create(scr_clock);
   lv_obj_remove_style_all(mid_weather);
-  lv_obj_set_size(mid_weather, 314, 76);
+  lv_obj_set_size(mid_weather, 314, mid_block_h);
   lv_obj_align(mid_weather, LV_ALIGN_TOP_MID, 0, mid_y);
   lv_obj_set_flex_flow(mid_weather, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(mid_weather, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
@@ -799,11 +802,12 @@ static void build_clock_screen(void) {
 
   auto mkcol = [&](lv_obj_t *parent) {
     lv_obj_t *c = lv_obj_create(parent);
-    lv_obj_set_size(c, 100, 72);
+    lv_obj_set_size(c, 100, weather_col_h);
     lv_obj_set_style_bg_color(c, rgb565_to_lv(COLOR_STATION_BOX_BG), LV_PART_MAIN);
     lv_obj_set_style_border_color(c, rgb565_to_lv(COLOR_STATION_BOX_BORDER), LV_PART_MAIN);
     lv_obj_set_style_border_width(c, 1, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(c, 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(c, 1, LV_PART_MAIN);
+    lv_obj_set_style_pad_row(c, 0, LV_PART_MAIN);
     lv_obj_set_flex_flow(c, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(c, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
     lv_obj_set_scrollbar_mode(c, LV_SCROLLBAR_MODE_OFF);
@@ -830,6 +834,9 @@ static void build_clock_screen(void) {
     lv_obj_set_style_text_font(*a, &font_ui_primary, LV_PART_MAIN);
     lv_obj_set_style_text_font(*b, &font_ui_primary, LV_PART_MAIN);
     lv_obj_set_style_text_font(*c, &font_ui_primary, LV_PART_MAIN);
+    lv_obj_set_style_text_line_space(*a, 0, LV_PART_MAIN);
+    lv_obj_set_style_text_line_space(*b, 0, LV_PART_MAIN);
+    lv_obj_set_style_text_line_space(*c, 0, LV_PART_MAIN);
     lv_obj_clear_flag(*a, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(*b, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(*c, LV_OBJ_FLAG_CLICKABLE);
@@ -859,7 +866,7 @@ static void build_clock_screen(void) {
 
   mid_radio = lv_obj_create(scr_clock);
   lv_obj_remove_style_all(mid_radio);
-  lv_obj_set_size(mid_radio, 314, 76);
+  lv_obj_set_size(mid_radio, 314, mid_block_h);
   lv_obj_align(mid_radio, LV_ALIGN_TOP_MID, 0, mid_y);
   lv_obj_set_style_bg_color(mid_radio, rgb565_to_lv(COLOR_STATION_BOX_BG), LV_PART_MAIN);
   lv_obj_set_style_border_color(mid_radio, rgb565_to_lv(COLOR_STATION_BOX_BORDER), LV_PART_MAIN);
@@ -909,9 +916,12 @@ static void build_clock_screen(void) {
   lv_label_set_text(l2, LV_SYMBOL_RIGHT);
   lv_obj_center(l2);
 
-  /* Tap-Bereich unter der Kopfzeile bis über Wetter/Radio-Block */
+  /* Tap-Bereich unter der Kopfzeile bis knapp über Wetter/Radio — nicht bis an den Lautstärke-Slider
+     (sonst beim Schieben versehentlich Einstellungsseite / Weg zu Favoriten). */
+  const lv_coord_t clock_tap_gap_above_slider = 32;
   lv_obj_t *btn_clock_radio = lv_button_create(scr_clock);
-  lv_obj_set_size(btn_clock_radio, 288, (lv_coord_t)(mid_y + 76 - 22));
+  lv_obj_set_size(btn_clock_radio, 288,
+                  (lv_coord_t)(mid_y + mid_block_h - 22 - clock_tap_gap_above_slider));
   lv_obj_align(btn_clock_radio, LV_ALIGN_TOP_MID, 0, 22);
   lv_obj_add_flag(btn_clock_radio, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_set_style_bg_opa(btn_clock_radio, LV_OPA_TRANSP, LV_PART_MAIN);
@@ -1600,24 +1610,50 @@ void setSnoozeTime(uint16_t value) {
   ui_slider_internal = false;
 }
 
+/* Zuletzt an TFT_LED geschriebener Wert (nach LED_ON-Invert) → logische Helligkeit 0…255 vor Invert. */
+static uint16_t ldr_logical_from_pin_pwm(uint16_t pinDuty) {
+  if (pinDuty > 255) pinDuty = 255;
+#if LED_ON == 0
+  return (uint16_t)(255 - pinDuty);
+#else
+  return pinDuty;
+#endif
+}
+
 void setBGLight(uint8_t prct) {
   uint16_t ledb;
   /* LDR (prct==0): nicht bei jedem Loop/Tick neu schreiben → weniger Flackern; Intervall ~10 s.
      Direkt nach Wechsel von fester Helligkeit → 0 % aber sofort anwenden (sonst wirkte LDR oft „tot“). */
   static unsigned long prevLdrMs = 0;
   static bool lastWasManualBright = true;
+  static uint16_t ldrSmoothLogical = LDR_LED_PWM_MIN;
   if (prct == 0) {
     bool enteringLdr = lastWasManualBright;
     if (!enteringLdr && (millis() - prevLdrMs < 10000UL)) return;
     prevLdrMs = millis();
     lastWasManualBright = false;
-    ledb = (uint16_t)(analogRead(LDR) * 255 / 4096);
+
+    uint16_t raw = (uint16_t)analogRead(LDR);
+    uint16_t target = (uint16_t)((uint32_t)raw * 255U / 4096U);
+    if (target < LDR_LED_PWM_MIN) target = LDR_LED_PWM_MIN;
+    if (target > 255) target = 255;
+
+#if LDR_PWM_SMOOTH_DIV <= 1
+    ledb = target;
+    ldrSmoothLogical = target;
+#else
+    if (enteringLdr) {
+      ldrSmoothLogical = ldr_logical_from_pin_pwm(lastLedb);
+    }
+    ldrSmoothLogical = (uint16_t)(((uint32_t)ldrSmoothLogical * (LDR_PWM_SMOOTH_DIV - 1) + target + (LDR_PWM_SMOOTH_DIV / 2)) / LDR_PWM_SMOOTH_DIV);
+    ledb = ldrSmoothLogical;
+#endif
   } else {
     lastWasManualBright = true;
     ledb = (uint16_t)(255 * prct / 100);
   }
   if (ledb > 255) ledb = 255;
-  /* Mindest-PWM nur bei fester Prozent-Helligkeit; LDR soll auch sehr dunkel dürfen. */
+  /* Mindest-PWM bei fester Prozent-Helligkeit; LDR-Minimum siehe LDR_LED_PWM_MIN in 00_pin_settings.h */
   if (prct != 0 && ledb < 3) ledb = 3;
   if (LED_ON == 0) ledb = (uint16_t)(255 - ledb);
   if (ledb != lastLedb) {
