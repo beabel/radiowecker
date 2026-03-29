@@ -222,8 +222,6 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 
 ## Screenshots — so sieht es aus
 
-Fotos aus dem Ordner [`screenshot/`](screenshot/). **`display_*`** = TFT (LVGL), **`webseite_*`** = HTML-Ausgabe im Browser. Ausführliche Einordnung: [`DOKU/05_Bedienungsanleitung.md`](DOKU/05_Bedienungsanleitung.md).
-
 ### TFT (Display)
 
 **Startseite, Radio an**
@@ -233,6 +231,10 @@ Fotos aus dem Ordner [`screenshot/`](screenshot/). **`display_*`** = TFT (LVGL),
 **Startseite, Radio aus, Wetter**
 
 ![Startseite Radio aus, Wetter](screenshot/display_startseite_radio_off_weather_on.jpg)
+
+**Startseite, Wecker/Alarm aktiv**
+
+![Startseite, Wecker/Alarm aktiv](screenshot/display_alarm_schlummer.jpg)
 
 **Einstellungen**
 
