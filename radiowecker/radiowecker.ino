@@ -20,6 +20,8 @@ void alarm_action_snooze(void);
 
 static void setup_alarm_hw_buttons(void);
 static void poll_alarm_hw_buttons(void);
+/** Nur Hardware-Stop: wie bisher alles aus, sonst Radio einschalten (Touch-Stop bleibt alarm_action_stop). */
+static void alarm_hw_stop_button_action(void);
 void httpOtaRunDeferredBoot(void);
 // predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
@@ -377,7 +379,7 @@ static void poll_alarm_hw_buttons(void) {
     int lv = digitalRead(ALARM_HW_BTN_STOP_PIN);
     if (stop_wait_release == 0) {
       if (lv == LOW) {
-        alarm_action_stop();
+        alarm_hw_stop_button_action();
         stop_wait_release = 1;
       }
     } else if (lv != LOW) {
@@ -400,5 +402,13 @@ static void poll_alarm_hw_buttons(void) {
     } else if (lv != LOW) {
       snooze_wait_release = 0;
     }
+  }
+}
+
+static void alarm_hw_stop_button_action(void) {
+  if (radio || alarmActionsVisible || alarmSnoozeUntil != 0) {
+    toggleRadio(true, false);
+  } else {
+    toggleRadio(false, false);
   }
 }
