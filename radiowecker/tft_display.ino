@@ -311,14 +311,17 @@ static void on_alarm_snooze_slider(lv_event_t *e) {
   cfg_sync_value_labels();
 }
 
-/* Startseite (schwarzer Hintergrund) */
+/* Nur Startseiten-Lautstärke: Farben aus tft_color_setting.h (COLOR_SLIDER_*) */
 static void style_slider(lv_obj_t *sl) {
-  lv_obj_set_style_bg_color(sl, lv_color_hex(0x404040), LV_PART_MAIN);
-  lv_obj_set_style_bg_color(sl, lv_palette_main(LV_PALETTE_ORANGE), LV_PART_INDICATOR);
-  lv_obj_set_style_bg_color(sl, lv_palette_darken(LV_PALETTE_ORANGE, 2), LV_PART_KNOB);
+  lv_color_t fill = rgb565_to_lv(COLOR_SLIDER);
+  lv_obj_set_style_bg_color(sl, rgb565_to_lv(COLOR_SLIDER_BG), LV_PART_MAIN);
+  lv_obj_set_style_border_width(sl, 1, LV_PART_MAIN);
+  lv_obj_set_style_border_color(sl, rgb565_to_lv(COLOR_SLIDER_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(sl, fill, LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(sl, lv_color_mix(fill, lv_color_black(), LV_OPA_60), LV_PART_KNOB);
 }
 
-/* Favoriten-, Einstellungs-, Alarm-UI (hellgrauer Screen) — keine dunkle „Schlucht“ an den Rändern */
+/* Favoriten-, Einstellungs-, Alarm-UI — unverändert hellgrauer Track + Orange */
 static void style_slider_light(lv_obj_t *sl) {
   lv_obj_set_style_bg_color(sl, lv_color_hex(0x888888), LV_PART_MAIN);
   lv_obj_set_style_bg_color(sl, lv_palette_main(LV_PALETTE_ORANGE), LV_PART_INDICATOR);
