@@ -1,4 +1,4 @@
-#define RADIOVERSION "v5.0.3"
+#define RADIOVERSION "v5.0.4"
 #include "00_librarys.h"      //Lade alle benötigten Bibliotheken
 #include "00_pin_settings.h"  //Einstellungen der genutzten Pins
 #include "00_settings.h"      //einstellungen
@@ -14,11 +14,19 @@ extern "C" int esp_bt_controller_mem_release(int mode);
 // Vor tft_display.ino (Arduino fügt die .ino alphabetisch danach ein)
 extern AudioGenerator *decoder;  // Definition in audio.ino
 void showStartPage(void);
-void toggleRadio(boolean off);
-void httpOtaTryConsume(void);
+void toggleRadio(boolean off, boolean keepAlarmSnoozePending = false);
+void alarm_action_stop(void);
+void alarm_action_snooze(void);
+
+static void setup_alarm_hw_buttons(void);
+static void poll_alarm_hw_buttons(void);
+/** Nur Hardware-Stop: wie bisher alles aus, sonst Radio einschalten (Touch-Stop bleibt alarm_action_stop). */
+static void alarm_hw_stop_button_action(void);
+void httpOtaRunDeferredBoot(void);
 // predefined function from modul tft_display.ino
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
 void setBGLight(uint8_t prct);
+boolean initWiFi(const char *wifiSsid, const char *wifiPkey);  /* wlan.ino — Hauptsketch steht vor alphabetischen .ino */
 
 // Liest die aktuelle Uhrzeit und berechnet weekday/minutes
 void updateCurrentTime() {
@@ -30,7 +38,7 @@ void updateCurrentTime() {
 
 // Sucht den nächsten gültigen Alarm
 void findNextAlarm() {
-  Serial.println("Search next alarm time");
+  RADIO_SERIAL(Serial.println("Search next alarm time"));
 
   if (!getLocalTime(&ti)) return; // keine Zeit verfügbar
 
@@ -77,37 +85,37 @@ void findNextAlarm() {
 
   // Ausgabe
   if (alarmday != 8) {
-    Serial.printf(
+    RADIO_SERIAL(Serial.printf(
       "Next alarm: %02d:%02d on %s\n",
       alarmtime / 60, alarmtime % 60,
       days_short[alarmday]
-    );
+    ));
   } else {
-    Serial.println("No alarm found");
+    RADIO_SERIAL(Serial.println("No alarm found"));
   }
 }
 
 // Initialisierung des Systems
 void setup() {
-  Serial.begin(115200);
+  RADIO_SERIAL(Serial.begin(115200));
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_IDF_TARGET_ESP32) && CONFIG_IDF_TARGET_ESP32
   esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);  /* klassischer ESP32: BT-RAM für App freigeben */
 #endif
-  Serial.println("Load preferences");  // Debug-Ausgabe: "Lade Einstellungen"
+  RADIO_SERIAL(Serial.println("Load preferences"));  // Debug-Ausgabe: "Lade Einstellungen"
 
   title[0] = 0;  // Setze das erste Zeichen des Titels auf 0 (leerer Titel)
 
   // Lade die gespeicherten Präferenzen aus dem EEPROM des ESP32
   // Die Präferenzen werden in zwei Themen gespeichert: "radio" und "senderliste"
-  // Beide Themen werden hier geladen
   pref.begin("radio", false);
+
   sender.begin("senderlist", false);
 
   // Werte aus den gespeicherten Präferenzen abrufen, falls vorhanden
-  if (pref.isKey("ssid")) ssid = pref.getString("ssid");  // SSID für WLAN-Verbindung
-  if (pref.isKey("pkey")) pkey = pref.getString("pkey");  // Passkey für WLAN-Verbindung
-  if (pref.isKey("ntp")) ntp = pref.getString("ntp");     // NTP-Server-URL für die Zeitabgleich
-  if (pref.isKey("TIME_ZONE_IANA")) TIME_ZONE_IANA = pref.getString("TIME_ZONE_IANA");  // Zeitzone abrufen
+  if (pref.isKey("ssid")) pref.getString("ssid", ssid, sizeof(ssid));
+  if (pref.isKey("pkey")) pref.getString("pkey", pkey, sizeof(pkey));
+  if (pref.isKey("ntp")) pref.getString("ntp", ntp, sizeof(ntp));
+  if (pref.isKey("TIME_ZONE_IANA")) pref.getString("TIME_ZONE_IANA", TIME_ZONE_IANA, sizeof(TIME_ZONE_IANA));
   if (pref.isKey("LATITUDE")) LATITUDE = pref.getFloat("LATITUDE");   // Latitude für die Wetterdaten
   if (pref.isKey("LONGITUDE")) LONGITUDE = pref.getFloat("LONGITUDE");  // Longitude für die Wetterdaten
 
@@ -115,8 +123,11 @@ void setup() {
   curGain = 50;                                              // Standardwert für Lautstärke
   if (pref.isKey("gain")) curGain = (uint8_t)constrain((int)pref.getUShort("gain"), 0, 100);
 
-  snoozeTime = 30;                                                  // Standardwert für Schlummerzeit in Minuten
-  if (pref.isKey("snooze")) snoozeTime = pref.getUShort("snooze");  // Abrufen der Schlummerzeit
+  snoozeTime = 30;                                                  // Standardwert für Einschlafzeit in Minuten
+  if (pref.isKey("snooze")) snoozeTime = (uint8_t)constrain((int)pref.getUShort("snooze"), 0, 60);
+
+  alarmSnoozeMin = 0;
+  if (pref.isKey("alm_snooze")) alarmSnoozeMin = (uint8_t)constrain((int)pref.getUShort("alm_snooze"), 0, 10);
 
   bright = 80;                                                  // Standardwert für Helligkeit in Prozent
   if (pref.isKey("bright")) bright = pref.getUShort("bright");  // Abrufen des Helligkeitswerts
@@ -145,25 +156,33 @@ void setup() {
   actStation = curStation;  // Setze die aktive Station auf die aktuelle Station
 
   // Debug-Ausgabe der aktuellen Station, Lautstärke, SSID und NTP-Server
-  Serial.printf("station %i, gain %i, ssid %s, ntp %s\n", curStation, curGain, ssid.c_str(), ntp.c_str());
-  Serial.printf_P(PSTR("heap vor setup_audio: %u\n"), (unsigned)ESP.getFreeHeap());
+  RADIO_SERIAL(Serial.printf("station %i, gain %i, ssid %s, ntp %s\n", curStation, curGain, ssid, ntp));
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap vor setup_audio: %u\n"), (unsigned)ESP.getFreeHeap()));
 
   // Führe die Setup-Funktionen für Audio, Display und Senderliste aus
   setup_audio();       // Initialisiere die Audio-Streams
-  Serial.printf_P(PSTR("heap nach setup_audio: %u\n"), (unsigned)ESP.getFreeHeap());
-  Serial.println(F("setup_display…"));
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap nach setup_audio: %u\n"), (unsigned)ESP.getFreeHeap()));
+  RADIO_SERIAL(Serial.println(F("setup_display…")));
   setup_display();     // Initialisiere die Display-Schnittstelle
-  Serial.printf_P(PSTR("heap nach setup_display: %u\n"), (unsigned)ESP.getFreeHeap());
-  Serial.println(F("setup_display OK"));
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap nach setup_display: %u\n"), (unsigned)ESP.getFreeHeap()));
+  RADIO_SERIAL(Serial.println(F("setup_display OK")));
+
+  /* HTTP-OTA: nach setup_display → gleicher OTA-Screen (Balken/Text) wie bei ArduinoOTA. */
+  if (pref.getUChar(PREF_HTTP_OTA_PEND, 0) != 0) {
+    httpOtaRunDeferredBoot();
+  }
+
   /* Audio-Puffer erst bei erstem startUrl: sonst ~70 KiB weniger Heap → LwIP/Wetter/TCP-Timeouts. */
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap vor setup_senderList: %u\n"), (unsigned)ESP.getFreeHeap()));
   setup_senderList();  // Lade die Senderliste aus den Präferenzen
+  RADIO_SERIAL(Serial.printf_P(PSTR("heap nach setup_senderList: %u\n"), (unsigned)ESP.getFreeHeap()));
   setGain(curGain);    // gespeicherte Lautstärke auf I2S (0 = dauerhaft stumm bis zum nächsten Slider-Zug)
 
   // Versuche, eine WLAN-Verbindung herzustellen und zeige den Fortschritt auf dem Display an
   displayClear();                                                                                          // Bildschirm löschen
   displayMessage(5, 10, 310, 30, TXT_CONNECTING_TO, ALIGNCENTER, true, ILI9341_YELLOW, ILI9341_BLACK, 1);  // Zeige "Verbinden zu" auf dem Display an
-  displayMessage(5, 50, 310, 30, ssid.c_str(), ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);        // Zeige die SSID auf dem Display an
-  Serial.println("Connect WiFi");                                                                          // Debug-Ausgabe: "Verbinde zu WiFi"
+  displayMessage(5, 50, 310, 30, ssid, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);  // SSID auf dem Display
+  RADIO_SERIAL(Serial.println("Connect WiFi"));                                                                          // Debug-Ausgabe: "Verbinde zu WiFi"
 
   // Versuche, sich mit dem WLAN zu verbinden
   connected = initWiFi(ssid, pkey);
@@ -171,7 +190,7 @@ void setup() {
   // Wenn die Verbindung erfolgreich war
   if (connected) {
     // Konfiguriere die Echtzeituhr mit der Zeitzone und dem NTP-Server
-    configTzTime(TIME_ZONE, ntp.c_str());
+    configTzTime(TIME_ZONE, ntp);
 
     // Zeige Datum und Uhrzeit sowie den Namen der Station an
     delay(500);  // Kurze Verzögerung für die Anzeige
@@ -180,7 +199,7 @@ void setup() {
     minutes = ti.tm_hour * 60 + ti.tm_min;  // Berechne Minuten seit Mitternacht
     weekday = ti.tm_wday;                   // Wochentag (0 = Sonntag, 1 = Montag, usw.)
 
-    Serial.println("Start");  // Debug-Ausgabe: "Start"
+    RADIO_SERIAL(Serial.println("Start"));  // Debug-Ausgabe: "Start"
 
     // Wenn der Alarm aktiviert ist, berechne das Datum und die Uhrzeit für den nächsten Alarm
     if (pref.isKey("alarmon") && pref.getBool("alarmon")) findNextAlarm();
@@ -198,7 +217,7 @@ void setup() {
   }
 
   /* Webserver vor Startseite (showStartPage): weniger Heap-Fragmentierung vor WebServer::begin(). */
-  Serial.println("Start webserver");  // Debug-Ausgabe: "Starte Webserver"
+  RADIO_SERIAL(Serial.println("Start webserver"));  // Debug-Ausgabe: "Starte Webserver"
   setup_webserver();
   setup_ota();
 
@@ -206,13 +225,12 @@ void setup() {
     showStartPage();
   }
 
+  setup_alarm_hw_buttons();
+
   start_conf = 0;  // Setze den Startwert für die Konfiguration
 }
 
 void loop() {
-  /* HTTP-Firmware-Update (blockiert bis Reboot oder Fehler) — vor allem anderen */
-  httpOtaTryConsume();
-
   // Überprüfe und verarbeite mögliche OTA-Updates
   ArduinoOTA.handle();
 
@@ -226,6 +244,8 @@ void loop() {
 
   // Überprüfe Touch-Ereignisse
   touch_loop();
+
+  poll_alarm_hw_buttons();
 
   /* Nach LVGL: nochmal füttern — Screen-Wechsel kann lv_timer_handler länger blocken (Underruns/Knackser). */
   if (connected && (radio || decoder)) {
@@ -271,7 +291,7 @@ void loop() {
     // LDR-Helligkeit nur auf der Startseite anwenden
     if (startpage && (diff > 50)) {
       setBGLight(bright);                                  // Setze die Hintergrundbeleuchtung
-      Serial.printf("ldr %i letzter %i\n", tmp, lastldr);  // Debug-Ausgabe der aktuellen und letzten LDR-Werte
+      RADIO_SERIAL(Serial.printf("ldr %i letzter %i\n", tmp, lastldr));  // Debug-Ausgabe der aktuellen und letzten LDR-Werte
       lastldr = tmp;                                       // Merke den aktuellen LDR-Wert für die nächste Messung
     }
   }
@@ -279,8 +299,8 @@ void loop() {
   // Wetter nur bei echter WLAN-Verbindung (ohne STA z. B. nur AP → kein Internet → kein HTTP)
   if (millis() - lastWeatherUpdate > weatherUpdateInterval || lastWeatherUpdate == 0) {
     if (connected && !radio && startpage) {
-      String weatherData = getWeatherData(LATITUDE, LONGITUDE, TIME_ZONE_IANA);
-      displayWeather(weatherData);
+      OpenMeteoTemps wt;
+      if (fetchOpenMeteoWeather(&wt, LATITUDE, LONGITUDE, TIME_ZONE_IANA)) displayWeather(&wt);
     }
     lastWeatherUpdate = millis();
   }
@@ -289,11 +309,18 @@ void loop() {
   if ((millis() - lastUpdate) > 1000) {
     lastUpdate = millis();  // Aktualisiere den Zeitstempel
 
-    // Regelmäßige Prüfung der Schlummerzeit
+    // Einschlafzeit (Sleep-Timer): Ende → Radio aus
     if (millis() > snoozeTimeEnd && snoozeTimeEnd > 0) {
       snoozeTimeEnd = 0;  // Setze den Schlummermodus zurück
       toggleRadio(true);  // Schalte das Radio aus
       showRadio();        // Zeige Radio-Status an
+    }
+
+    // Wecker-Schlummer: Ende → Radio wieder an, UI wie beim ersten Wecken
+    if (alarmSnoozeUntil != 0 && millis() >= alarmSnoozeUntil) {
+      alarmSnoozeUntil = 0;
+      alarmActionsVisible = true;
+      toggleRadio(false);
     }
 
     // Hole das Datum und die Uhrzeit
@@ -318,9 +345,8 @@ void loop() {
     if ((alarmday < 8) && getLocalTime(&ti)) {
       // Wenn der Alarmtag und die Zeit erreicht sind, schalte das Radio ein und berechne die Werte für den nächsten erwarteten Alarm
       if ((alarmday == weekday) && (minutes == alarmtime) && !alarmTriggered) {
-        // Test Beeper#####################
         alarmTriggered = true;  // verhindert mehrfaches Auslösen
-        // Test Beeper#####################
+        alarmActionsVisible = true;
         toggleRadio(false);  // Schalte das Radio an
         showRadio();         // Zeige Radio-Informationen an
         findNextAlarm();     // Berechne den nächsten Alarm
@@ -336,4 +362,53 @@ if (minutes != alarmtime) {
 
   // Starte einen Neustart, wenn das Gerät mehr als 5 Minuten getrennt war
   if (!connected && ((millis() - discon) > 300000)) ESP.restart();
+}
+
+static void setup_alarm_hw_buttons(void) {
+  if (ALARM_HW_BTN_STOP_PIN >= 0)
+    pinMode((uint8_t)ALARM_HW_BTN_STOP_PIN, INPUT_PULLUP);
+  if (ALARM_HW_BTN_SNOOZE_PIN >= 0)
+    pinMode((uint8_t)ALARM_HW_BTN_SNOOZE_PIN, INPUT_PULLUP);
+}
+
+static void poll_alarm_hw_buttons(void) {
+  if (ALARM_HW_BTN_STOP_PIN < 0 && ALARM_HW_BTN_SNOOZE_PIN < 0) return;
+
+  if (ALARM_HW_BTN_STOP_PIN >= 0) {
+    static uint8_t stop_wait_release;
+    int lv = digitalRead(ALARM_HW_BTN_STOP_PIN);
+    if (stop_wait_release == 0) {
+      if (lv == LOW) {
+        alarm_hw_stop_button_action();
+        stop_wait_release = 1;
+      }
+    } else if (lv != LOW) {
+      stop_wait_release = 0;
+    }
+  }
+
+  if (ALARM_HW_BTN_SNOOZE_PIN >= 0) {
+    static uint8_t snooze_wait_release;
+    int lv = digitalRead(ALARM_HW_BTN_SNOOZE_PIN);
+    if (snooze_wait_release == 0) {
+      if (lv == LOW) {
+        if (alarmActionsVisible) {
+          alarm_action_snooze();
+          snooze_wait_release = 1;
+        } else {
+          snooze_wait_release = 2;
+        }
+      }
+    } else if (lv != LOW) {
+      snooze_wait_release = 0;
+    }
+  }
+}
+
+static void alarm_hw_stop_button_action(void) {
+  if (radio || alarmActionsVisible || alarmSnoozeUntil != 0) {
+    toggleRadio(true, false);
+  } else {
+    toggleRadio(false, false);
+  }
 }

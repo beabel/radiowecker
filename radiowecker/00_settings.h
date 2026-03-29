@@ -18,16 +18,41 @@ typedef struct {
 #define AUDIO_GAIN_MAX 0.42f
 #endif
 
+/**
+ * Serielle Diagnose für den gesamten Sketch (inkl. Wetter-URL/JSON).
+ * 0: kein Serial.begin(), alle RADIO_SERIAL(...) werden wegpräpariert — weniger Blockierzeit an der UART,
+ *    weniger Flash durch Debug-Strings; USB-Upload zum Flashen bleibt unabhängig davon möglich.
+ * 1: bisheriges Verhalten. Build: -DRADIO_DEBUG_SERIAL=0
+ */
+#ifndef RADIO_DEBUG_SERIAL
+#define RADIO_DEBUG_SERIAL 0
+#endif
+#if RADIO_DEBUG_SERIAL
+#define RADIO_SERIAL(x) \
+  do {                    \
+    x;                    \
+  } while (0)
+#else
+#define RADIO_SERIAL(x) ((void)0)
+#endif
+
 // Globale Variablen
 Station stationlist[STATIONS];  // Liste der verfügbaren Stationen
 
+/* Konfiguration als char[] statt Arduino-String: kein Heap für SSID/NTP/TZ, weniger Fragmentierung. */
+#define CFG_SSID_MAX 33         /* 802.11: SSID max. 32 Zeichen + NUL */
+#define CFG_WPA_PSK_MAX 65      /* WPA-PSK: max. 63 ASCII + NUL */
+#define CFG_NTP_HOST_MAX 96     /* Hostname (weit unter DNS-253) */
+#define CFG_TZ_IANA_MAX 64      /* z. B. America/Argentina/ComodRivadavia */
+
 // Variablen zur Speicherung von Konfigurationsdaten
-String ssid = "";                // SSID für die WLAN-Verbindung
-String pkey = "";                // Passwort für die WLAN-Verbindung
-String ntp = "de.pool.ntp.org";  // URL des NTP-Servers zur Zeitabgleich
+char ssid[CFG_SSID_MAX] = "";
+char pkey[CFG_WPA_PSK_MAX] = "";
+char ntp[CFG_NTP_HOST_MAX] = "de.pool.ntp.org";
 uint8_t curStation = 0;          // Index der aktuell ausgewählten Station in der stationlist
 uint8_t curGain = 50;            // Aktuelle Lautstärke 0–100 (Slider)
-uint8_t snoozeTime = 30;         // Schlummerzeit in Minuten
+uint8_t snoozeTime = 30;         // Einschlafzeit (Sleep-Timer) in Minuten
+uint8_t alarmSnoozeMin = 0;      // Wecker-Schlummer 0–10 min (0 = Funktion aus)
 uint16_t alarm1 = 390;           // Erste Alarmzeit (6:30 Uhr in Minuten nach Mitternacht)
 uint8_t alarmday1 = 0B00111110;  // Gültige Wochentage für den ersten Alarm (Beispiel: 00111110 = Montag bis Freitag)
 uint16_t alarm2 = 480;           // Zweite Alarmzeit (8:00 Uhr in Minuten nach Mitternacht)
@@ -37,7 +62,9 @@ uint8_t bright = 25;             // Helligkeit in Prozent. 0 bedeutet, dass der 
 
 // Weitere globale Variablen
 uint32_t lastchange = 0;       // Zeitpunkt der letzten Auswahländerung
-uint32_t snoozeTimeEnd = 0;    // Zeitpunkt zum Beenden des Schlummermodus
+uint32_t snoozeTimeEnd = 0;    // Einschlafzeit (Sleep-Timer): Ende → Radio aus
+uint32_t alarmSnoozeUntil = 0; // Wecker-Schlummer: millis() bis Radio wieder an (0 = inaktiv)
+bool alarmActionsVisible = false; // Stop/Schlummer-Buttons: true bei Weckstart und nach Schlummer-Ende (Radio wieder an)
 uint16_t alarmtime = 0;        // Nächste relevante Alarmzeit
 uint8_t alarmday = 8;          // Wochentag für den nächsten relevanten Alarm oder 8 bedeutet Alarm deaktiviert
 char title[128];               // Stream-Titel (UTF-8 nach Normalisierung aus ICY-Metadaten)
@@ -81,6 +108,9 @@ bool alarmTriggered = false;
 #define HTTP_OTA_FIRMWARE_FILENAME "radiowecker-firmware.bin"
 /** Mindestens freier Platz im inaktiven OTA-Slot (Bytes), sonst Abbruch vor Download */
 #define HTTP_OTA_MIN_FREE_BYTES 524288u
+/** NVS (Namespace „radio“): HTTP-OTA nach Neustart — Key-Namen ≤15 Zeichen */
+#define PREF_HTTP_OTA_PEND "http_otapend"
+#define PREF_HTTP_OTA_TAG "http_otatag"
 //############## WETTER ##############################################################
 // Globale Variable, um den Zeitpunkt des letzten Wetterupdates zu speichern
 unsigned long lastWeatherUpdate = 0;
@@ -88,4 +118,4 @@ const unsigned long weatherUpdateInterval = 60000;  // 60 Sekunden
 // Definiere Latitude, Longitude und Zeitzone
 float LATITUDE = 52.520645;
 float LONGITUDE = 13.409779;
-String TIME_ZONE_IANA = "Europe/Berlin";  // Zeitzone dynamisch setzen
+char TIME_ZONE_IANA[CFG_TZ_IANA_MAX] = "Europe/Berlin";

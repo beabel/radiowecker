@@ -31,6 +31,12 @@ Station defstations[DEFAULTSTATIONS] PROGMEM = {
   { "http://stream.streambase.ch/vrock/mp3-192/", "Virgin Radio", 1 }
 };
 
+/* NVS-String direkt in stationlist — ohne temporäre Arduino-String (30×3× getString weniger Heap/Fragmentierung). */
+static void senderLoadStrOr(Preferences &p, const char *key, char *dest, size_t cap, const char *fallback) {
+  if (p.getString(key, dest, cap) == 0)
+    strlcpy(dest, fallback, cap);
+}
+
 // Füllt die Stationenliste aus den gespeicherten Präferenzen. Wenn ein Eintrag nicht existiert, wird die Standardliste verwendet
 void setup_senderList() {
   char nkey[4];  // Schlüssel für den Namen
@@ -45,14 +51,12 @@ void setup_senderList() {
     sprintf(fkey, "f%i", i);
 
     if (i < DEFAULTSTATIONS) {
-      // Wenn der Index innerhalb der Standardstationen liegt, lade die Daten aus den Präferenzen oder verwende Standardwerte
-      strlcpy(stationlist[i].name, sender.getString(nkey, defstations[i].name).c_str(), 32);
-      strlcpy(stationlist[i].url, sender.getString(ukey, defstations[i].url).c_str(), 150);
+      senderLoadStrOr(sender, nkey, stationlist[i].name, sizeof(stationlist[i].name), defstations[i].name);
+      senderLoadStrOr(sender, ukey, stationlist[i].url, sizeof(stationlist[i].url), defstations[i].url);
       stationlist[i].enabled = sender.getUChar(fkey, defstations[i].enabled);
     } else {
-      // Wenn der Index außerhalb der Standardstationen liegt, lade die Daten aus den Präferenzen oder verwende leere Standardwerte
-      strlcpy(stationlist[i].name, sender.getString(nkey, nkey).c_str(), 32);
-      strlcpy(stationlist[i].url, sender.getString(ukey, "").c_str(), 150);
+      senderLoadStrOr(sender, nkey, stationlist[i].name, sizeof(stationlist[i].name), nkey);
+      senderLoadStrOr(sender, ukey, stationlist[i].url, sizeof(stationlist[i].url), "");
       stationlist[i].enabled = sender.getUChar(fkey, 0);
     }
   }

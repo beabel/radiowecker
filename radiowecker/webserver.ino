@@ -1,4 +1,5 @@
 //home page and templatefor options
+#include <string.h>
 #include "index.h"
 #include "ArduinoJson.h"
 
@@ -39,7 +40,8 @@ void setup_webserver() {
 
   // Info-Tab: Definiert die Route für das Abrufen von Systeminformationen
   server.on("/cmd/getInfo", getInfo);  // Ruft allgemeine Systeminformationen ab
-  server.on("/cmd/startHttpUpdate", handleStartHttpUpdate);
+  /* Kein Upload-Callback: sonst nimmt WebServer 3.x den RAW-Pfad, arg("plain") bleibt leer (JSON-OTA schlägt fehl). */
+  server.on("/cmd/startHttpUpdate", HTTP_POST, handleStartHttpUpdate, nullptr);
 
   // Startet den Webserver
   server.begin();
@@ -59,27 +61,31 @@ void handleRoot() {
   } else {
     // Wenn nicht verbunden, sende die Konfigurationsseite
     // Parameter werden als Argumente im HTML-Request übergeben
-    Serial.println("Got config:");
-    uint8_t a = server.args();  // Anzahl der Argumente im Request
-    Serial.print(a);
-    Serial.println(" Arguments");
-    for (uint8_t i = 0; i < a; i++) Serial.println(server.arg(i));  // Ausgabe aller Argumente
+    RADIO_SERIAL({
+      Serial.println("Got config:");
+      uint8_t a = server.args();  // Anzahl der Argumente im Request
+      Serial.print(a);
+      Serial.println(" Arguments");
+      for (uint8_t i = 0; i < a; i++) Serial.println(server.arg(i));  // Ausgabe aller Argumente
+    });
 
     // Speichern der SSID in den Einstellungen, falls vorhanden
     if (server.hasArg("conf_ssid")) {
-      pref.putString("ssid", server.arg("conf_ssid"));
-      Serial.println(server.arg("conf_ssid"));
+      strlcpy(ssid, server.arg("conf_ssid").c_str(), sizeof(ssid));
+      pref.putString("ssid", ssid);
+      RADIO_SERIAL(Serial.println(ssid));
     }
 
     // Speichern des PKEY in den Einstellungen, falls vorhanden
     if (server.hasArg("conf_pkey")) {
-      pref.putString("pkey", server.arg("conf_pkey"));
-      Serial.println(server.arg("conf_pkey"));
+      strlcpy(pkey, server.arg("conf_pkey").c_str(), sizeof(pkey));
+      pref.putString("pkey", pkey);
+      RADIO_SERIAL(Serial.println(pkey));
     }
 
     // Falls das Reset-Argument vorhanden ist, starte das System neu
     if (server.hasArg("reset")) {
-      Serial.println("Restart!");
+      RADIO_SERIAL(Serial.println("Restart!"));
       ESP.restart();
     }
 
@@ -122,25 +128,25 @@ void setAccessData() {
 
   // Speichere die SSID, wenn vorhanden
   if (server.hasArg("ssid")) {
-    ssid = server.arg("ssid");
+    strlcpy(ssid, server.arg("ssid").c_str(), sizeof(ssid));
     pref.putString("ssid", ssid);
   }
 
   // Speichere den Pre-Shared Key (PKEY), wenn vorhanden
   if (server.hasArg("pkey")) {
-    pkey = server.arg("pkey");
+    strlcpy(pkey, server.arg("pkey").c_str(), sizeof(pkey));
     pref.putString("pkey", pkey);
   }
 
   // Speichere die NTP-Server-Adresse, wenn vorhanden
   if (server.hasArg("ntp")) {
-    ntp = server.arg("ntp");
+    strlcpy(ntp, server.arg("ntp").c_str(), sizeof(ntp));
     pref.putString("ntp", ntp);
   }
 
   // Speichere die Timezone, wenn vorhanden
   if (server.hasArg("TIME_ZONE_IANA")) {
-    TIME_ZONE_IANA = server.arg("TIME_ZONE_IANA");
+    strlcpy(TIME_ZONE_IANA, server.arg("TIME_ZONE_IANA").c_str(), sizeof(TIME_ZONE_IANA));
     pref.putString("TIME_ZONE_IANA", TIME_ZONE_IANA);
   }
 
@@ -163,10 +169,9 @@ if (server.hasArg("LONGITUDE")) {
 // Bearbeitet AJAX-Befehle für "/cmd/getaccess"
 // Sendet Zugangsdaten als Textnachricht
 void getAccessData() {
-  // Erstelle eine Nachricht mit den Zugangsdaten, getrennt durch Zeilenumbrüche
-  String msg = String(ssid) + "\n" + String(pkey) + "\n" + String(ntp) + "\n" + String(TIME_ZONE_IANA) + "\n" + String(LATITUDE, 6) + "\n" + String(LONGITUDE, 6);
-
-  // Antworte mit den Zugangsdaten
+  char msg[384];
+  snprintf(msg, sizeof(msg), "%s\n%s\n%s\n%s\n%.6f\n%.6f\n", ssid, pkey, ntp, TIME_ZONE_IANA, (double)LATITUDE,
+           (double)LONGITUDE);
   server.send(200, "text/plain", msg);
 }
 
@@ -197,20 +202,16 @@ void getAlarms() {
 
   buf[40] = 0;  // Null-Terminierung des Strings
 
-  // Antwort mit den Alarmdaten als Textnachricht
-  server.send(200, "text/plain", String(buf));
+  // Antwort mit den Alarmdaten als Textnachricht (kein String(buf): spart Heap-Kopie)
+  server.send(200, "text/plain", buf);
 }
 
-// Berechnet die Gesamtanzahl der Minuten aus einer Stunden- und Minutenangabe im Format "HH:MM"
-// Gibt die Minuten als uint16_t zurück
-uint16_t stringToMinutes(String val) {
-  uint8_t h, m;
-  // Extrahiere die Stunden aus den ersten zwei Zeichen des Strings und konvertiere sie in eine Ganzzahl
-  h = val.substring(0, 2).toInt();
-  // Extrahiere die Minuten aus den Zeichen nach dem Doppelpunkt und konvertiere sie in eine Ganzzahl
-  m = val.substring(3).toInt();
-  // Berechne die Gesamtanzahl der Minuten und gebe sie zurück
-  return h * 60 + m;
+// Berechnet die Gesamtanzahl der Minuten aus "HH:MM" ohne Arduino-String/substring-Allokationen
+static uint16_t stringToMinutes(const char *val) {
+  int h, m;
+  if (!val || sscanf(val, "%d:%d", &h, &m) != 2) return 0;
+  if (h < 0 || h > 23 || m < 0 || m > 59) return 0;
+  return (uint16_t)(h * 60 + m);
 }
 
 // Verarbeitet den AJAX-Befehl /cmd/setalarms zum Setzen der Alarmzeiten
@@ -218,21 +219,21 @@ void setAlarms() {
   char txt[10];
 
   // Debug-Ausgabe: Beginn des Setzens der Alarme
-  Serial.println("Set alarms start");
+  RADIO_SERIAL(Serial.println("Set alarms start"));
 
   // Überprüfe, ob der Parameter "al0" vorhanden ist und setze alarm1
   if (server.hasArg("al0")) {
-    alarm1 = stringToMinutes(server.arg("al0"));  // Konvertiere die Zeit in Minuten
-    Serial.print(server.arg("al0"));              // Debug-Ausgabe der übergebenen Zeit
-    Serial.printf(" = %i\n", alarm1);             // Debug-Ausgabe des berechneten Alarmwerts
+    alarm1 = stringToMinutes(server.arg("al0").c_str());  // Konvertiere die Zeit in Minuten
+    RADIO_SERIAL(Serial.print(server.arg("al0")));              // Debug-Ausgabe der übergebenen Zeit
+    RADIO_SERIAL(Serial.printf(" = %i\n", alarm1));             // Debug-Ausgabe des berechneten Alarmwerts
     pref.putUInt("alarm1", alarm1);               // Speichere den Alarmwert in den Einstellungen
   }
 
   // Überprüfe, ob der Parameter "al8" vorhanden ist und setze alarm2
   if (server.hasArg("al8")) {
-    alarm2 = stringToMinutes(server.arg("al8"));  // Konvertiere die Zeit in Minuten
-    Serial.print(server.arg("al8"));              // Debug-Ausgabe der übergebenen Zeit
-    Serial.printf(" = %i\n", alarm2);             // Debug-Ausgabe des berechneten Alarmwerts
+    alarm2 = stringToMinutes(server.arg("al8").c_str());  // Konvertiere die Zeit in Minuten
+    RADIO_SERIAL(Serial.print(server.arg("al8")));              // Debug-Ausgabe der übergebenen Zeit
+    RADIO_SERIAL(Serial.printf(" = %i\n", alarm2));             // Debug-Ausgabe des berechneten Alarmwerts
     pref.putUInt("alarm2", alarm2);               // Speichere den Alarmwert in den Einstellungen
   }
 
@@ -260,7 +261,7 @@ void setAlarms() {
   pref.putUShort("alarmday2", alarmday2);
 
   // Debug-Ausgabe der Wochentags-Flags
-  Serial.printf("days1 %x days2 %x\n", alarmday1, alarmday2);
+  RADIO_SERIAL(Serial.printf("days1 %x days2 %x\n", alarmday1, alarmday2));
 
   // Nächster Alarm berechnen; Kopfzeile nur aktualisieren, wenn Startseite sichtbar ist
   findNextAlarm();
@@ -279,10 +280,11 @@ void getStationData() {
     // Wenn die Station-ID außerhalb des gültigen Bereichs liegt, setze sie auf die letzte Station
     if (i >= STATIONS) i = STATIONS - 1;
 
-    // Erstelle eine Nachricht mit dem Namen, der URL und dem Aktivierungsstatus der Station, getrennt durch neue Zeilen
-    String msg = String(stationlist[i].name) + "\n" + String(stationlist[i].url) + "\n" + String(stationlist[i].enabled) + "\n" + String(i + 1);
+    /* Festpuffer statt String-Ketten (4× weniger dynamische Allokation pro Request) */
+    char msg[32 + 150 + 16];
+    snprintf(msg, sizeof(msg), "%s\n%s\n%u\n%u", stationlist[i].name, stationlist[i].url, (unsigned)stationlist[i].enabled,
+             (unsigned)(i + 1));
 
-    // Sende die Nachricht als Antwort
     server.send(200, "text/plain", msg);
   } else {
     // Wenn der Parameter fehlt oder ungültig ist, sende eine Fehlermeldung
@@ -323,7 +325,7 @@ void setStationData() {
     if (server.hasArg("position")) {
       int16_t newpos = server.arg("position").toInt();
       newpos--;
-      Serial.printf("Move %i to position %i\n", i + 1, newpos + 1);
+      RADIO_SERIAL(Serial.printf("Move %i to position %i\n", i + 1, newpos + 1));
       if ((i != newpos) && (newpos >= 0) && (newpos < STATIONS)) {
         reorder(i, newpos);  // Ändert die Position der Station in der Liste
         saveList();          // Speichert die aktualisierte Liste
@@ -346,7 +348,7 @@ void testStation() {
   // Überprüft, ob das URL-Argument vorhanden ist
   if (server.hasArg("url")) {
     // Versucht, die URL zu starten und speichert das Ergebnis
-    ret = startUrl(server.arg("url"));
+    ret = startUrl(server.arg("url").c_str());
   }
 
   // Sendet eine Bestätigung bei Erfolg oder eine Fehlermeldung bei Misserfolg
@@ -355,7 +357,7 @@ void testStation() {
     server.send(200, "text/plain", "OK");
   } else {
     // Bei Misserfolg: Wechselt zurück zur aktuellen Station und sendet "ERROR"
-    startUrl(String(stationlist[actStation].url));
+    startUrl(stationlist[actStation].url);
     server.send(300, "text/plain", "ERROR");
   }
 }
@@ -363,7 +365,7 @@ void testStation() {
 // Verarbeitet den AJAX-Befehl /cmd/endtest, um den Test zu beenden
 void endTest() {
   // Wechselt zurück zur aktuellen Station, um den Test zu beenden
-  startUrl(String(stationlist[actStation].url));
+  startUrl(stationlist[actStation].url);
 
   // Sendet eine Bestätigung, dass der Test beendet wurde
   server.send(200, "text/plain", "OK");
@@ -407,8 +409,10 @@ void GainSlider() {
     server.send(200, "text/plain", "OK");
 
     // Gibt den Wert für Debugging-Zwecke aus
-    Serial.print("GainValue: ");
-    Serial.println(floatWert);
+    RADIO_SERIAL({
+      Serial.print("GainValue: ");
+      Serial.println(floatWert);
+    });
   } else {
     // Antwortet mit einem Fehlercode, wenn der Parameter fehlt
     server.send(400, "text/plain", "ERROR");

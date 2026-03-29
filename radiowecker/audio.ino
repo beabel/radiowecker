@@ -54,12 +54,12 @@ static bool ensure_audio_prealloc(void) {
   for (size_t i = 0; i < sizeof(kStreamTry) / sizeof(kStreamTry[0]); i++) {
     if (try_alloc(kStreamTry[i])) {
       if (kStreamTry[i] < preallocateBufferSize) {
-        Serial.printf_P(PSTR("Audio: Stream-Puffer %d B (kleiner = mehr Heap für TCP)\n"), kStreamTry[i]);
+        RADIO_SERIAL(Serial.printf_P(PSTR("Audio: Stream-Puffer %d B (kleiner = mehr Heap für TCP)\n"), kStreamTry[i]));
       }
       return true;
     }
   }
-  Serial.printf_P(PSTR("WARNING: Audio-Puffer malloc fehlgeschlagen. freeHeap=%u\n"), (unsigned)ESP.getFreeHeap());
+  RADIO_SERIAL(Serial.printf_P(PSTR("WARNING: Audio-Puffer malloc fehlgeschlagen. freeHeap=%u\n"), (unsigned)ESP.getFreeHeap()));
   return false;
 }
 
@@ -79,7 +79,7 @@ static bool audio_ensure_i2s_on_esp8266_style(void) {
   out->SetChannels(2);
   out->SetRate(44100);
   if (!out->begin()) {
-    Serial.println(F("Audio: I2S begin fehlgeschlagen (DMA/Heap?)"));
+    RADIO_SERIAL(Serial.println(F("Audio: I2S begin fehlgeschlagen (DMA/Heap?)")));
     return false;
   }
   return true;
@@ -97,7 +97,7 @@ void setup_audio() {
   out->SetChannels(2);
   out->SetRate(44100);
   if (!out->begin()) {
-    Serial.println(F("Audio: I2S begin fehlgeschlagen (DMA/Heap?)"));
+    RADIO_SERIAL(Serial.println(F("Audio: I2S begin fehlgeschlagen (DMA/Heap?)")));
   }
 #endif
 }
@@ -118,14 +118,14 @@ static uint16_t s_audio_soft_fail_streak = 0;
 static void audio_recover_or_stop(void) {
   stopPlaying();
   if (radio && connected && actStation < STATIONS) {
-    Serial.printf_P(PSTR("Stream unterbrochen — Reconnect %s\n"), stationlist[actStation].name);
-    if (startUrl(String(stationlist[actStation].url))) {
+    RADIO_SERIAL(Serial.printf_P(PSTR("Stream unterbrochen — Reconnect %s\n"), stationlist[actStation].name));
+    if (startUrl(stationlist[actStation].url)) {
       DrawFooterButtons_Power_Sleep_Alarm();
       return;
     }
   }
   radio = false;
-  Serial.println(F("Stream beendet / Reconnect fehlgeschlagen (Radio aus)."));
+  RADIO_SERIAL(Serial.println(F("Stream beendet / Reconnect fehlgeschlagen (Radio aus).")));
   DrawFooterButtons_Power_Sleep_Alarm();
 }
 
@@ -205,7 +205,7 @@ static void metadata_latin1_to_utf8(const char *in, char *out, size_t outsz) {
 void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string) {
   (void)cbData;
   if (type == nullptr || string == nullptr) {
-    Serial.println("Error: Null pointer encountered in MDCallback.");
+    RADIO_SERIAL(Serial.println("Error: Null pointer encountered in MDCallback."));
     return;
   }
 
@@ -222,10 +222,10 @@ void MDCallback(void *cbData, const char *type, bool isUnicode, const char *stri
     } else {
       metadata_latin1_to_utf8(s2, title, sizeof(title));
     }
-    Serial.printf("Title: %s\n", title);
+    RADIO_SERIAL(Serial.printf("Title: %s\n", title));
     newTitle = true;
   } else {
-    Serial.printf("METADATA '%s' = '%s'\n", s1, s2);
+    RADIO_SERIAL(Serial.printf("METADATA '%s' = '%s'\n", s1, s2));
   }
 }
 
@@ -258,22 +258,27 @@ void stopPlaying() {
 #endif
 }
 
-// Startet das Abspielen eines Streams von der angegebenen Station
-bool startUrl(String url) {
+// Startet das Abspielen eines Streams von der angegebenen Station (URL aus stationlist[].url o. Ä.)
+bool startUrl(const char *url) {
   stopPlaying();  // Zuerst bestehende Streams schließen
 
-  if (!out || !ensure_audio_prealloc()) {
-    Serial.println(F("startUrl: kein I2S oder Audio-Puffer-Allokation fehlgeschlagen"));
+  if (!url || !*url) {
+    RADIO_SERIAL(Serial.println(F("startUrl: leere URL")));
     return false;
   }
 
-  Serial.printf_P(PSTR("startUrl: heap=%u vor open\n"), (unsigned)ESP.getFreeHeap());
+  if (!out || !ensure_audio_prealloc()) {
+    RADIO_SERIAL(Serial.println(F("startUrl: kein I2S oder Audio-Puffer-Allokation fehlgeschlagen")));
+    return false;
+  }
+
+  RADIO_SERIAL(Serial.printf_P(PSTR("startUrl: heap=%u vor open\n"), (unsigned)ESP.getFreeHeap()));
   yield();
 
-  Serial.printf("Active station %s\n", url.c_str());
+  RADIO_SERIAL(Serial.printf("Active station %s\n", url));
   file = new AudioFileSourceICYStream();
-  if (!file->open(url.c_str())) {
-    Serial.printf_P(PSTR("startUrl: open fehlgeschlagen heap=%u\n"), (unsigned)ESP.getFreeHeap());
+  if (!file->open(url)) {
+    RADIO_SERIAL(Serial.printf_P(PSTR("startUrl: open fehlgeschlagen heap=%u\n"), (unsigned)ESP.getFreeHeap()));
     delete file;
     file = NULL;
     return false;
@@ -282,14 +287,14 @@ bool startUrl(String url) {
   file->RegisterMetadataCB(MDCallback, NULL);
 
   buff = new AudioFileSourceBuffer(file, preallocateBuffer, s_effective_buffer_size);
-  Serial.printf_P(PSTR("sourcebuffer created - Free mem=%d\n"), ESP.getFreeHeap());
+  RADIO_SERIAL(Serial.printf_P(PSTR("sourcebuffer created - Free mem=%d\n"), ESP.getFreeHeap()));
 
   decoder = (AudioGenerator *)new AudioGeneratorMP3(preallocateCodec, preallocateCodecSize);
-  Serial.printf_P(PSTR("created decoder\n"));
-  Serial.printf_P(PSTR("Decoder start...\n"));
+  RADIO_SERIAL(Serial.printf_P(PSTR("created decoder\n")));
+  RADIO_SERIAL(Serial.printf_P(PSTR("Decoder start...\n")));
   if (!decoder->begin(buff, out)) {
-    Serial.printf_P(PSTR("MP3 decoder begin failed (codec %d B, need %d B, heap %u)\n"),
-                    preallocateCodecSize, (int)AudioGeneratorMP3::preAllocSize(), (unsigned)ESP.getFreeHeap());
+    RADIO_SERIAL(Serial.printf_P(PSTR("MP3 decoder begin failed (codec %d B, need %d B, heap %u)\n"),
+                    preallocateCodecSize, (int)AudioGeneratorMP3::preAllocSize(), (unsigned)ESP.getFreeHeap()));
     delete decoder;
     decoder = NULL;
     buff->close();
@@ -308,7 +313,7 @@ bool startUrl(String url) {
     }
   }
   setGain(curGain);
-  Serial.printf_P(PSTR("MP3 ok running=%d\n"), decoder->isRunning() ? 1 : 0);
+  RADIO_SERIAL(Serial.printf_P(PSTR("MP3 ok running=%d\n"), decoder->isRunning() ? 1 : 0));
 
   return decoder->isRunning();
 }
@@ -323,5 +328,5 @@ void setGain(float gain) {
   float v = g * AUDIO_GAIN_MAX;
   if (v > 4.0f) v = 4.0f;
   out->SetGain(v);
-  Serial.printf_P(PSTR("New volume = %4.2f\n"), v);
+  RADIO_SERIAL(Serial.printf_P(PSTR("New volume = %4.2f\n"), v));
 }
