@@ -897,8 +897,8 @@ static void build_clock_screen(void) {
   lv_obj_clear_flag(lbl_stream_title, LV_OBJ_FLAG_SCROLLABLE);
   lv_label_set_text(lbl_stream_title, "");
 
-  /* Sender vor/zurück: unter der Uhr im Datumsband (nicht über der Uhr), Breite wie zuvor. */
-  const lv_coord_t clock_nav_w = 34;
+  /* Sender vor/zurück: breitere Touch-Ziele; Abstand zum zentralen Tap (Unterseite) über clock_nav_tap_margin. */
+  const lv_coord_t clock_nav_w = 48;
   const lv_coord_t clock_nav_y = clock_top + clock_bar_h + date_below_clock;
   const lv_coord_t clock_nav_h = date_row_h;
   btn_l = lv_button_create(scr_clock);
@@ -919,11 +919,13 @@ static void build_clock_screen(void) {
   lv_label_set_text(l2, LV_SYMBOL_RIGHT);
   lv_obj_center(l2);
 
-  /* Tap-Bereich unter der Kopfzeile bis knapp über Wetter/Radio — nicht bis an den Lautstärke-Slider
-     (sonst beim Schieben versehentlich Einstellungsseite / Weg zu Favoriten). */
+  /* Tap-Bereich Mitte: seitlich einrücken (nav_w + Rand), damit Pfeile nicht knapp an „Unterseite“ grenzen. */
   const lv_coord_t clock_tap_gap_above_slider = 32;
+  const lv_coord_t clock_nav_tap_margin = 8;
+  const lv_coord_t clock_tap_side_inset = clock_nav_w + clock_nav_tap_margin;
+  const lv_coord_t clock_tap_w = 320 - 2 * clock_tap_side_inset;
   lv_obj_t *btn_clock_radio = lv_button_create(scr_clock);
-  lv_obj_set_size(btn_clock_radio, 288,
+  lv_obj_set_size(btn_clock_radio, clock_tap_w,
                   (lv_coord_t)(mid_y + mid_block_h - 22 - clock_tap_gap_above_slider));
   lv_obj_align(btn_clock_radio, LV_ALIGN_TOP_MID, 0, 22);
   lv_obj_add_flag(btn_clock_radio, LV_OBJ_FLAG_CLICKABLE);
