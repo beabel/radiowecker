@@ -25,7 +25,7 @@ typedef struct {
  * 1: bisheriges Verhalten. Build: -DRADIO_DEBUG_SERIAL=0
  */
 #ifndef RADIO_DEBUG_SERIAL
-#define RADIO_DEBUG_SERIAL 0
+#define RADIO_DEBUG_SERIAL 1
 #endif
 #if RADIO_DEBUG_SERIAL
 #define RADIO_SERIAL(x) \

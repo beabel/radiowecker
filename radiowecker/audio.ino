@@ -201,6 +201,26 @@ static void metadata_latin1_to_utf8(const char *in, char *out, size_t outsz) {
   out[o] = 0;
 }
 
+/*
+ * ICY/Shoutcast-Metadaten (StreamTitle):
+ * - Viele Sender schicken nichts oder nur alle 10–60 s (Header icy-metaint).
+ * - Kodierung: oft UTF-8, sonst ISO-8859-1; russische Sender manchmal Windows-1251 —
+ *   dann schlägt utf8_ok fehl und der Latin-1-Fallback liefert falsche Zeichen (kein Kyrillisch).
+ * - Leerer StreamTitle (len=0): ICY liefert manchmal Padding/leere Blöcke — wird ignoriert, Titel bleibt.
+ * Diagnose: RADIO_DEBUG_SERIAL=1 in 00_settings.h, seriell 115200 Baud.
+ * Extern: ffplay -loglevel debug URL oder Stream im Browser (Entwicklertools → Netzwerk).
+ */
+#if RADIO_DEBUG_SERIAL
+static void radio_debug_icy_raw(const char *s, size_t maxshow) {
+  Serial.print(F("ICY raw hex: "));
+  const unsigned char *p = (const unsigned char *)s;
+  for (size_t i = 0; i < maxshow && p[i]; i++) {
+    Serial.printf("%02x ", (unsigned)p[i]);
+  }
+  Serial.println();
+}
+#endif
+
 // Callback-Funktion, die aufgerufen wird, wenn Metadaten im Eingabestream gefunden werden
 void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string) {
   (void)cbData;
@@ -210,11 +230,24 @@ void MDCallback(void *cbData, const char *type, bool isUnicode, const char *stri
   }
 
   char s1[32];
-  char s2[160];
+  /* Genug Platz für lange StreamTitle-Zeilen; zu kurz → abgeschnittener UTF-8 → utf8_ok=0. */
+  char s2[384];
   strlcpy(s1, type, sizeof(s1));
   strlcpy(s2, string, sizeof(s2));
 
   if (strstr(s1, "Title") != nullptr) {
+    if (s2[0] == '\0') {
+#if RADIO_DEBUG_SERIAL
+      Serial.println(F("ICY StreamTitle leer (len=0) — Titel unverändert, utf8_ok=1 nur trivial"));
+#endif
+      return;
+    }
+#if RADIO_DEBUG_SERIAL
+    radio_debug_icy_raw(s2, 48);
+    Serial.printf("ICY StreamTitle type='%s' isUnicode=%d len=%u utf8_ok=%d path=%s\n", s1, isUnicode ? 1 : 0,
+                  (unsigned)strlen(s2), metadata_is_valid_utf8(s2) ? 1 : 0,
+                  isUnicode ? "unicode" : (metadata_is_valid_utf8(s2) ? "utf8" : "latin1"));
+#endif
     if (isUnicode) {
       strlcpy(title, s2, sizeof(title));
     } else if (metadata_is_valid_utf8(s2)) {

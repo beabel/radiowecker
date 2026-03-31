@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-/** UI-Sprache (NVS-Key "uilang"). Russisch auf dem TFT: lateinische Umschrift (ASCII), kein Extra-Font. */
+/** UI-Sprache (NVS-Key "uilang", 0–5: de,en,fr,ru,es,nl). TFT: UTF-8, Fallback Montserrat 14 → lv_font_latin_supp_14 (u. a. ES/FR/DE/NL, … « ») → lv_font_cyrl_supp_14 (RU). */
 enum i18n_string_id : uint16_t {
   I18N_DISCONNECT = 0,
   I18N_SOFT_AP_DISCONNECT,

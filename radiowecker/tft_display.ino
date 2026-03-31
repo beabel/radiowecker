@@ -10,6 +10,7 @@ class AudioGenerator;
 extern AudioGenerator *decoder;
 
 extern "C" const lv_font_t lv_font_latin_supp_14;
+extern "C" const lv_font_t lv_font_latin_supp_14_for_m18;
 
 void showStartPage(void);
 void showFavoritenPage(void);
@@ -1194,13 +1195,13 @@ static void config_row_slider(lv_obj_t *parent, const char *label, lv_obj_t **sl
 
 static void evt_footer_cfg_lang(lv_event_t *e) {
   (void)e;
-  i18n_set_lang((uint8_t)((i18n_get_lang() + 1) % 4));
+  i18n_set_lang((uint8_t)((i18n_get_lang() + 1) % 6));
   ui_cfg_lang_lbl_refresh();
 }
 
 static void ui_cfg_lang_lbl_refresh(void) {
   if (!lbl_cfg_lang) return;
-  static const char *const codes[4] = {"DE", "EN", "FR", "RU"};
+  static const char *const codes[6] = {"DE", "EN", "FR", "RU", "ES", "NL"};
   lv_label_set_text(lbl_cfg_lang, codes[i18n_get_lang()]);
 }
 
@@ -1303,6 +1304,7 @@ static void build_alarm_screen(void) {
       lv_obj_set_style_text_color(al_day_btn[row][col], lv_color_black(), LV_PART_MAIN);
       lv_obj_t *lb = lv_label_create(al_day_btn[row][col]);
       lv_label_set_text(lb, i18n_day_short((col + 1) % 7));
+      lv_obj_set_style_text_font(lb, &font_ui_primary, LV_PART_MAIN);
       lv_obj_set_style_text_color(lb, lv_color_black(), LV_PART_MAIN);
       lv_obj_center(lb);
       uintptr_t ud = ((uintptr_t)row << 8) | col;
@@ -1462,7 +1464,7 @@ void setup_display(void) {
 
   font_clock_digits = &lv_font_clock_digits;
   font_clock_date = lv_font_montserrat_18;
-  font_clock_date.fallback = &lv_font_latin_supp_14;
+  font_clock_date.fallback = &lv_font_latin_supp_14_for_m18;
   font_radio_meta = lv_font_montserrat_18;
   font_radio_meta.fallback = &lv_font_latin_supp_14;
 

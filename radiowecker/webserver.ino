@@ -548,11 +548,15 @@ void setLang() {
     l = 2;
   else if (v == "ru")
     l = 3;
+  else if (v == "es")
+    l = 4;
+  else if (v == "nl")
+    l = 5;
   else {
     int n = v.toInt();
-    if (n >= 0 && n <= 3) l = (uint8_t)n;
+    if (n >= 0 && n <= 5) l = (uint8_t)n;
   }
-  if (l > 3) {
+  if (l > 5) {
     server.send(400, "text/plain", "bad lang");
     return;
   }
