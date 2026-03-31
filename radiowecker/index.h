@@ -13,6 +13,15 @@ const char MAIN_page[] PROGMEM = R"=====(
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <link rel="stylesheet" href="//use.fontawesome.com/releases/v6.6.0/css/all.css">
 <script>
+var CURRENT_UI_LANG = "de";
+var I18N = {
+ de: {lang:"Sprache",title:"Web Radiowecker",w1:"Weckzeit 1:",w2:"Weckzeit 2:",save:"Speichern",cancel:"Rückgängig",list:"Liste:",name:"Name:",url:"URL:",use:"Verwenden:",pos:"Position:",btest:"Testen",bchange:"Ändern",acc_wlan:"Wlan",acc_ntp:"NTP",acc_wx:"Wetter",bsave:"Speichern",brestart:"Neustart",brestore:"Senderliste Reset",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"ChipModel:",fh:"Fehler beim Abrufen der Daten.",fe:"Fehler beim Laden der Daten.",gh_err:"Fehler beim Überprüfen auf Updates.",dow_mo:"Mo",dow_di:"Di",dow_mi:"Mi",dow_do:"Do",dow_fr:"Fr",dow_sa:"Sa",dow_so:"So",testend:"Mit OK beenden Sie den Test",ota_ask:"Firmware auf",ota_rel:"Im GitHub-Release muss die Datei angehängt sein:",ota_free:"Freier OTA-Slot (ungefähr):",ota_stop:"Das Radio wird gestoppt;",ota_iprog:"Der Fortschritt erscheint auf dem Display.",ota_reboot:"Anschließend startet das Gerät neu.",ota_web:"Diese Webseite verliert danach die Verbindung zum Gerät (erwartet) — es erscheint kein weiteres Meldungsfenster.",ota_go:"Fortfahren?",gh_new:"Neue Version:",gh_inst:"Per Web installieren…",gh_rel:"Release-Seite",gh_newer:"Du verwendest eine neuere Version",gh_than:"als die neueste offizielle Version",gh_okv:"Du verwendest bereits die neueste Version",heap_u:"Belegt:",heap_f:"Frei:",heap_t:"Heap gesamt:",heap_m:"max. Block:",fw_l:"Firmware:",fw_v:"von",fw_u:"frei für nächstes Update:",fu:"Letztes Update:",fl:"Created with",sp:"Sponsor this Project:",fgh:"Fehler beim Abrufen der GitHub-Informationen."},
+ en: {lang:"Language",title:"Web clock radio",w1:"Alarm 1:",w2:"Alarm 2:",save:"Save",cancel:"Undo",list:"List:",name:"Name:",url:"URL:",use:"Use:",pos:"Position:",btest:"Test",bchange:"Apply",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weather",bsave:"Save",brestart:"Restart",brestore:"Reset station list",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chip model:",fh:"Failed to fetch data.",fe:"Failed to load data.",gh_err:"Update check failed.",dow_mo:"Mo",dow_di:"Tu",dow_mi:"We",dow_do:"Th",dow_fr:"Fr",dow_sa:"Sa",dow_so:"Su",testend:"Press OK to end the test",ota_ask:"Install firmware",ota_rel:"The GitHub release must include file:",ota_free:"Approx. free OTA slot:",ota_stop:"Playback will stop;",ota_iprog:"progress is shown on the device.",ota_reboot:"Then the device reboots.",ota_web:"This page will lose connection (expected).",ota_go:"Continue?",gh_new:"New version:",gh_inst:"Install via web…",gh_rel:"Release page",gh_newer:"You are running a newer version",gh_than:"than the latest official release",gh_okv:"You are on the latest version",heap_u:"Used:",heap_f:"Free:",heap_t:"Heap total:",heap_m:"max block:",fw_l:"Firmware:",fw_v:"of",fw_u:"free for next update:",fu:"Last update:",fl:"Created with",sp:"Sponsor this project:",fgh:"Failed to fetch GitHub info."},
+ fr: {lang:"Langue",title:"Radio-réveil web",w1:"Alarme 1 :",w2:"Alarme 2 :",save:"Enregistrer",cancel:"Annuler",list:"Liste :",name:"Nom :",url:"URL :",use:"Actif :",pos:"Position :",btest:"Tester",bchange:"Modifier",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Météo",bsave:"Enregistrer",brestart:"Redémarrer",brestore:"Réinit. liste stations",lbl_ver:"Version :",lbl_heap:"TAS :",lbl_sk:"SKETCH :",lbl_chip:"Modèle puce :",fh:"Échec de lecture des données.",fe:"Échec du chargement.",gh_err:"Échec vérif. mises à jour.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Me",dow_do:"Je",dow_fr:"Ve",dow_sa:"Sa",dow_so:"Di",testend:"OK pour terminer le test",ota_ask:"Installer le firmware",ota_rel:"Le release GitHub doit contenir :",ota_free:"Espace OTA libre (approx.) :",ota_stop:"La radio s'arrête ;",ota_iprog:"la progression s'affiche sur l'appareil.",ota_reboot:"Puis redémarrage.",ota_web:"Cette page perdra la connexion (normal).",ota_go:"Continuer ?",gh_new:"Nouvelle version :",gh_inst:"Installer via le web…",gh_rel:"Page release",gh_newer:"Version plus récente que",gh_than:"la dernière version officielle",gh_okv:"Déjà la dernière version",heap_u:"Utilisé :",heap_f:"Libre :",heap_t:"Tas total :",heap_m:"bloc max :",fw_l:"Firmware :",fw_v:"sur",fw_u:"libre pour prochaine MAJ :",fu:"Dernière MAJ :",fl:"Créé avec",sp:"Soutenir le projet :",fgh:"Échec infos GitHub."},
+ ru: {lang:"Язык",title:"Веб‑радиобудильник",w1:"Будильник 1:",w2:"Будильник 2:",save:"Сохранить",cancel:"Отменить",list:"Список:",name:"Имя:",url:"URL:",use:"Вкл.:",pos:"Позиция:",btest:"Тест",bchange:"Изменить",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Погода",bsave:"Сохранить",brestart:"Перезагрузка",brestore:"Сброс списка станций",lbl_ver:"Версия:",lbl_heap:"КУЧА:",lbl_sk:"ПРОШИВКА:",lbl_chip:"Чип:",fh:"Ошибка получения данных.",fe:"Ошибка загрузки.",gh_err:"Ошибка проверки обновлений.",dow_mo:"Пн",dow_di:"Вт",dow_mi:"Ср",dow_do:"Чт",dow_fr:"Пт",dow_sa:"Сб",dow_so:"Вс",testend:"Нажмите OK, чтобы завершить тест",ota_ask:"Установить прошивку",ota_rel:"В релизе GitHub должен быть файл:",ota_free:"Свободно под OTA (прибл.):",ota_stop:"Радио остановится;",ota_iprog:"прогресс на экране устройства.",ota_reboot:"Затем перезагрузка.",ota_web:"Страница потеряет связь (норма).",ota_go:"Продолжить?",gh_new:"Новая версия:",gh_inst:"Установить через веб…",gh_rel:"Страница релиза",gh_newer:"У вас новее, чем",gh_than:"последний официальный релиз",gh_okv:"Уже последняя версия",heap_u:"Занято:",heap_f:"Свободно:",heap_t:"Куча всего:",heap_m:"макс. блок:",fw_l:"Прошивка:",fw_v:"из",fw_u:"свободно для обновления:",fu:"Последнее обновление:",fl:"Создано с",sp:"Поддержать проект:",fgh:"Ошибка GitHub."}
+};
+function tr(k) { var o = I18N[CURRENT_UI_LANG] || I18N.de; if (o[k] !== undefined) return o[k]; return (I18N.de[k] !== undefined) ? I18N.de[k] : k; }
+function applyWebLang(code) { if (!I18N[code]) code = "de"; CURRENT_UI_LANG = code; document.documentElement.lang = code; $("[data-i18n]").each(function() { var k = $(this).attr("data-i18n"); if (k) $(this).text(tr(k)); }); }
 $(document).ready(function() {
   $("#tabs").tabs();
   $( "#accordion" ).accordion({
@@ -27,6 +36,10 @@ $(document).ready(function() {
   $("#btn_restore").click(restoreStations);
   $("#btn_savealarm").click(setAlarms);
   $("#btn_cancelalarm").click(getAlarms);
+  $("#ui_lang_sel").on("change", function() {
+    var v = $(this).val();
+    $.get("/cmd/setlang", { l: v }, function() { applyWebLang(v); });
+  });
   $("#stationlist").change(getStation);
   // Player Tab ######################
   $("#btn_play").click(startPlay);// senden Play zum ESP
@@ -64,11 +77,23 @@ $(document).ready(function() {
 });
 
 function getAll() {
-    getSSID();
-    getStationList();
-    getAlarms();
-    getInfo();
-    updateGitHubInfo();
+    $.getJSON("/cmd/getlang", function(d) {
+      var c = (d && d.lang) ? d.lang : "de";
+      $("#ui_lang_sel").val(c);
+      applyWebLang(c);
+      getSSID();
+      getStationList();
+      getAlarms();
+      getInfo();
+      updateGitHubInfo();
+    }).fail(function() {
+      applyWebLang("de");
+      getSSID();
+      getStationList();
+      getAlarms();
+      getInfo();
+      updateGitHubInfo();
+    });
 }
 
 function getStationList() {
@@ -135,7 +160,7 @@ function testStation() {
         url:"/cmd/teststation",
         data:{"url":$("#url_input").val()},
         success: function(data){
-            alert("Mit OK beenden Sie den Test");
+            alert(tr("testend"));
             endTest();
         },
         error: function() {
@@ -311,7 +336,7 @@ function updateCurrentStatus() {
       //console.log(data);
     },
     error: function () {
-      alert("Fehler beim Laden der Daten.");
+      alert(tr("fe"));
     },
   });
 }
@@ -436,10 +461,10 @@ function getInfo() {
       $( "#heapprogressbar" ).progressbar({
         value: heapUsedPct
       });
-      var heapTxt = "Belegt: " + usedHeap + " B (" + heapUsedPct.toFixed(2) + "%) · Frei: " + freeHeap + " B (" + heapFreePct.toFixed(2) + "%) · Heap gesamt: " + heapSize + " B";
+      var heapTxt = tr("heap_u") + " " + usedHeap + " B (" + heapUsedPct.toFixed(2) + "%) · " + tr("heap_f") + " " + freeHeap + " B (" + heapFreePct.toFixed(2) + "%) · " + tr("heap_t") + " " + heapSize + " B";
       var maxAlloc = data.ESP_INFO.HEAP.getMaxAllocHeap;
       if (typeof maxAlloc === "number") {
-        heapTxt += " · max. Block: " + maxAlloc + " B";
+        heapTxt += " · " + tr("heap_m") + " " + maxAlloc + " B";
       }
       $("#heapBarText").text(heapTxt);
 
@@ -452,7 +477,7 @@ function getInfo() {
         value: sketchUsedPct
       });
       $("#sketchBarText").text(
-        "Firmware: " + usedSketch + " B (" + sketchUsedPct.toFixed(2) + "%) von " + totalSketch + " B · frei für nächstes Update: " + freeSketch + " B"
+        tr("fw_l") + " " + usedSketch + " B (" + sketchUsedPct.toFixed(2) + "%) " + tr("fw_v") + " " + totalSketch + " B · " + tr("fw_u") + " " + freeSketch + " B"
       );
 
       window._otaAssetName = data.httpOtaAsset;
@@ -461,7 +486,7 @@ function getInfo() {
       checkForUpdate(data.radioversion);                
     },
     error: function () {
-      alert("Fehler beim Abrufen der Daten.");
+      alert(tr("fh"));
     },
   });
 }
@@ -470,11 +495,11 @@ function confirmAndStartHttpOta(tag) {
   if (!tag) return;
   var asset = window._otaAssetName || ($("#httpOtaAsset").length ? $("#httpOtaAsset").text() : "") || "radiowecker-firmware.bin";
   var freeB = window._otaFreeSketch;
-  var msg = "Firmware auf " + tag + " aktualisieren?\n\n";
-  msg += "Im GitHub-Release muss die Datei angehängt sein:\n" + asset + "\n";
-  if (typeof freeB === "number") msg += "\nFreier OTA-Slot (ungefähr): " + freeB + " Byte\n";
-  msg += "\nDas Radio wird gestoppt; der Fortschritt erscheint auf dem Display. Anschließend startet das Gerät neu.\n\n";
-  msg += "Diese Webseite verliert danach die Verbindung zum Gerät (erwartet) — es erscheint kein weiteres Meldungsfenster.\n\nFortfahren?";
+  var msg = tr("ota_ask") + " " + tag + "?\n\n";
+  msg += tr("ota_rel") + "\n" + asset + "\n";
+  if (typeof freeB === "number") msg += "\n" + tr("ota_free") + " " + freeB + " Byte\n";
+  msg += "\n" + tr("ota_stop") + " " + tr("ota_iprog") + " " + tr("ota_reboot") + "\n\n";
+  msg += tr("ota_web") + "\n\n" + tr("ota_go");
   if (!confirm(msg)) return;
   $.ajax({
     type: "POST",
@@ -525,24 +550,24 @@ function checkForUpdate(currentVersion) {
 
       if (comparisonResult < 0) {
         $("#githubVersion").html(
-          '<i class="fas fa-exclamation-triangle" style="color: red;"></i> Neue Version: <strong>' + latestVersion + '</strong><br/>' +
-          '<button type="button" id="btn_fw_update" style="margin-top:6px;">Per Web installieren…</button> ' +
-          '<a href="' + data.html_url + '" target="_blank">Release-Seite</a>'
+          '<i class="fas fa-exclamation-triangle" style="color: red;"></i> ' + tr("gh_new") + ' <strong>' + latestVersion + '</strong><br/>' +
+          '<button type="button" id="btn_fw_update" style="margin-top:6px;">' + tr("gh_inst") + '</button> ' +
+          '<a href="' + data.html_url + '" target="_blank">' + tr("gh_rel") + '</a>'
         );
         $("#btn_fw_update").off("click").on("click", function () {
           confirmAndStartHttpOta(latestVersion);
         });
       } else if (comparisonResult > 0) {
         // Wenn die aktuelle Version größer ist, zeige eine Meldung, dass diese neuer ist
-        $("#githubVersion").html('<i class="fas fa-code" style="color: blue;"></i> Du verwendest eine neuere Version (' + currentVersion + ') als die neueste offizielle Version (' + latestVersion + ').');
+        $("#githubVersion").html('<i class="fas fa-code" style="color: blue;"></i> ' + tr("gh_newer") + ' (' + currentVersion + ') ' + tr("gh_than") + ' (' + latestVersion + ').');
       } else {
         // Wenn die Versionen gleich sind, zeige an, dass die neueste Version verwendet wird
-        $("#githubVersion").html('<i class="fas fa-check" style="color: green;"></i> Du verwendest bereits die neueste Version (' + currentVersion + ').');
+        $("#githubVersion").html('<i class="fas fa-check" style="color: green;"></i> ' + tr("gh_okv") + ' (' + currentVersion + ').');
       }
     },
     error: function () {
       // Zeige eine Fehlermeldung an, falls der AJAX-Request fehlschlägt
-      $("#githubVersion").text("Fehler beim Überprüfen auf Updates.");
+      $("#githubVersion").text(tr("gh_err"));
     }
   });
 }
@@ -574,13 +599,13 @@ function updateGitHubInfo() {
       html += '<p><a href="' + data.html_url + '/stargazers" target="_blank"><i class="fas fa-star"></i>Stars: ' + data.stargazers_count + '</a> ';
       html += '<a href="' + data.html_url + '/wiki" target="_blank"><i class="fas fa-info"></i> Wiki</a> ';
       html += '<a href="' + data.html_url + '/discussions" target="_blank"><i class="fas fa-users"></i> Forum</a></p>';
-      html += '<p>Letztes Update: ' + formattedDate + '</p>';
-      html += '<p>Created with <i class="fas fa-heart"></i> by kunigunde</p>';
+      html += '<p>' + tr("fu") + ' ' + formattedDate + '</p>';
+      html += '<p>' + tr("fl") + ' <i class="fas fa-heart"></i> by kunigunde</p>';
       html += '</div>';            
       $("#footer").html(html);
     },
     error: function () {
-      $("#footer").html("Fehler beim Abrufen der GitHub-Informationen.");
+      $("#footer").html(tr("fgh"));
     }
   });
 }
@@ -634,10 +659,41 @@ input {
     color: white; 
 }
 .categorie input:checked + span{background-color: #82D44E;}
+/* Sprachzeile: globales label{float:left} + leeres Parent-div → Höhe 0, Tabs überdecken die Zeile */
+.lang-bar {
+  margin: 6px 0;
+  clear: both;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+}
+.lang-bar label {
+  float: none;
+  display: inline-block;
+  width: auto;
+  margin-top: 0;
+  flex: 0 0 auto;
+}
+.lang-bar select {
+  flex: 0 1 auto;
+  min-width: 4.5em;
+  max-width: 100%;
+}
 </style>
 </head>
 <body>
-<h1>Web Radiowecker</h1>
+<h1 data-i18n="title">Web Radiowecker</h1>
+<div class="lang-bar">
+<label for="ui_lang_sel"><span data-i18n="lang">Sprache</span></label>
+<select id="ui_lang_sel" aria-label="UI language">
+<option value="de">DE</option>
+<option value="en">EN</option>
+<option value="fr">FR</option>
+<option value="ru">RU</option>
+</select>
+</div>
 
 <div id="tabs">
     <ul>
@@ -707,110 +763,110 @@ input {
       </table>      
     </div>    
     <div id="wecker">
-      <label>Weckzeit 1:
+      <label><span data-i18n="w1">Weckzeit 1:</span>
           <input id="al0" type="time" />
       </label>
       <br />
       <div class="categorie days" align="center">
         <label>
             <input type="checkbox" id="al2"/>
-            <span>Mo</span>
+            <span data-i18n="dow_mo">Mo</span>
         </label>
         <label>
             <input type="checkbox" id="al3"/>
-            <span>Di</span>
+            <span data-i18n="dow_di">Di</span>
         </label>
         <label>
             <input type="checkbox" id="al4"/>
-            <span>Mi</span>
+            <span data-i18n="dow_mi">Mi</span>
         </label>
         <label>
             <input type="checkbox" id="al5"/>
-            <span>Do</span>
+            <span data-i18n="dow_do">Do</span>
         </label>
         <label>
             <input type="checkbox" id="al6"/>
-            <span>Fr</span>
+            <span data-i18n="dow_fr">Fr</span>
         </label>
         <label>
             <input type="checkbox" id="al7"/>
-            <span>Sa</span>
+            <span data-i18n="dow_sa">Sa</span>
         </label>
         <label>
             <input id="al1" type="checkbox"/>
-            <span>So</span>
+            <span data-i18n="dow_so">So</span>
         </label>
       </div>
       <br />
-      <label>Weckzeit 2:
+      <label><span data-i18n="w2">Weckzeit 2:</span>
           <input id="al8" type="time"/>
       </label>
       <br />
       <div class="categorie days"  align="center">
         <label>
             <input type="checkbox" id="al10"/>
-            <span>Mo</span>
+            <span data-i18n="dow_mo">Mo</span>
         </label>
         <label>
             <input type="checkbox" id="al11"/>
-            <span>Di</span>
+            <span data-i18n="dow_di">Di</span>
         </label>
         <label>
             <input type="checkbox" id="al12"/>
-            <span>Mi</span>
+            <span data-i18n="dow_mi">Mi</span>
         </label>
         <label>
             <input type="checkbox" id="al13"/>
-            <span>Do</span>
+            <span data-i18n="dow_do">Do</span>
         </label>
         <label>
             <input type="checkbox" id="al14"/>
-            <span>Fr</span>
+            <span data-i18n="dow_fr">Fr</span>
         </label>
         <label>
             <input type="checkbox" id="al15"/>
-            <span>Sa</span>
+            <span data-i18n="dow_sa">Sa</span>
         </label>
         <label>
             <input type="checkbox" id="al9"/>
-            <span>So</span>
+            <span data-i18n="dow_so">So</span>
         </label>
       </div>
       <br />
       <div align="center">
-        <button id="btn_savealarm" type="button">Speichern</button>
-        <button id="btn_cancelalarm" type="button">Rückgängig</button>
+        <button id="btn_savealarm" type="button" data-i18n="save">Speichern</button>
+        <button id="btn_cancelalarm" type="button" data-i18n="cancel">Rückgängig</button>
       </div>      
     </div>
     <div id="radio">
-      <label>Liste:
+      <label><span data-i18n="list">Liste:</span>
         <select id="stationlist"></select>
       </label>
       <br />
-      <label>Name:
+      <label><span data-i18n="name">Name:</span>
           <input id="name_input"/>
       </label>
       <br />
-      <label>URL:
+      <label><span data-i18n="url">URL:</span>
           <input id="url_input"/>
       </label>
       <br />
-      <label>Verwenden:
+      <label><span data-i18n="use">Verwenden:</span>
           <input id="enable_input" type="checkbox">
       </label>
       <br />
-      <label>Position:
+      <label><span data-i18n="pos">Position:</span>
           <input id="pos_input" type="number" step="1" min="1" max="99" size="2"/>
       </label>
       <br />
       <div align="center">
-        <button id="btn_test" type="button">Testen</button>
-        <button id="btn_updt" type="button">Ändern</button>
+        <button id="btn_test" type="button" data-i18n="btest">Testen</button>
+        <button id="btn_updt" type="button" data-i18n="bchange">Ändern</button>
       </div>
     </div>         
     <div id="wlan">
       <div id="accordion">
-        <h3><i class="fa fa-wifi"></i> Wlan</h3>
+        <h3><i class="fa fa-wifi"></i> <span data-i18n="acc_wlan">Wlan</span></h3>
         <div>
           <p>
             <label>SSID:
@@ -823,7 +879,7 @@ input {
             <br />
           </p>
         </div>
-        <h3><i class="fa fa-business-time"></i> NTP</h3>
+        <h3><i class="fa fa-business-time"></i> <span data-i18n="acc_ntp">NTP</span></h3>
         <div>
           <p>
             <label>NTP:
@@ -832,7 +888,7 @@ input {
             <br />
           </p>
         </div>
-        <h3><i class="fa fa-umbrella"></i> Wetter</h3>
+        <h3><i class="fa fa-umbrella"></i> <span data-i18n="acc_wx">Wetter</span></h3>
         <div>
           <p>
             <!-- ################# Wetter -------------- -->
@@ -853,14 +909,14 @@ input {
       </div>
       <hr />      
       <div align="center">
-        <button id="btn_save" type="button">Speichern</button>
-        <button id="btn_reset" type="button">Neustart</button>
+        <button id="btn_save" type="button" data-i18n="bsave">Speichern</button>
+        <button id="btn_reset" type="button" data-i18n="brestart">Neustart</button>
         <br />
-        <button id="btn_restore" type="button">Senderliste Reset</button>
+        <button id="btn_restore" type="button" data-i18n="brestore">Senderliste Reset</button>
       </div>
     </div>
     <div id="info">
-      <label for="radioversion">Version:
+      <label for="radioversion"><span data-i18n="lbl_ver">Version:</span>
         <span id="radioversion"></span><br />
         <span id="githubVersion"></span>
         <span id="httpOtaAsset" style="display:none"></span>
@@ -868,17 +924,17 @@ input {
       </label>
       <hr />
       
-      <label for="BarContainer">HEAP:
+      <label for="BarContainer"><span data-i18n="lbl_heap">HEAP:</span>
       </label>
       <div id="heapprogressbar"></div>
       <div id="heapBarText"></div>
       <br />
-      <label for="BarContainer">SKETCH:
+      <label for="BarContainer"><span data-i18n="lbl_sk">SKETCH:</span>
       </label>
       <div id="sketchprogressbar"></div>
       <div id="sketchBarText"></div>
       <hr />
-      <label for="ESP_INFO_CHIP_getChipModel">ChipModel:
+      <label for="ESP_INFO_CHIP_getChipModel"><span data-i18n="lbl_chip">ChipModel:</span>
         <span id="ESP_INFO_CHIP_getChipModel"></span>
       </label>
       <hr />
@@ -888,7 +944,7 @@ input {
       <hr />
       <div id="sponsor" class="ui-widget">
         <div class="ui-state-error ui-corner-all">
-          Sponsor this Project: 
+          <span data-i18n="sp">Sponsor this Project:</span> 
           <a href="https://buymeacoffee.com/kunigunde" target="_blank"><img width="16" height="16" class="octicon rounded-2 d-block" alt="buy_me_a_coffee" src="https://github.githubassets.com/assets/buy_me_a_coffee-63ed78263f6e.svg"></a>
           <a href="https://www.paypal.com/paypalme/pleissa" target="_blank"><i class="fa-brands fa-paypal"></i></a>
           <a href="https://thanks.dev/beabel" target="_blank"><img width="16" height="16" class="octicon rounded-2 d-block" alt="thanks_dev" src="https://github.githubassets.com/assets/thanks_dev-0fe87803d1ed.svg"></a>

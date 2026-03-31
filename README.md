@@ -205,7 +205,7 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 - **ESP32** internet clock radio with **ILI9341** + **XPT2046** (library **XPT2046_Touchscreen** required for touch input to LVGL), **LVGL 9.5**, MP3 streams via **ESP8266Audio**, alarms, weather, and a built-in **web UI**. The old **TouchEvent** library is not used.  
 - **Arduino IDE 2.x**; install libraries listed above.  
 - Set **Partition Scheme** to **No FS 4MB** (large app partition).  
-- Copy **`radiowecker/lv_conf.h`** to **`Arduino/libraries/lvgl/src/lv_conf.h`** (must stay in sync). Keep **`build_opt.h`** and **`lv_font_de_supp_14.c`** in the sketch folder.  
+- Copy **`radiowecker/lv_conf.h`** to **`Arduino/libraries/lvgl/src/lv_conf.h`** (must stay in sync). Keep **`build_opt.h`** and **`lv_font_latin_supp_14.c`** in the sketch folder.  
 - First-time WiFi: join **`radioweckerconf`**, open **`http://192.168.4.1`**, configure home WiFi.
 - **Optional firmware update from the browser:** on the **Info** tab, if GitHub has a newer release, use **“Per Web installieren…”** (device downloads **`radiowecker-firmware.bin`** from the matching release tag). 
 

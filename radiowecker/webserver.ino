@@ -2,8 +2,11 @@
 #include <string.h>
 #include "index.h"
 #include "ArduinoJson.h"
+#include "i18n.h"
 
 void handleStartHttpUpdate(void);
+void getLang(void);
+void setLang(void);
 
 WebServer server(80);
 
@@ -40,6 +43,8 @@ void setup_webserver() {
 
   // Info-Tab: Definiert die Route für das Abrufen von Systeminformationen
   server.on("/cmd/getInfo", getInfo);  // Ruft allgemeine Systeminformationen ab
+  server.on("/cmd/getlang", getLang);
+  server.on("/cmd/setlang", setLang);
   /* Kein Upload-Callback: sonst nimmt WebServer 3.x den RAW-Pfad, arg("plain") bleibt leer (JSON-OTA schlägt fehl). */
   server.on("/cmd/startHttpUpdate", HTTP_POST, handleStartHttpUpdate, nullptr);
 
@@ -440,7 +445,7 @@ void beforeStation() {
   if (station_navigate_prev())
     server.send(200, "text/plain", "OK");
   else
-    server.send(200, "text/plain", "Keine aktive Station verfügbar.");
+    server.send(200, "text/plain", i18n_str(I18N_ERR_NO_STATION));
 }
 
 // Verarbeitet den AJAX-Befehl /cmd/nextStation, um zur nächsten "aktiven" Station zu wechseln
@@ -448,7 +453,7 @@ void nextStation() {
   if (station_navigate_next())
     server.send(200, "text/plain", "OK");
   else
-    server.send(200, "text/plain", "Keine aktive Station verfügbar.");
+    server.send(200, "text/plain", i18n_str(I18N_ERR_NO_STATION));
 }
 
 // AJAX-Befehl /cmd/getCurrentStatus
@@ -475,10 +480,10 @@ void getCurrentStatus() {
   if (alarmday < 8) {  // Alarm ist aktiv
     h = alarmtime / 60;
     m = alarmtime % 60;
-    sprintf(txt, "%s %02i:%02i", days_short[alarmday], h, m);
+    sprintf(txt, "%s %02i:%02i", i18n_day_short((int)alarmday), h, m);
     jsonDoc["alarm"] = "1";
   } else {  // Alarm ist ausgeschaltet
-    sprintf(txt, "AUS");
+    snprintf(txt, sizeof(txt), "%s", i18n_str(I18N_ALARM_OFF));
     jsonDoc["alarm"] = "0";
   }
   jsonDoc["alarmtime"] = txt;
@@ -495,7 +500,7 @@ void getCurrentStatus() {
   // Aktuelles Datum und Uhrzeit
   char tim[40];
   if (getLocalTime(&ti)) {
-    sprintf(tim, "%s %i. %s %i", days[ti.tm_wday], ti.tm_mday, months[ti.tm_mon], ti.tm_year + 1900);
+    sprintf(tim, "%s %i. %s %i", i18n_day_long(ti.tm_wday), ti.tm_mday, i18n_month_short(ti.tm_mon), ti.tm_year + 1900);
     jsonDoc["Date"] = tim;
     strftime(tim, sizeof(tim), "%H:%M", &ti);
     jsonDoc["Time"] = tim;
@@ -522,12 +527,46 @@ void getCurrentStatus() {
 //   - Heap-Größe und freier Heap-Speicher
 //   - Sketch-Größe und freier Platz in der App-Partition (Summe = Partitionsgröße)
 //   - Chip-Modell
+void getLang() {
+  char buf[48];
+  snprintf(buf, sizeof(buf), "{\"lang\":\"%s\"}", i18n_lang_code());
+  server.send(200, "application/json; charset=utf-8", buf);
+}
+
+void setLang() {
+  if (!server.hasArg("l")) {
+    server.send(400, "text/plain", "missing l");
+    return;
+  }
+  String v = server.arg("l");
+  uint8_t l = 255;
+  if (v == "de")
+    l = 0;
+  else if (v == "en")
+    l = 1;
+  else if (v == "fr")
+    l = 2;
+  else if (v == "ru")
+    l = 3;
+  else {
+    int n = v.toInt();
+    if (n >= 0 && n <= 3) l = (uint8_t)n;
+  }
+  if (l > 3) {
+    server.send(400, "text/plain", "bad lang");
+    return;
+  }
+  i18n_set_lang(l);
+  server.send(200, "text/plain", "OK");
+}
+
 void getInfo() {
   // Erstellen eines JSON-Dokuments für die Antwort
   StaticJsonDocument<512> jsonDoc;
 
   // Installierte Radio-Version
   jsonDoc["radioversion"] = RADIOVERSION;
+  jsonDoc["uiLang"] = i18n_lang_code();
   jsonDoc["httpOtaAsset"] = HTTP_OTA_FIRMWARE_FILENAME;
   jsonDoc["httpOtaFreeBytes"] = ESP.getFreeSketchSpace();
 
