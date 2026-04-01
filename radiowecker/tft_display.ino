@@ -398,6 +398,13 @@ bool station_navigate_next(void) {
   return true;
 }
 
+bool station_navigate_select(uint8_t idx) {
+  if (idx >= STATIONS || !stationlist[idx].enabled) return false;
+  curStation = idx;
+  changeStation();
+  return true;
+}
+
 static void rebuild_favorites(void) {
   fav_count = 0;
   for (int i = 0; i < STATIONS && fav_count < 10; i++) {

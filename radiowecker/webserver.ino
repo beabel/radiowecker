@@ -19,7 +19,8 @@ void setup_webserver() {
   server.on("/", handleRoot);
 
   // Definiert die Routen für verschiedene AJAX-Befehle und verknüpft sie mit den entsprechenden Funktionen
-  server.on("/cmd/stations", sendStations);            // Ruft die Liste der verfügbaren Stationen ab
+  server.on("/cmd/stations", sendStations);            // Alle Stationen (Senderliste / Bearbeitung)
+  server.on("/cmd/stationsActive", sendStationsActive); // Nur aktive Sender (Player-Dropdown)
   server.on("/cmd/restorestations", restoreStations);  // Stellt die gespeicherten Stationen wieder her
   server.on("/cmd/restart", restart);                  // Startet das System neu
   server.on("/cmd/setaccess", setAccessData);          // Setzt die Zugangsdaten
@@ -39,6 +40,7 @@ void setup_webserver() {
   server.on("/cmd/startSleep", startSleep);              // Startet den Schlafmodus
   server.on("/cmd/beforeStation", beforeStation);        // Wechselt zur vorherigen Station
   server.on("/cmd/nextStation", nextStation);            // Wechselt zur nächsten Station
+  server.on("/cmd/selectStation", selectStationByIndex); // Wechselt zur gewählten Station (Web-Dropdown)
   server.on("/cmd/getCurrentStatus", getCurrentStatus);  // Ruft den aktuellen Status ab
 
   // Info-Tab: Definiert die Route für das Abrufen von Systeminformationen
@@ -101,9 +103,9 @@ void handleRoot() {
 // Bearbeitet AJAX-Befehle für "/cmd/stations"
 // Sendet eine Liste der verfügbaren Stationen als HTML-Optionen
 void sendStations() {
-  char* s;        // Variable für das Symbol vor dem Stationsnamen
-  char* sel;      // Variable für das 'selected'-Attribut der aktuellen Station
-  char buf[100];  // Buffer für die HTML-Ausgabe
+  const char* s;   // Symbol vor dem Stationsnamen (Stringliteral)
+  const char* sel;   // 'selected' oder leer (Stringliteral)
+  char buf[100];   // Buffer für die HTML-Ausgabe
 
   // Bereite die HTML-Antwort vor
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
@@ -122,6 +124,22 @@ void sendStations() {
     // Erstelle den Eintrag für die Option mit der Vorlage
     sprintf(buf, OPTION_entry, i, sel, s, stationlist[i].name);
     server.sendContent(buf);  // Sende den Inhalt der Option
+  }
+}
+
+// Nur aktivierte Stationen — gleiche Index-Werte wie in stationlist (für /cmd/selectStation)
+void sendStationsActive() {
+  const char* sel;
+  char buf[100];
+
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.send(200, "text/html", "");
+
+  for (uint8_t i = 0; i < STATIONS; i++) {
+    if (!stationlist[i].enabled) continue;
+    sel = (i == actStation) ? "selected" : "";
+    sprintf(buf, OPTION_entry, i, sel, "&#x25cf;", stationlist[i].name);
+    server.sendContent(buf);
   }
 }
 
@@ -456,6 +474,22 @@ void nextStation() {
     server.send(200, "text/plain", i18n_str(I18N_ERR_NO_STATION));
 }
 
+void selectStationByIndex() {
+  if (!server.hasArg("stationid")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("stationid").toInt();
+  if (v < 0 || v >= STATIONS) {
+    server.send(200, "text/plain", i18n_str(I18N_ERR_NO_STATION));
+    return;
+  }
+  if (station_navigate_select((uint8_t)v))
+    server.send(200, "text/plain", "OK");
+  else
+    server.send(200, "text/plain", i18n_str(I18N_ERR_NO_STATION));
+}
+
 // AJAX-Befehl /cmd/getCurrentStatus
 // Diese Funktion wird aufgerufen, um den aktuellen Status des Systems zu ermitteln und als JSON-Daten zurückzugeben.
 // Die JSON-Antwort enthält Informationen über:
@@ -489,6 +523,7 @@ void getCurrentStatus() {
   jsonDoc["alarmtime"] = txt;
 
   // Radio-Status
+  jsonDoc["actStation"] = actStation;
   if (radio) {
     jsonDoc["radioStation"] = stationlist[actStation].name;
     jsonDoc["radioTitle"] = title;

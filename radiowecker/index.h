@@ -62,6 +62,7 @@ $(document).ready(function() {
   GainSlider();// senden des Sliders zum ESP
   $("#btn_bwd").click(beforeStation);// toggle beforeStation zum ESP 
   $("#btn_fwd").click(nextStation);// toggle nextStation zum ESP 
+  $("#switchStation").on("change", selectStationFromDropdown);
 
   // Zeugs um die aktuellen Daten des ESP regelmäßig zu erhalten um halbwegs sinvolle Anzeigen zu sehen
   $("#tabs").tabs({
@@ -106,15 +107,13 @@ function getAll() {
 }
 
 function getStationList() {
-    $.ajax({
-        type:"GET",
-        url:"/cmd/stations",
-        data:{},
-        success: function(data){
-            $("#switchStation").html(data);          
-            $("#stationlist").html(data);
-            getStation();
-        }
+    $.when(
+        $.ajax({ type: "GET", url: "/cmd/stations", data: {} }),
+        $.ajax({ type: "GET", url: "/cmd/stationsActive", data: {} })
+    ).done(function (full, activeOnly) {
+        $("#stationlist").html(full[0]);
+        $("#switchStation").html(activeOnly[0]);
+        getStation();
     });
 }
 
@@ -336,6 +335,10 @@ function updateCurrentStatus() {
       updateCurrentStatusAlarm(data.alarm, data.alarmtime);
       // Radio
       updateCurrentStatusRadio(data.radioStation, data.radioTitle);
+      if (data.actStation !== undefined && data.actStation !== null) {
+        var $ss = $("#switchStation");
+        if (!$ss.is(":focus")) $ss.val(String(data.actStation));
+      }
       // Zeit + Datum
       updateCurrentStatusDateTime(data.Date, data.Time);
       // WLAN
@@ -430,6 +433,24 @@ function nextStation() {
         success: function (response) {
             if (response === "OK") {
               getStationList();
+            }
+        }
+    });
+}
+function selectStationFromDropdown() {
+    var sid = $("#switchStation").val();
+    if (sid === undefined || sid === null) return;
+    $.ajax({
+        type: "POST",
+        url: "/cmd/selectStation",
+        data: { stationid: sid },
+        success: function (response) {
+            if (response === "OK") {
+                updateCurrentStatus();
+                getStationList();
+            } else {
+                alert(response);
+                getStationList();
             }
         }
     });
@@ -716,7 +737,7 @@ input {
     </ul>
     <div id="player">
       <div align="center">
-        <select id="switchStation" disabled></select>
+        <select id="switchStation" aria-label="Sender"></select>
         <br />
         <button id="btn_alarm" type="button"></button>
         <button id="btn_bwd" type="button"><i class="fa fa-step-backward"></i></button>
