@@ -1,6 +1,6 @@
-# Internet-Radiowecker mit Touchscreen · **Version 5.0.4**
+# Internet-Radiowecker mit Touchscreen · **Version 5.0.5**
 
-ESP32-Webradio mit 2,8"-TFT (ILI9341), Touch (XPT2046), Wecker, Wetter, Web-Konfiguration und grafischer Oberfläche auf Basis von **LVGL 9**. Die Firmware meldet sich als **`v5.0.4`** (siehe `RADIOVERSION` in `radiowecker.ino`).
+ESP32-Webradio mit 2,8"-TFT (ILI9341), Touch (XPT2046), Wecker, Wetter, Web-Konfiguration und grafischer Oberfläche auf Basis von **LVGL 9**. Die Firmware meldet sich als **`v5.0.5`** (siehe `RADIOVERSION` in `radiowecker.ino`).
 
 | [:skull: Issues](https://github.com/beabel/radiowecker/issues) | [:speech_balloon: Diskussionen](https://github.com/beabel/radiowecker/discussions) | [:grey_question: Wiki](https://github.com/beabel/radiowecker/wiki) |
 |----------------------------------------------------------------|-----------------------------------------------------------------------------------|----------------------------------------------------------------------|
@@ -17,11 +17,11 @@ Was sich gegenüber den **älteren Releases** (z. B. der **4.x-Linie** wie [v4.0
 
 ## Änderungen gegenüber der Vorgängerversion
 
-Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafruit GFX** auf dem ILI9341 sowie die Bibliothek **TouchEvent** zur Touch-Auswertung. **Ab der 5.x-Linie** (aktueller Stand **v5.0.4**) ersetzt **LVGL 9** die **Hauptoberfläche** (Widgets, Themes, Animationen). Darunter liegt weiterhin derselbe **ILI9341**-Treiber: LVGL schreibt in einen Puffer, der auf das TFT gezeichnet wird; für wenige Zustände (z. B. WLAN-Verbindungsdialog vor dem Start von LVGL) werden weiterhin **Adafruit_ILI9341**-Aufrufe genutzt.
+Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafruit GFX** auf dem ILI9341 sowie die Bibliothek **TouchEvent** zur Touch-Auswertung. **Ab der 5.x-Linie** (aktueller Stand **v5.0.5**) ersetzt **LVGL 9** die **Hauptoberfläche** (Widgets, Themes, Animationen). Darunter liegt weiterhin derselbe **ILI9341**-Treiber: LVGL schreibt in einen Puffer, der auf das TFT gezeichnet wird; für wenige Zustände (z. B. WLAN-Verbindungsdialog vor dem Start von LVGL) werden weiterhin **Adafruit_ILI9341**-Aufrufe genutzt.
 
 ### Flash, Partition und neue Dateien
 
-- **Partition Scheme:** Früher reichte oft das **Default-Layout mit SPIFFS** nicht mehr, sobald Core und Sketch wuchsen. **Ab 5.x** (Stand **5.0.4**) wird **„No FS 4MB“** empfohlen: möglichst **große App-Partition**, kein großes Dateisystem — ausreichend Platz für LVGL, Web- und Audio-Code.  
+- **Partition Scheme:** Früher reichte oft das **Default-Layout mit SPIFFS** nicht mehr, sobald Core und Sketch wuchsen. **Ab 5.x** (Stand **5.0.5**) wird **„No FS 4MB“** empfohlen: möglichst **große App-Partition**, kein großes Dateisystem — ausreichend Platz für LVGL, Web- und Audio-Code.  
 - **LVGL-Konfiguration:** Zusätzlich zum Sketch ist **`lv_conf.h`** identisch nach **`libraries/lvgl/src/lv_conf.h`** zu kopieren (siehe Abschnitt unten). Ohne diese Kopie fehlen oft Fonts/Features beim Bau der Library.  
 
 ### Sonstiges im Code
@@ -70,7 +70,7 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 |<= 4.0.3|2.0.17|default|
 |>= 5.x|3.3.7|No FS 4MB|
 
-### Bibliotheken (Referenzstände für v5.0.4)
+### Bibliotheken (Referenzstände für v5.0.5)
 
 1. Gehe zu `Sketch` > `Include Library` > `Library Manager`.
 2. Suche nach **Bibliothek Name**.
@@ -200,7 +200,7 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 
 ---
 
-## English summary (v5.0.4)
+## English summary (v5.0.5)
 
 - **ESP32** internet clock radio with **ILI9341** + **XPT2046** (library **XPT2046_Touchscreen** required for touch input to LVGL), **LVGL 9.5**, MP3 streams via **ESP8266Audio**, alarms, weather, and a built-in **web UI**. The old **TouchEvent** library is not used.  
 - **Arduino IDE 2.x**; install libraries listed above.  
@@ -228,6 +228,14 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 
 ![Startseite Radio an](screenshot/display_startseite_radio_on.jpg)
 
+**Startseite, Farben angepasst**
+
+![Startseite, Farben angepasst](screenshot/display_color_changed.jpg)
+
+**Startseite, Kyrilic **
+
+![Startseite, Kyrilic](screenshot/display_cyrilic.jpg)
+
 **Startseite, Radio aus, Wetter**
 
 ![Startseite Radio aus, Wetter](screenshot/display_startseite_radio_off_weather_on.jpg)
@@ -235,6 +243,10 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 **Startseite, Wecker/Alarm aktiv**
 
 ![Startseite, Wecker/Alarm aktiv](screenshot/display_alarm_schlummer.jpg)
+
+**Favoriten**
+
+![Favoriten](screenshot/display_favoritenseite.jpg)
 
 **Einstellungen**
 
@@ -244,9 +256,7 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 
 ![Wecker](screenshot/display_alarmpage.jpg)
 
-**Favoriten**
 
-![Favoriten](screenshot/display_favoritenseite.jpg)
 
 ### Webseite (HTML im Browser)
 
@@ -261,6 +271,10 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 **Radiosender**
 
 ![Web Radiosender](screenshot/webseite_3_radiestations.png)
+
+**Slider + Color**
+
+![Slider + Color](screenshot/webseite_6_slider_color.png)
 
 **Einstellungen**
 
@@ -278,5 +292,5 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 
 ---
 
-**Radiowecker · Version 5.0.4**
+**Radiowecker · Version 5.0.5**
 
