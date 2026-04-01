@@ -524,6 +524,7 @@ void getCurrentStatus() {
 
   // Radio-Status
   jsonDoc["actStation"] = actStation;
+  jsonDoc["radioPlaying"] = radio ? 1 : 0;
   if (radio) {
     jsonDoc["radioStation"] = stationlist[actStation].name;
     jsonDoc["radioTitle"] = title;

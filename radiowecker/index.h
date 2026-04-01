@@ -278,6 +278,7 @@ function startPlay() {
         type:"POST",
         url:"/cmd/startPlay",
         data:{},
+        success: function () { updateCurrentStatus(); }
     });
 }
 function stopPlay() {
@@ -285,6 +286,7 @@ function stopPlay() {
         type:"POST",
         url:"/cmd/stopPlay",
         data:{},
+        success: function () { updateCurrentStatus(); }
     });
 }
 function GainSlider() {
@@ -335,6 +337,7 @@ function updateCurrentStatus() {
       updateCurrentStatusAlarm(data.alarm, data.alarmtime);
       // Radio
       updateCurrentStatusRadio(data.radioStation, data.radioTitle);
+      updateCurrentStatusPlayStop(data.radioPlaying);
       if (data.actStation !== undefined && data.actStation !== null) {
         var $ss = $("#switchStation");
         if (!$ss.is(":focus")) $ss.val(String(data.actStation));
@@ -384,6 +387,11 @@ function updateCurrentStatusRadio(station, title) {
   } else {
     $("#radioTitle").html("<br /><br />");
   }
+}
+function updateCurrentStatusPlayStop(radioPlaying) {
+  var on = radioPlaying === 1 || radioPlaying === true || parseInt(radioPlaying, 10) === 1;
+  $("#btn_play").prop("disabled", on);
+  $("#btn_stop").prop("disabled", !on);
 }
 function updateCurrentStatusDateTime(date, time) {
   $("#Date").text(date);
@@ -743,7 +751,7 @@ input {
         <button id="btn_bwd" type="button"><i class="fa fa-step-backward"></i></button>
         <button id="btn_play" type="button"><i class="fas fa-play"></i></button>
         <button id="btn_fwd" type="button"><i class="fa fa-step-forward"></i></button>
-        <button id="btn_stop" type="button"><i class="fas fa-stop"></i></button>
+        <button id="btn_stop" type="button" disabled><i class="fas fa-stop"></i></button>
         <button id="btn_sleep" type="button"><i class="fas fa-bed"></i></button>
         <br />
         
