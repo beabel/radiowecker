@@ -8,6 +8,7 @@
 #include <WiFiClientSecure.h>
 #include <HTTPUpdate.h>
 #include "ArduinoJson.h"
+#include "i18n.h"
 
 boolean initWiFi(const char *wifiSsid, const char *wifiPkey);
 void setBGLight(uint8_t prct);
@@ -37,14 +38,14 @@ void httpOtaRunDeferredBoot(void) {
   RADIO_SERIAL(Serial.printf_P(PSTR("heap zu OTA-Start: %u\n"), (unsigned)ESP.getFreeHeap()));
 
   setBGLight(100);
-  ota_ui_begin("HTTP Firmware-Update");
-  ota_ui_set_sub("Lade …");
+  ota_ui_begin(i18n_str(I18N_OTA_HTTP_FW));
+  ota_ui_set_sub(i18n_str(I18N_OTA_LOADING));
   showProgress(0);
 
   if (!http_ota_tag_ok(tag)) {
     RADIO_SERIAL(Serial.println(F("HTTP-OTA: ungültiger/leerer Tag in NVS — Neustart normal")));
-    ota_ui_begin("Update abgebrochen");
-    ota_ui_set_sub("Ungültiger Tag");
+    ota_ui_begin(i18n_str(I18N_OTA_ABORTED));
+    ota_ui_set_sub(i18n_str(I18N_OTA_INV_TAG));
     delay(2500);
     ESP.restart();
     return;
@@ -52,17 +53,17 @@ void httpOtaRunDeferredBoot(void) {
 
   RADIO_SERIAL(Serial.printf_P(PSTR("HTTP-OTA: Tag %s\n"), tag));
 
-  ota_ui_set_sub("WLAN verbinden …");
+  ota_ui_set_sub(i18n_str(I18N_OTA_CONN_WLAN));
   if (!initWiFi(ssid, pkey)) {
     RADIO_SERIAL(Serial.println(F("HTTP-OTA: WLAN fehlgeschlagen — Neustart normal")));
-    ota_ui_begin("Update fehlgeschlagen");
-    ota_ui_set_sub("Kein WLAN");
+    ota_ui_begin(i18n_str(I18N_OTA_FAILED));
+    ota_ui_set_sub(i18n_str(I18N_OTA_NO_WLAN));
     delay(3000);
     ESP.restart();
     return;
   }
 
-  ota_ui_set_sub("Lade Firmware …");
+  ota_ui_set_sub(i18n_str(I18N_OTA_DL_FW));
   showProgress(0);
 
   char url[256];
@@ -70,8 +71,8 @@ void httpOtaRunDeferredBoot(void) {
                         HTTP_OTA_GITHUB_REPO, tag, HTTP_OTA_FIRMWARE_FILENAME);
   if (urllen <= 0 || (size_t)urllen >= sizeof(url)) {
     RADIO_SERIAL(Serial.println(F("HTTP-OTA: URL-Puffer zu klein")));
-    ota_ui_begin("Update fehlgeschlagen");
-    ota_ui_set_sub("URL zu lang");
+    ota_ui_begin(i18n_str(I18N_OTA_FAILED));
+    ota_ui_set_sub(i18n_str(I18N_OTA_URL_LONG));
     delay(3000);
     ESP.restart();
     return;
@@ -104,7 +105,7 @@ void httpOtaRunDeferredBoot(void) {
   /* Bibliothek rebootet oft selbst; falls nicht, nach OK nachziehen */
   if (ret == HTTP_UPDATE_OK) {
     showProgress(100);
-    ota_ui_set_sub("Neustart …");
+    ota_ui_set_sub(i18n_str(I18N_OTA_RESTART));
     delay(500);
     ESP.restart();
     return;
@@ -112,10 +113,10 @@ void httpOtaRunDeferredBoot(void) {
 
   String detail = httpOta.getLastErrorString();
   RADIO_SERIAL(Serial.printf_P(PSTR("HTTP OTA Fehler ret=%d %s\n"), (int)ret, detail.c_str()));
-  ota_ui_begin("Update fehlgeschlagen");
+  ota_ui_begin(i18n_str(I18N_OTA_FAILED));
   {
     char line[48];
-    snprintf(line, sizeof(line), "Code %d", (int)ret);
+    snprintf(line, sizeof(line), "%s %d", i18n_str(I18N_OTA_CODE), (int)ret);
     ota_ui_set_sub(line);
   }
   delay(400);

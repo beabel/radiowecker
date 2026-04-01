@@ -1,8 +1,8 @@
-#define RADIOVERSION "v5.0.4"
+#define RADIOVERSION "v5.0.5"
 #include "00_librarys.h"      //Lade alle benötigten Bibliotheken
 #include "00_pin_settings.h"  //Einstellungen der genutzten Pins
 #include "00_settings.h"      //einstellungen
-#include "00_texte.h"         //Strings
+#include "i18n.h"
 #include "weather.h"
 /* Kein #include <esp_bt.h>: spart Include-Kette + #pragma-Warnungen; Linker bindet die Funktion trotzdem. */
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_IDF_TARGET_ESP32) && CONFIG_IDF_TARGET_ESP32
@@ -27,6 +27,7 @@ void httpOtaRunDeferredBoot(void);
 void displayMessage(uint16_t x, uint16_t y, uint16_t w, uint16_t h, const char* text, uint8_t align = ALIGNLEFT, boolean big = false, uint16_t fc = ILI9341_WHITE, uint16_t bg = ILI9341_BLACK, uint8_t lines = 1);
 void setBGLight(uint8_t prct);
 boolean initWiFi(const char *wifiSsid, const char *wifiPkey);  /* wlan.ino — Hauptsketch steht vor alphabetischen .ino */
+void tft_i18n_refresh_labels(void);
 
 // Liest die aktuelle Uhrzeit und berechnet weekday/minutes
 void updateCurrentTime() {
@@ -88,7 +89,7 @@ void findNextAlarm() {
     RADIO_SERIAL(Serial.printf(
       "Next alarm: %02d:%02d on %s\n",
       alarmtime / 60, alarmtime % 60,
-      days_short[alarmday]
+      i18n_day_short((int)alarmday)
     ));
   } else {
     RADIO_SERIAL(Serial.println("No alarm found"));
@@ -108,6 +109,7 @@ void setup() {
   // Lade die gespeicherten Präferenzen aus dem EEPROM des ESP32
   // Die Präferenzen werden in zwei Themen gespeichert: "radio" und "senderliste"
   pref.begin("radio", false);
+  i18n_begin();
 
   sender.begin("senderlist", false);
 
@@ -180,7 +182,7 @@ void setup() {
 
   // Versuche, eine WLAN-Verbindung herzustellen und zeige den Fortschritt auf dem Display an
   displayClear();                                                                                          // Bildschirm löschen
-  displayMessage(5, 10, 310, 30, TXT_CONNECTING_TO, ALIGNCENTER, true, ILI9341_YELLOW, ILI9341_BLACK, 1);  // Zeige "Verbinden zu" auf dem Display an
+  displayMessage(5, 10, 310, 30, i18n_str(I18N_CONNECTING_TO), ALIGNCENTER, true, ILI9341_YELLOW, ILI9341_BLACK, 1);  // Zeige "Verbinden zu" auf dem Display an
   displayMessage(5, 50, 310, 30, ssid, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);  // SSID auf dem Display
   RADIO_SERIAL(Serial.println("Connect WiFi"));                                                                          // Debug-Ausgabe: "Verbinde zu WiFi"
 
@@ -206,10 +208,10 @@ void setup() {
   } else {  // Wenn die Verbindung nicht erfolgreich war
     // Es konnte keine Verbindung hergestellt werden. Eine entsprechende Nachricht wird auf dem Display angezeigt
     displayClear();                                                                                         // Bildschirm löschen
-    displayMessage(5, 10, 310, 30, TXT_NOT_CONNECTED, ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);    // Zeige "Nicht verbunden" auf dem Display an
-    displayMessage(5, 50, 310, 30, TXT_CONNECT_TO_AP, ALIGNCENTER, true, ILI9341_WHITE, ILI9341_BLACK, 1);  // Zeige "Verbinden zu AP" auf dem Display an
+    displayMessage(5, 10, 310, 30, i18n_str(I18N_NOT_CONNECTED), ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);    // Zeige "Nicht verbunden" auf dem Display an
+    displayMessage(5, 50, 310, 30, i18n_str(I18N_CONNECT_TO_AP), ALIGNCENTER, true, ILI9341_WHITE, ILI9341_BLACK, 1);  // Zeige "Verbinden zu AP" auf dem Display an
     displayMessage(5, 100, 310, 30, AP_NAME, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);           // Zeige "Ap Name" auf dem Display an
-    displayMessage(5, 150, 310, 30, TXT_CONFIG_IP, ALIGNCENTER, true, ILI9341_WHITE, ILI9341_BLACK, 1);     // Zeige "IP konfigurieren" auf dem Display an
+    displayMessage(5, 150, 310, 30, i18n_str(I18N_CONFIG_IP), ALIGNCENTER, true, ILI9341_WHITE, ILI9341_BLACK, 1);     // Zeige "IP konfigurieren" auf dem Display an
     displayMessage(5, 200, 310, 30, "192.168.4.1", ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);     // Zeige "IP " auf dem Display an
 
     // Merke den aktuellen Zeitstempel, um später nach 5 Minuten einen Retry zu ermöglichen
@@ -247,6 +249,10 @@ void loop() {
 
   poll_alarm_hw_buttons();
 
+  if (i18n_take_ui_dirty()) {
+    tft_i18n_refresh_labels();
+  }
+
   /* Nach LVGL: nochmal füttern — Screen-Wechsel kann lv_timer_handler länger blocken (Underruns/Knackser). */
   if (connected && (radio || decoder)) {
     audio_loop();
@@ -269,7 +275,7 @@ void loop() {
     discon = millis();  // Merke den aktuellen Zeitstempel für einen automatischen Retry
     displayClear();     // Bildschirm löschen
     // Zeige eine Nachricht an, dass die Verbindung verloren gegangen ist
-    displayMessage(5, 10, 310, 30, TXT_NOT_CONNECTED, ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);
+    displayMessage(5, 10, 310, 30, i18n_str(I18N_NOT_CONNECTED), ALIGNCENTER, true, ILI9341_RED, ILI9341_BLACK, 1);
   }
 
   // Erkenne eine Wiederverbindung
@@ -278,7 +284,7 @@ void loop() {
     lastWeatherUpdate = 0;  // Wetter nach Reconnect zeitnah neu holen (nicht bis Intervall warten)
     displayClear();    // Bildschirm löschen
     // Zeige eine Nachricht an, dass die Verbindung wiederhergestellt wurde
-    displayMessage(5, 10, 310, 30, TXT_RECONNECTED, ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);
+    displayMessage(5, 10, 310, 30, i18n_str(I18N_RECONNECTED), ALIGNCENTER, true, ILI9341_GREEN, ILI9341_BLACK, 1);
     reconnected = true;
   }
 

@@ -1,4 +1,4 @@
-// Colors for the Main Screen
+// Colors for the Main Screen (Startseite: Laufzeit ui_start_cols aus NVS, sonst diese Werte als Fallback beim ersten Start)
 #define COLOR_WIFI_RSSI           ILI9341_ORANGE
 #define COLOR_IP                  ILI9341_ORANGE
 #define COLOR_SLEEP_SYMBOL        ILI9341_ORANGE
@@ -30,5 +30,4 @@
 #define COLOR_FAV_BUTTONS         ILI9341_BLUE
 #define COLOR_FAV_BUTTONS_BG      ILI9341_LIGHTGREY
 #define COLOR_FAV_BUTTONS_AKTIV   ILI9341_ORANGE
-// to be done
-// maybe later all the color settings from the Webpage adjustable
+/* Startseiten-Farben zusätzlich per Web-Tab „Anzeige“ / NVS (usc_*) */

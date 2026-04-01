@@ -1,6 +1,6 @@
 #include "tft_color_setting.h"
 #include "lv_font_clock_digits.h"
-#include "00_texte.h"
+#include "i18n.h"
 #include "weather.h"
 #if defined(ARDUINO_ARCH_ESP32)
 #include <esp_random.h>
@@ -9,7 +9,8 @@
 class AudioGenerator;
 extern AudioGenerator *decoder;
 
-extern "C" const lv_font_t lv_font_de_supp_14;
+extern "C" const lv_font_t lv_font_latin_supp_14;
+extern "C" const lv_font_t lv_font_latin_supp_14_for_m18;
 
 void showStartPage(void);
 void showFavoritenPage(void);
@@ -34,6 +35,8 @@ typedef struct {
 } AlarmEdit;
 
 AlarmEdit alarmConfig;
+
+UiStartColors ui_start_cols;
 
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
@@ -99,8 +102,21 @@ static lv_obj_t *lbl_cfg_alarm_snooze_val;
 
 static lv_font_t font_ui_primary;
 static const lv_font_t *font_clock_digits; /* lv_font_clock_digits.c — nur Ziffern + Doppelpunkt */
-static lv_font_t font_clock_date;          /* großes Datum inkl. Umlaute (Fallback de_supp) */
+static lv_font_t font_clock_date;          /* großes Datum inkl. Latin-Supplement (Fallback) */
 static lv_font_t font_radio_meta;   /* Sender + Streamtitel größer */
+
+static lv_obj_t *w_hdr_now;
+static lv_obj_t *w_hdr_today;
+static lv_obj_t *w_hdr_tomorrow;
+static lv_obj_t *weather_col_boxes[3];
+static lv_obj_t *lbl_cfg_title_gain;
+static lv_obj_t *lbl_cfg_title_bright;
+static lv_obj_t *lbl_cfg_title_snooze;
+static lv_obj_t *lbl_cfg_title_alarm_snooze;
+static lv_obj_t *btn_cfg_lang;
+static lv_obj_t *lbl_cfg_lang;
+static OpenMeteoTemps g_weather_cache;
+static bool g_weather_valid = false;
 static lv_obj_t *lbl_station_radio;
 
 static lv_obj_t *lbl_al_t1;
@@ -311,12 +327,12 @@ static void on_alarm_snooze_slider(lv_event_t *e) {
   cfg_sync_value_labels();
 }
 
-/* Nur Startseiten-Lautstärke: Farben aus tft_color_setting.h (COLOR_SLIDER_*) */
+/* Startseiten-Lautstärke: ui_start_cols (Web/NVS) */
 static void style_slider(lv_obj_t *sl) {
-  lv_color_t fill = rgb565_to_lv(COLOR_SLIDER);
-  lv_obj_set_style_bg_color(sl, rgb565_to_lv(COLOR_SLIDER_BG), LV_PART_MAIN);
+  lv_color_t fill = rgb565_to_lv(ui_start_cols.slider);
+  lv_obj_set_style_bg_color(sl, rgb565_to_lv(ui_start_cols.slider_bg), LV_PART_MAIN);
   lv_obj_set_style_border_width(sl, 1, LV_PART_MAIN);
-  lv_obj_set_style_border_color(sl, rgb565_to_lv(COLOR_SLIDER_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_border_color(sl, rgb565_to_lv(ui_start_cols.slider_border), LV_PART_MAIN);
   lv_obj_set_style_bg_color(sl, fill, LV_PART_INDICATOR);
   lv_obj_set_style_bg_color(sl, lv_color_mix(fill, lv_color_black(), LV_OPA_60), LV_PART_KNOB);
 }
@@ -339,14 +355,14 @@ static void cfg_sync_value_labels(void) {
     lv_label_set_text(lbl_cfg_bright_val, b);
   }
   if (lbl_cfg_snooze_val) {
-    snprintf(b, sizeof(b), "%u min", (unsigned)constrain((int)snoozeTime, 0, 60));
+    snprintf(b, sizeof(b), "%u %s", (unsigned)constrain((int)snoozeTime, 0, 60), i18n_str(I18N_UNIT_MIN));
     lv_label_set_text(lbl_cfg_snooze_val, b);
   }
   if (lbl_cfg_alarm_snooze_val) {
     if (alarmSnoozeMin == 0) {
-      lv_label_set_text(lbl_cfg_alarm_snooze_val, "aus");
+      lv_label_set_text(lbl_cfg_alarm_snooze_val, i18n_str(I18N_SNOOZE_OFF));
     } else {
-      snprintf(b, sizeof(b), "%u min", (unsigned)alarmSnoozeMin);
+      snprintf(b, sizeof(b), "%u %s", (unsigned)alarmSnoozeMin, i18n_str(I18N_UNIT_MIN));
       lv_label_set_text(lbl_cfg_alarm_snooze_val, b);
     }
   }
@@ -381,6 +397,13 @@ bool station_navigate_next(void) {
       return false;
     }
   } while (!stationlist[curStation].enabled);
+  changeStation();
+  return true;
+}
+
+bool station_navigate_select(uint8_t idx) {
+  if (idx >= STATIONS || !stationlist[idx].enabled) return false;
+  curStation = idx;
   changeStation();
   return true;
 }
@@ -696,7 +719,7 @@ static void evt_alarm_snooze(lv_event_t *e);
 
 static void build_clock_screen(void) {
   scr_clock = lv_obj_create(NULL);
-  lv_obj_set_style_bg_color(scr_clock, rgb565_to_lv(COLOR_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(scr_clock, rgb565_to_lv(ui_start_cols.bg), LV_PART_MAIN);
   lv_obj_set_style_bg_opa(scr_clock, LV_OPA_COVER, LV_PART_MAIN);
   lv_obj_set_style_pad_all(scr_clock, 0, LV_PART_MAIN);
   lv_obj_clear_flag(scr_clock, LV_OBJ_FLAG_SCROLLABLE);
@@ -720,7 +743,7 @@ static void build_clock_screen(void) {
   lv_obj_set_flex_grow(lbl_ip, 1);
   lv_obj_set_style_text_align(lbl_ip, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
   lv_obj_set_style_text_font(lbl_ip, &font_ui_primary, LV_PART_MAIN);
-  lv_obj_set_style_text_color(lbl_ip, rgb565_to_lv(COLOR_IP), LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_ip, rgb565_to_lv(ui_start_cols.ip), LV_PART_MAIN);
 
   lbl_snooze = lv_label_create(hdr);
   lv_label_set_text(lbl_snooze, "Zz");
@@ -763,7 +786,7 @@ static void build_clock_screen(void) {
     clock_digit_lbl[idx] = lv_label_create(clock_digit_cell[idx]);
     lv_label_set_text(clock_digit_lbl[idx], "0");
     lv_obj_set_style_text_font(clock_digit_lbl[idx], font_clock_digits, LV_PART_MAIN);
-    lv_obj_set_style_text_color(clock_digit_lbl[idx], rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
+    lv_obj_set_style_text_color(clock_digit_lbl[idx], rgb565_to_lv(ui_start_cols.time_c), LV_PART_MAIN);
     lv_obj_set_style_text_letter_space(clock_digit_lbl[idx], 0, LV_PART_MAIN);
     lv_obj_center(clock_digit_lbl[idx]);
   };
@@ -773,7 +796,7 @@ static void build_clock_screen(void) {
   clock_colon = lv_label_create(clock_time_bar);
   lv_label_set_text(clock_colon, ":");
   lv_obj_set_style_text_font(clock_colon, font_clock_digits, LV_PART_MAIN);
-  lv_obj_set_style_text_color(clock_colon, rgb565_to_lv(COLOR_TIME), LV_PART_MAIN);
+  lv_obj_set_style_text_color(clock_colon, rgb565_to_lv(ui_start_cols.time_c), LV_PART_MAIN);
   lv_obj_set_style_pad_top(clock_colon, 0, LV_PART_MAIN);
   mk_digit_cell(2);
   mk_digit_cell(3);
@@ -784,7 +807,7 @@ static void build_clock_screen(void) {
   lv_obj_set_width(lbl_date, 308);
   lv_label_set_long_mode(lbl_date, LV_LABEL_LONG_WRAP);
   lv_obj_set_style_text_align(lbl_date, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-  lv_obj_set_style_text_color(lbl_date, rgb565_to_lv(COLOR_DATE), LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_date, rgb565_to_lv(ui_start_cols.date), LV_PART_MAIN);
   lv_obj_set_style_text_font(lbl_date, &font_clock_date, LV_PART_MAIN);
   lv_obj_set_style_text_line_space(lbl_date, 2, LV_PART_MAIN);
   lv_obj_align(lbl_date, LV_ALIGN_TOP_MID, 0, clock_top + clock_bar_h + date_below_clock);
@@ -806,8 +829,8 @@ static void build_clock_screen(void) {
   auto mkcol = [&](lv_obj_t *parent) {
     lv_obj_t *c = lv_obj_create(parent);
     lv_obj_set_size(c, 100, weather_col_h);
-    lv_obj_set_style_bg_color(c, rgb565_to_lv(COLOR_STATION_BOX_BG), LV_PART_MAIN);
-    lv_obj_set_style_border_color(c, rgb565_to_lv(COLOR_STATION_BOX_BORDER), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(c, rgb565_to_lv(ui_start_cols.box_bg), LV_PART_MAIN);
+    lv_obj_set_style_border_color(c, rgb565_to_lv(ui_start_cols.box_border), LV_PART_MAIN);
     lv_obj_set_style_border_width(c, 1, LV_PART_MAIN);
     lv_obj_set_style_pad_all(c, 1, LV_PART_MAIN);
     lv_obj_set_style_pad_row(c, 0, LV_PART_MAIN);
@@ -820,7 +843,9 @@ static void build_clock_screen(void) {
   lv_obj_t *c0 = mkcol(mid_weather);
   lv_obj_t *c1 = mkcol(mid_weather);
   lv_obj_t *c2 = mkcol(mid_weather);
-  (void)c0;
+  weather_col_boxes[0] = c0;
+  weather_col_boxes[1] = c1;
+  weather_col_boxes[2] = c2;
   auto mk3 = [&](lv_obj_t *col, lv_obj_t **a, lv_obj_t **b, lv_obj_t **c) {
     *a = lv_label_create(col);
     *b = lv_label_create(col);
@@ -831,9 +856,9 @@ static void build_clock_screen(void) {
     lv_label_set_long_mode(*a, LV_LABEL_LONG_DOT);
     lv_label_set_long_mode(*b, LV_LABEL_LONG_DOT);
     lv_label_set_long_mode(*c, LV_LABEL_LONG_DOT);
-    lv_obj_set_style_text_color(*a, rgb565_to_lv(COLOR_STATION_TITLE), LV_PART_MAIN);
-    lv_obj_set_style_text_color(*b, rgb565_to_lv(COLOR_STATION_TITLE), LV_PART_MAIN);
-    lv_obj_set_style_text_color(*c, rgb565_to_lv(COLOR_STATION_TITLE), LV_PART_MAIN);
+    lv_obj_set_style_text_color(*a, rgb565_to_lv(ui_start_cols.station_title), LV_PART_MAIN);
+    lv_obj_set_style_text_color(*b, rgb565_to_lv(ui_start_cols.station_title), LV_PART_MAIN);
+    lv_obj_set_style_text_color(*c, rgb565_to_lv(ui_start_cols.station_title), LV_PART_MAIN);
     lv_obj_set_style_text_font(*a, &font_ui_primary, LV_PART_MAIN);
     lv_obj_set_style_text_font(*b, &font_ui_primary, LV_PART_MAIN);
     lv_obj_set_style_text_font(*c, &font_ui_primary, LV_PART_MAIN);
@@ -856,23 +881,33 @@ static void build_clock_screen(void) {
   w_lbl_td_max = t1c;
   w_lbl_tm_min = t2b;
   w_lbl_tm_max = t2c;
-  lv_label_set_text(t0a, TXT_NOW);
-  lv_label_set_text(t1a, TXT_TODAY);
-  lv_label_set_text(t2a, TXT_TOMMORROW);
+  w_hdr_now = t0a;
+  w_hdr_today = t1a;
+  w_hdr_tomorrow = t2a;
+  lv_label_set_text(t0a, i18n_str(I18N_NOW));
+  lv_label_set_text(t1a, i18n_str(I18N_TODAY));
+  lv_label_set_text(t2a, i18n_str(I18N_TOMORROW));
   /* LVGL 9 + LV_WIDGETS_HAS_DEFAULT_VALUE: leere Labels heißen sonst "Text" bis displayWeather läuft. */
-  lv_label_set_text(t0b, TXT_TEMP " -- C");
-  lv_label_set_text(t0c, TXT_FEELS " -- C");
-  lv_label_set_text(t1b, TXT_MIN " -- C");
-  lv_label_set_text(t1c, TXT_MAX " -- C");
-  lv_label_set_text(t2b, TXT_MIN " -- C");
-  lv_label_set_text(t2c, TXT_MAX " -- C");
+  {
+    char z[32];
+    snprintf(z, sizeof(z), "%s -- C", i18n_str(I18N_TEMP));
+    lv_label_set_text(t0b, z);
+    snprintf(z, sizeof(z), "%s -- C", i18n_str(I18N_FEELS));
+    lv_label_set_text(t0c, z);
+    snprintf(z, sizeof(z), "%s -- C", i18n_str(I18N_MIN_W));
+    lv_label_set_text(t1b, z);
+    lv_label_set_text(t2b, z);
+    snprintf(z, sizeof(z), "%s -- C", i18n_str(I18N_MAX_W));
+    lv_label_set_text(t1c, z);
+    lv_label_set_text(t2c, z);
+  }
 
   mid_radio = lv_obj_create(scr_clock);
   lv_obj_remove_style_all(mid_radio);
   lv_obj_set_size(mid_radio, 314, mid_block_h);
   lv_obj_align(mid_radio, LV_ALIGN_TOP_MID, 0, mid_y);
-  lv_obj_set_style_bg_color(mid_radio, rgb565_to_lv(COLOR_STATION_BOX_BG), LV_PART_MAIN);
-  lv_obj_set_style_border_color(mid_radio, rgb565_to_lv(COLOR_STATION_BOX_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(mid_radio, rgb565_to_lv(ui_start_cols.box_bg), LV_PART_MAIN);
+  lv_obj_set_style_border_color(mid_radio, rgb565_to_lv(ui_start_cols.box_border), LV_PART_MAIN);
   lv_obj_set_style_border_width(mid_radio, 1, LV_PART_MAIN);
   lv_obj_set_style_pad_all(mid_radio, 6, LV_PART_MAIN);
   lv_obj_set_flex_flow(mid_radio, LV_FLEX_FLOW_COLUMN);
@@ -884,7 +919,7 @@ static void build_clock_screen(void) {
   lv_obj_set_width(lbl_station_big, LV_PCT(100));
   lv_label_set_long_mode(lbl_station_big, LV_LABEL_LONG_DOT);
   lv_obj_set_style_text_align(lbl_station_big, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-  lv_obj_set_style_text_color(lbl_station_big, rgb565_to_lv(COLOR_STATION_NAME), LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_station_big, rgb565_to_lv(ui_start_cols.station_name), LV_PART_MAIN);
   lv_obj_set_style_text_font(lbl_station_big, &font_radio_meta, LV_PART_MAIN);
   lv_label_set_text(lbl_station_big, "-");
 
@@ -892,7 +927,7 @@ static void build_clock_screen(void) {
   lv_obj_set_width(lbl_stream_title, LV_PCT(100));
   lv_label_set_long_mode(lbl_stream_title, LV_LABEL_LONG_WRAP);
   lv_obj_set_style_text_align(lbl_stream_title, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN);
-  lv_obj_set_style_text_color(lbl_stream_title, rgb565_to_lv(COLOR_STATION_TITLE), LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_stream_title, rgb565_to_lv(ui_start_cols.station_title), LV_PART_MAIN);
   lv_obj_set_style_text_font(lbl_stream_title, &font_radio_meta, LV_PART_MAIN);
   lv_obj_clear_flag(lbl_stream_title, LV_OBJ_FLAG_SCROLLABLE);
   lv_label_set_text(lbl_stream_title, "");
@@ -1142,7 +1177,8 @@ static void build_radio_screen(void) {
   add_radio_footer(scr_radio, true);
 }
 
-static void config_row_slider(lv_obj_t *parent, const char *label, lv_obj_t **sl, lv_obj_t **val_lbl, int y0, int vmax) {
+static void config_row_slider(lv_obj_t *parent, const char *label, lv_obj_t **sl, lv_obj_t **val_lbl, int y0, int vmax,
+                              lv_obj_t **title_out) {
   lv_obj_t *box = lv_obj_create(parent);
   lv_obj_set_size(box, 320, 44);
   lv_obj_align(box, LV_ALIGN_TOP_LEFT, 0, y0);
@@ -1156,6 +1192,7 @@ static void config_row_slider(lv_obj_t *parent, const char *label, lv_obj_t **sl
   lv_obj_set_style_text_font(lb, &font_ui_primary, LV_PART_MAIN);
   lv_obj_set_style_text_color(lb, lv_color_black(), LV_PART_MAIN);
   lv_obj_align(lb, LV_ALIGN_TOP_LEFT, 4, 2);
+  if (title_out) *title_out = lb;
   *val_lbl = lv_label_create(box);
   lv_label_set_text(*val_lbl, "--");
   lv_obj_set_style_text_font(*val_lbl, &font_ui_primary, LV_PART_MAIN);
@@ -1168,25 +1205,38 @@ static void config_row_slider(lv_obj_t *parent, const char *label, lv_obj_t **sl
   style_slider_light(*sl);
 }
 
+static void evt_footer_cfg_lang(lv_event_t *e) {
+  (void)e;
+  i18n_set_lang((uint8_t)((i18n_get_lang() + 1) % 6));
+  ui_cfg_lang_lbl_refresh();
+}
+
+static void ui_cfg_lang_lbl_refresh(void) {
+  if (!lbl_cfg_lang) return;
+  static const char *const codes[6] = {"DE", "EN", "FR", "RU", "ES", "NL"};
+  lv_label_set_text(lbl_cfg_lang, codes[i18n_get_lang()]);
+}
+
 static void build_config_screen(void) {
   scr_config = lv_obj_create(NULL);
   lv_obj_set_style_bg_color(scr_config, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
   lv_obj_set_style_bg_opa(scr_config, LV_OPA_COVER, LV_PART_MAIN);
   lv_obj_set_style_pad_all(scr_config, 0, LV_PART_MAIN);
 
-  config_row_slider(scr_config, "Lautstärke", &sl_cfg_gain, &lbl_cfg_gain_val, 0, 100);
+  config_row_slider(scr_config, i18n_str(I18N_CFG_VOLUME), &sl_cfg_gain, &lbl_cfg_gain_val, 0, 100, &lbl_cfg_title_gain);
   lv_obj_add_event_cb(sl_cfg_gain, on_gain_slider, LV_EVENT_VALUE_CHANGED, NULL);
   lv_obj_add_event_cb(sl_cfg_gain, on_gain_slider, LV_EVENT_RELEASED, NULL);
 
-  config_row_slider(scr_config, "Helligkeit", &sl_cfg_bright, &lbl_cfg_bright_val, 44, 100);
+  config_row_slider(scr_config, i18n_str(I18N_CFG_BRIGHT), &sl_cfg_bright, &lbl_cfg_bright_val, 44, 100, &lbl_cfg_title_bright);
   lv_obj_add_event_cb(sl_cfg_bright, on_bright_slider, LV_EVENT_VALUE_CHANGED, NULL);
   lv_obj_add_event_cb(sl_cfg_bright, on_bright_slider, LV_EVENT_RELEASED, NULL);
 
-  config_row_slider(scr_config, "Einschlafzeit", &sl_cfg_snooze, &lbl_cfg_snooze_val, 88, 60);
+  config_row_slider(scr_config, i18n_str(I18N_CFG_SNOOZE), &sl_cfg_snooze, &lbl_cfg_snooze_val, 88, 60, &lbl_cfg_title_snooze);
   lv_obj_add_event_cb(sl_cfg_snooze, on_snooze_slider, LV_EVENT_VALUE_CHANGED, NULL);
   lv_obj_add_event_cb(sl_cfg_snooze, on_snooze_slider, LV_EVENT_RELEASED, NULL);
 
-  config_row_slider(scr_config, "Wecker-Schlummer", &sl_cfg_alarm_snooze, &lbl_cfg_alarm_snooze_val, 132, 10);
+  config_row_slider(scr_config, i18n_str(I18N_CFG_ALARM_SNOOZE), &sl_cfg_alarm_snooze, &lbl_cfg_alarm_snooze_val, 132, 10,
+                    &lbl_cfg_title_alarm_snooze);
   lv_obj_add_event_cb(sl_cfg_alarm_snooze, on_alarm_snooze_slider, LV_EVENT_VALUE_CHANGED, NULL);
   lv_obj_add_event_cb(sl_cfg_alarm_snooze, on_alarm_snooze_slider, LV_EVENT_RELEASED, NULL);
 
@@ -1214,12 +1264,14 @@ static void build_config_screen(void) {
   lv_obj_center(x2);
   lv_obj_add_event_cb(b2, evt_footer_alarm, LV_EVENT_CLICKED, NULL);
 
-  /* Platzhalter wie 4. Footer-Taste (Senderwechsel) — gleiche Breite/Höhe, kein Klick */
-  lv_obj_t *gap = lv_obj_create(row);
-  lv_obj_remove_style_all(gap);
-  lv_obj_set_size(gap, 62, 58);
-  lv_obj_set_style_bg_opa(gap, LV_OPA_TRANSP, LV_PART_MAIN);
-  lv_obj_clear_flag(gap, LV_OBJ_FLAG_CLICKABLE);
+  /* Sprache: DE → EN → FR → RU (freier Platz wie zuvor „Senderwechsel“) */
+  btn_cfg_lang = lv_button_create(row);
+  footer_style_btn(btn_cfg_lang);
+  lbl_cfg_lang = lv_label_create(btn_cfg_lang);
+  lv_obj_set_style_text_font(lbl_cfg_lang, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_center(lbl_cfg_lang);
+  lv_obj_add_event_cb(btn_cfg_lang, evt_footer_cfg_lang, LV_EVENT_CLICKED, NULL);
+  ui_cfg_lang_lbl_refresh();
 
   lv_obj_t *b4 = lv_button_create(row);
   footer_style_btn(b4);
@@ -1263,7 +1315,8 @@ static void build_alarm_screen(void) {
       lv_obj_set_style_bg_color(al_day_btn[row][col], rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
       lv_obj_set_style_text_color(al_day_btn[row][col], lv_color_black(), LV_PART_MAIN);
       lv_obj_t *lb = lv_label_create(al_day_btn[row][col]);
-      lv_label_set_text(lb, days_short[(col + 1) % 7]);
+      lv_label_set_text(lb, i18n_day_short((col + 1) % 7));
+      lv_obj_set_style_text_font(lb, &font_ui_primary, LV_PART_MAIN);
       lv_obj_set_style_text_color(lb, lv_color_black(), LV_PART_MAIN);
       lv_obj_center(lb);
       uintptr_t ud = ((uintptr_t)row << 8) | col;
@@ -1358,24 +1411,118 @@ static void ui_refresh_header(void) {
   lv_label_set_text(lbl_ip, ipstr);
 
   if (snoozeTimeEnd != 0)
-    lv_obj_set_style_text_color(lbl_snooze, rgb565_to_lv(COLOR_SLEEP_SYMBOL), LV_PART_MAIN);
+    lv_obj_set_style_text_color(lbl_snooze, rgb565_to_lv(ui_start_cols.sleep_sym), LV_PART_MAIN);
   else
-    lv_obj_set_style_text_color(lbl_snooze, rgb565_to_lv(COLOR_BG), LV_PART_MAIN);
+    lv_obj_set_style_text_color(lbl_snooze, rgb565_to_lv(ui_start_cols.bg), LV_PART_MAIN);
 
   if (startpage) {
     char txt[50] = "";
-    lv_color_t ac = rgb565_to_lv(COLOR_ALARM_SYMBOL);
+    lv_color_t ac = rgb565_to_lv(ui_start_cols.alarm_sym);
     if (alarmday < 8) {
       uint8_t h = alarmtime / 60;
       uint8_t m = alarmtime % 60;
-      snprintf(txt, sizeof(txt), "%s %02u:%02u", days_short[alarmday], h, m);
+      snprintf(txt, sizeof(txt), "%s %02u:%02u", i18n_day_short((int)alarmday), h, m);
     } else {
       ac = lv_palette_main(LV_PALETTE_RED);
-      snprintf(txt, sizeof(txt), "AUS");
+      snprintf(txt, sizeof(txt), "%s", i18n_str(I18N_ALARM_OFF));
     }
     lv_obj_set_style_text_color(lbl_alarm_hdr, ac, LV_PART_MAIN);
     lv_label_set_text(lbl_alarm_hdr, txt);
   }
+}
+
+static void ui_start_colors_fill_factory(UiStartColors *d) {
+  d->bg = ILI9341_BLACK;
+  d->ip = ILI9341_ORANGE;
+  d->sleep_sym = ILI9341_ORANGE;
+  d->alarm_sym = ILI9341_ORANGE;
+  d->slider = ILI9341_ORANGE;
+  d->slider_bg = ILI9341_BLACK;
+  d->slider_border = ILI9341_RED;
+  d->date = ILI9341_ORANGE;
+  d->time_c = ILI9341_ORANGE;
+  d->box_bg = ILI9341_BLACK;
+  d->box_border = ILI9341_WHITE;
+  d->station_name = ILI9341_YELLOW;
+  d->station_title = ILI9341_WHITE;
+}
+
+void ui_start_colors_load_from_prefs(void) {
+  ui_start_cols.bg = pref.getUShort("usc_bg", ILI9341_BLACK);
+  ui_start_cols.ip = pref.getUShort("usc_ip", ILI9341_ORANGE);
+  ui_start_cols.sleep_sym = pref.getUShort("usc_sleep", ILI9341_ORANGE);
+  ui_start_cols.alarm_sym = pref.getUShort("usc_alarm", ILI9341_ORANGE);
+  ui_start_cols.slider = pref.getUShort("usc_sli", ILI9341_ORANGE);
+  ui_start_cols.slider_bg = pref.getUShort("usc_slibg", ILI9341_BLACK);
+  ui_start_cols.slider_border = pref.getUShort("usc_slibd", ILI9341_RED);
+  ui_start_cols.date = pref.getUShort("usc_date", ILI9341_ORANGE);
+  ui_start_cols.time_c = pref.getUShort("usc_time", ILI9341_ORANGE);
+  ui_start_cols.box_bg = pref.getUShort("usc_boxbg", ILI9341_BLACK);
+  ui_start_cols.box_border = pref.getUShort("usc_boxbd", ILI9341_WHITE);
+  ui_start_cols.station_name = pref.getUShort("usc_stnm", ILI9341_YELLOW);
+  ui_start_cols.station_title = pref.getUShort("usc_sttl", ILI9341_WHITE);
+}
+
+static void ui_start_colors_save_to_prefs_internal(void) {
+  pref.putUShort("usc_bg", ui_start_cols.bg);
+  pref.putUShort("usc_ip", ui_start_cols.ip);
+  pref.putUShort("usc_sleep", ui_start_cols.sleep_sym);
+  pref.putUShort("usc_alarm", ui_start_cols.alarm_sym);
+  pref.putUShort("usc_sli", ui_start_cols.slider);
+  pref.putUShort("usc_slibg", ui_start_cols.slider_bg);
+  pref.putUShort("usc_slibd", ui_start_cols.slider_border);
+  pref.putUShort("usc_date", ui_start_cols.date);
+  pref.putUShort("usc_time", ui_start_cols.time_c);
+  pref.putUShort("usc_boxbg", ui_start_cols.box_bg);
+  pref.putUShort("usc_boxbd", ui_start_cols.box_border);
+  pref.putUShort("usc_stnm", ui_start_cols.station_name);
+  pref.putUShort("usc_sttl", ui_start_cols.station_title);
+}
+
+static void ui_start_colors_refresh_lvgl(void) {
+  if (!scr_clock) return;
+  lv_obj_set_style_bg_color(scr_clock, rgb565_to_lv(ui_start_cols.bg), LV_PART_MAIN);
+  if (lbl_ip) lv_obj_set_style_text_color(lbl_ip, rgb565_to_lv(ui_start_cols.ip), LV_PART_MAIN);
+  if (lbl_date) lv_obj_set_style_text_color(lbl_date, rgb565_to_lv(ui_start_cols.date), LV_PART_MAIN);
+  for (int i = 0; i < 4; i++) {
+    if (clock_digit_lbl[i]) lv_obj_set_style_text_color(clock_digit_lbl[i], rgb565_to_lv(ui_start_cols.time_c), LV_PART_MAIN);
+  }
+  if (clock_colon) lv_obj_set_style_text_color(clock_colon, rgb565_to_lv(ui_start_cols.time_c), LV_PART_MAIN);
+  for (int i = 0; i < 3; i++) {
+    if (weather_col_boxes[i]) {
+      lv_obj_set_style_bg_color(weather_col_boxes[i], rgb565_to_lv(ui_start_cols.box_bg), LV_PART_MAIN);
+      lv_obj_set_style_border_color(weather_col_boxes[i], rgb565_to_lv(ui_start_cols.box_border), LV_PART_MAIN);
+    }
+  }
+  {
+    lv_obj_t *wls[] = {w_hdr_now,   w_lbl_now_t, w_lbl_now_f, w_hdr_today, w_lbl_td_min,
+                       w_lbl_td_max, w_hdr_tomorrow, w_lbl_tm_min, w_lbl_tm_max};
+    for (size_t j = 0; j < sizeof(wls) / sizeof(wls[0]); j++) {
+      if (wls[j]) lv_obj_set_style_text_color(wls[j], rgb565_to_lv(ui_start_cols.station_title), LV_PART_MAIN);
+    }
+  }
+  if (mid_radio) {
+    lv_obj_set_style_bg_color(mid_radio, rgb565_to_lv(ui_start_cols.box_bg), LV_PART_MAIN);
+    lv_obj_set_style_border_color(mid_radio, rgb565_to_lv(ui_start_cols.box_border), LV_PART_MAIN);
+  }
+  if (lbl_station_big) lv_obj_set_style_text_color(lbl_station_big, rgb565_to_lv(ui_start_cols.station_name), LV_PART_MAIN);
+  if (lbl_stream_title) lv_obj_set_style_text_color(lbl_stream_title, rgb565_to_lv(ui_start_cols.station_title), LV_PART_MAIN);
+  if (sl_clock_vol) style_slider(sl_clock_vol);
+  ui_refresh_header();
+  lv_timer_handler();
+}
+
+void ui_start_colors_apply_from_web(const UiStartColors *src) {
+  if (!src) return;
+  ui_start_cols = *src;
+  ui_start_colors_save_to_prefs_internal();
+  ui_start_colors_refresh_lvgl();
+}
+
+void ui_start_colors_reset_to_factory(void) {
+  ui_start_colors_fill_factory(&ui_start_cols);
+  ui_start_colors_save_to_prefs_internal();
+  ui_start_colors_refresh_lvgl();
 }
 
 static void ui_refresh_mid_clock(void) {
@@ -1419,13 +1566,13 @@ void setup_display(void) {
   lv_tick_set_cb(lvgl_tick_get_cb);
 
   font_ui_primary = lv_font_montserrat_14;
-  font_ui_primary.fallback = &lv_font_de_supp_14;
+  font_ui_primary.fallback = &lv_font_latin_supp_14;
 
   font_clock_digits = &lv_font_clock_digits;
   font_clock_date = lv_font_montserrat_18;
-  font_clock_date.fallback = &lv_font_de_supp_14;
+  font_clock_date.fallback = &lv_font_latin_supp_14_for_m18;
   font_radio_meta = lv_font_montserrat_18;
-  font_radio_meta.fallback = &lv_font_de_supp_14;
+  font_radio_meta.fallback = &lv_font_latin_supp_14;
 
   lv_disp_main = lv_display_create(320, 240);
   lv_display_set_flush_cb(lv_disp_main, disp_flush);
@@ -1441,6 +1588,7 @@ void setup_display(void) {
   yield();
   build_ota_screen();
   yield();
+  ui_start_colors_load_from_prefs();
   build_clock_screen();
   yield();
   build_radio_screen();
@@ -1534,7 +1682,7 @@ void updateTime(boolean redraw) {
     return;
   }
 
-  sprintf(tim, "%s %i. %s %i", days[ti.tm_wday], ti.tm_mday, months[ti.tm_mon], ti.tm_year + 1900);
+  sprintf(tim, "%s %i. %s %i", i18n_day_long(ti.tm_wday), ti.tm_mday, i18n_month_short(ti.tm_mon), ti.tm_year + 1900);
   if (redraw || strcmp(tim, lastdate) != 0) {
     strncpy(lastdate, tim, sizeof(lastdate) - 1);
     lastdate[sizeof(lastdate) - 1] = 0;
@@ -1613,6 +1761,34 @@ void setSnoozeTime(uint16_t value) {
   ui_slider_internal = true;
   if (sl_cfg_snooze) lv_slider_set_value(sl_cfg_snooze, snoozeTime, LV_ANIM_OFF);
   ui_slider_internal = false;
+}
+
+void web_apply_brightness(uint8_t v) {
+  bright = (uint8_t)constrain((int)v, 0, 100);
+  pref.putUShort("bright", bright);
+  ui_slider_internal = true;
+  if (sl_cfg_bright) lv_slider_set_value(sl_cfg_bright, bright, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  cfg_sync_value_labels();
+  setBGLight(bright == 0 ? 0 : bright);
+}
+
+void web_apply_sleep_timer_min(uint8_t v) {
+  snoozeTime = (uint8_t)constrain((int)v, 0, 60);
+  pref.putUShort("snooze", snoozeTime);
+  ui_slider_internal = true;
+  if (sl_cfg_snooze) lv_slider_set_value(sl_cfg_snooze, snoozeTime, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  cfg_sync_value_labels();
+}
+
+void web_apply_alarm_snooze_min(uint8_t v) {
+  alarmSnoozeMin = (uint8_t)constrain((int)v, 0, 10);
+  pref.putUShort("alm_snooze", alarmSnoozeMin);
+  ui_slider_internal = true;
+  if (sl_cfg_alarm_snooze) lv_slider_set_value(sl_cfg_alarm_snooze, alarmSnoozeMin, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  cfg_sync_value_labels();
 }
 
 /* Zuletzt an TFT_LED geschriebener Wert (nach LED_ON-Invert) → logische Helligkeit 0…255 vor Invert. */
@@ -1867,7 +2043,7 @@ void safeAlarmTime(void) {
   pref.putUShort("alarmday2", alarmday2);
   lv_obj_set_style_bg_color(scr_msg, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
   lv_obj_set_style_bg_opa(scr_msg, LV_OPA_COVER, LV_PART_MAIN);
-  lv_label_set_text(msg_title, TXT_OK);
+  lv_label_set_text(msg_title, i18n_str(I18N_OK));
   lv_obj_set_style_text_color(msg_title, lv_palette_main(LV_PALETTE_GREEN), LV_PART_MAIN);
   lv_obj_set_style_text_font(msg_title, &font_ui_primary, LV_PART_MAIN);
   lv_obj_set_style_text_align(msg_title, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
@@ -1937,13 +2113,16 @@ void FavoriteButtons(void) {
 void displayWeather(const OpenMeteoTemps *t) {
   if (!t) return;
 
+  g_weather_cache = *t;
+  g_weather_valid = true;
+
   char lt[48], lf[48], dmin[48], dmax[48], mmin[48], mmax[48];
-  snprintf(lt, sizeof(lt), "%s %d C", TXT_TEMP, (int)t->current_c);
-  snprintf(lf, sizeof(lf), "%s %d C", TXT_FEELS, (int)t->feels_c);
-  snprintf(dmin, sizeof(dmin), "%s %d C", TXT_MIN, (int)t->today_min);
-  snprintf(dmax, sizeof(dmax), "%s %d C", TXT_MAX, (int)t->today_max);
-  snprintf(mmin, sizeof(mmin), "%s %d C", TXT_MIN, (int)t->tomorrow_min);
-  snprintf(mmax, sizeof(mmax), "%s %d C", TXT_MAX, (int)t->tomorrow_max);
+  snprintf(lt, sizeof(lt), "%s %d C", i18n_str(I18N_TEMP), (int)t->current_c);
+  snprintf(lf, sizeof(lf), "%s %d C", i18n_str(I18N_FEELS), (int)t->feels_c);
+  snprintf(dmin, sizeof(dmin), "%s %d C", i18n_str(I18N_MIN_W), (int)t->today_min);
+  snprintf(dmax, sizeof(dmax), "%s %d C", i18n_str(I18N_MAX_W), (int)t->today_max);
+  snprintf(mmin, sizeof(mmin), "%s %d C", i18n_str(I18N_MIN_W), (int)t->tomorrow_min);
+  snprintf(mmax, sizeof(mmax), "%s %d C", i18n_str(I18N_MAX_W), (int)t->tomorrow_max);
   lv_label_set_text(w_lbl_now_t, lt);
   lv_label_set_text(w_lbl_now_f, lf);
   lv_label_set_text(w_lbl_td_min, dmin);
@@ -1975,4 +2154,45 @@ void DrawFooterButtons_Power_Sleep_Alarm(void) {
 
 void onTouchClick(TS_Point p) {
   (void)p;
+}
+
+void tft_i18n_refresh_labels(void) {
+  if (w_hdr_now) lv_label_set_text(w_hdr_now, i18n_str(I18N_NOW));
+  if (w_hdr_today) lv_label_set_text(w_hdr_today, i18n_str(I18N_TODAY));
+  if (w_hdr_tomorrow) lv_label_set_text(w_hdr_tomorrow, i18n_str(I18N_TOMORROW));
+
+  {
+    char z[36];
+    snprintf(z, sizeof(z), "%s -- C", i18n_str(I18N_TEMP));
+    if (w_lbl_now_t) lv_label_set_text(w_lbl_now_t, z);
+    snprintf(z, sizeof(z), "%s -- C", i18n_str(I18N_FEELS));
+    if (w_lbl_now_f) lv_label_set_text(w_lbl_now_f, z);
+    snprintf(z, sizeof(z), "%s -- C", i18n_str(I18N_MIN_W));
+    if (w_lbl_td_min) lv_label_set_text(w_lbl_td_min, z);
+    if (w_lbl_tm_min) lv_label_set_text(w_lbl_tm_min, z);
+    snprintf(z, sizeof(z), "%s -- C", i18n_str(I18N_MAX_W));
+    if (w_lbl_td_max) lv_label_set_text(w_lbl_td_max, z);
+    if (w_lbl_tm_max) lv_label_set_text(w_lbl_tm_max, z);
+  }
+
+  if (g_weather_valid) displayWeather(&g_weather_cache);
+
+  if (lbl_cfg_title_gain) lv_label_set_text(lbl_cfg_title_gain, i18n_str(I18N_CFG_VOLUME));
+  if (lbl_cfg_title_bright) lv_label_set_text(lbl_cfg_title_bright, i18n_str(I18N_CFG_BRIGHT));
+  if (lbl_cfg_title_snooze) lv_label_set_text(lbl_cfg_title_snooze, i18n_str(I18N_CFG_SNOOZE));
+  if (lbl_cfg_title_alarm_snooze) lv_label_set_text(lbl_cfg_title_alarm_snooze, i18n_str(I18N_CFG_ALARM_SNOOZE));
+  ui_cfg_lang_lbl_refresh();
+
+  for (uint8_t row = 0; row < 2; row++) {
+    for (uint8_t col = 0; col < 7; col++) {
+      if (!al_day_btn[row][col]) continue;
+      lv_obj_t *lb = lv_obj_get_child(al_day_btn[row][col], 0);
+      if (lb) lv_label_set_text(lb, i18n_day_short((col + 1) % 7));
+    }
+  }
+
+  cfg_sync_value_labels();
+  lastdate[0] = 0;
+  updateTime(true);
+  ui_refresh_header();
 }

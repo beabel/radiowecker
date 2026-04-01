@@ -1,9 +1,15 @@
 //home page and templatefor options
 #include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
 #include "index.h"
 #include "ArduinoJson.h"
+#include "i18n.h"
+#include "ui_start_colors.h"
 
 void handleStartHttpUpdate(void);
+void getLang(void);
+void setLang(void);
 
 WebServer server(80);
 
@@ -16,7 +22,8 @@ void setup_webserver() {
   server.on("/", handleRoot);
 
   // Definiert die Routen für verschiedene AJAX-Befehle und verknüpft sie mit den entsprechenden Funktionen
-  server.on("/cmd/stations", sendStations);            // Ruft die Liste der verfügbaren Stationen ab
+  server.on("/cmd/stations", sendStations);            // Alle Stationen (Senderliste / Bearbeitung)
+  server.on("/cmd/stationsActive", sendStationsActive); // Nur aktive Sender (Player-Dropdown)
   server.on("/cmd/restorestations", restoreStations);  // Stellt die gespeicherten Stationen wieder her
   server.on("/cmd/restart", restart);                  // Startet das System neu
   server.on("/cmd/setaccess", setAccessData);          // Setzt die Zugangsdaten
@@ -36,10 +43,20 @@ void setup_webserver() {
   server.on("/cmd/startSleep", startSleep);              // Startet den Schlafmodus
   server.on("/cmd/beforeStation", beforeStation);        // Wechselt zur vorherigen Station
   server.on("/cmd/nextStation", nextStation);            // Wechselt zur nächsten Station
+  server.on("/cmd/selectStation", selectStationByIndex); // Wechselt zur gewählten Station (Web-Dropdown)
   server.on("/cmd/getCurrentStatus", getCurrentStatus);  // Ruft den aktuellen Status ab
+  server.on("/cmd/getDisplaySettings", getDisplaySettings);
+  server.on("/cmd/setBright", setBrightWeb);
+  server.on("/cmd/setSleepTimer", setSleepTimerWeb);
+  server.on("/cmd/setAlarmSnooze", setAlarmSnoozeWeb);
+  server.on("/cmd/getStartColors", getStartColors);
+  server.on("/cmd/setStartColors", HTTP_POST, setStartColorsWeb, nullptr);
+  server.on("/cmd/resetStartColors", HTTP_POST, resetStartColorsWeb, nullptr);
 
   // Info-Tab: Definiert die Route für das Abrufen von Systeminformationen
   server.on("/cmd/getInfo", getInfo);  // Ruft allgemeine Systeminformationen ab
+  server.on("/cmd/getlang", getLang);
+  server.on("/cmd/setlang", setLang);
   /* Kein Upload-Callback: sonst nimmt WebServer 3.x den RAW-Pfad, arg("plain") bleibt leer (JSON-OTA schlägt fehl). */
   server.on("/cmd/startHttpUpdate", HTTP_POST, handleStartHttpUpdate, nullptr);
 
@@ -96,9 +113,9 @@ void handleRoot() {
 // Bearbeitet AJAX-Befehle für "/cmd/stations"
 // Sendet eine Liste der verfügbaren Stationen als HTML-Optionen
 void sendStations() {
-  char* s;        // Variable für das Symbol vor dem Stationsnamen
-  char* sel;      // Variable für das 'selected'-Attribut der aktuellen Station
-  char buf[100];  // Buffer für die HTML-Ausgabe
+  const char* s;   // Symbol vor dem Stationsnamen (Stringliteral)
+  const char* sel;   // 'selected' oder leer (Stringliteral)
+  char buf[100];   // Buffer für die HTML-Ausgabe
 
   // Bereite die HTML-Antwort vor
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
@@ -117,6 +134,22 @@ void sendStations() {
     // Erstelle den Eintrag für die Option mit der Vorlage
     sprintf(buf, OPTION_entry, i, sel, s, stationlist[i].name);
     server.sendContent(buf);  // Sende den Inhalt der Option
+  }
+}
+
+// Nur aktivierte Stationen — gleiche Index-Werte wie in stationlist (für /cmd/selectStation)
+void sendStationsActive() {
+  const char* sel;
+  char buf[100];
+
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.send(200, "text/html", "");
+
+  for (uint8_t i = 0; i < STATIONS; i++) {
+    if (!stationlist[i].enabled) continue;
+    sel = (i == actStation) ? "selected" : "";
+    sprintf(buf, OPTION_entry, i, sel, "&#x25cf;", stationlist[i].name);
+    server.sendContent(buf);
   }
 }
 
@@ -440,7 +473,7 @@ void beforeStation() {
   if (station_navigate_prev())
     server.send(200, "text/plain", "OK");
   else
-    server.send(200, "text/plain", "Keine aktive Station verfügbar.");
+    server.send(200, "text/plain", i18n_str(I18N_ERR_NO_STATION));
 }
 
 // Verarbeitet den AJAX-Befehl /cmd/nextStation, um zur nächsten "aktiven" Station zu wechseln
@@ -448,7 +481,23 @@ void nextStation() {
   if (station_navigate_next())
     server.send(200, "text/plain", "OK");
   else
-    server.send(200, "text/plain", "Keine aktive Station verfügbar.");
+    server.send(200, "text/plain", i18n_str(I18N_ERR_NO_STATION));
+}
+
+void selectStationByIndex() {
+  if (!server.hasArg("stationid")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("stationid").toInt();
+  if (v < 0 || v >= STATIONS) {
+    server.send(200, "text/plain", i18n_str(I18N_ERR_NO_STATION));
+    return;
+  }
+  if (station_navigate_select((uint8_t)v))
+    server.send(200, "text/plain", "OK");
+  else
+    server.send(200, "text/plain", i18n_str(I18N_ERR_NO_STATION));
 }
 
 // AJAX-Befehl /cmd/getCurrentStatus
@@ -475,15 +524,17 @@ void getCurrentStatus() {
   if (alarmday < 8) {  // Alarm ist aktiv
     h = alarmtime / 60;
     m = alarmtime % 60;
-    sprintf(txt, "%s %02i:%02i", days_short[alarmday], h, m);
+    sprintf(txt, "%s %02i:%02i", i18n_day_short((int)alarmday), h, m);
     jsonDoc["alarm"] = "1";
   } else {  // Alarm ist ausgeschaltet
-    sprintf(txt, "AUS");
+    snprintf(txt, sizeof(txt), "%s", i18n_str(I18N_ALARM_OFF));
     jsonDoc["alarm"] = "0";
   }
   jsonDoc["alarmtime"] = txt;
 
   // Radio-Status
+  jsonDoc["actStation"] = actStation;
+  jsonDoc["radioPlaying"] = radio ? 1 : 0;
   if (radio) {
     jsonDoc["radioStation"] = stationlist[actStation].name;
     jsonDoc["radioTitle"] = title;
@@ -495,7 +546,7 @@ void getCurrentStatus() {
   // Aktuelles Datum und Uhrzeit
   char tim[40];
   if (getLocalTime(&ti)) {
-    sprintf(tim, "%s %i. %s %i", days[ti.tm_wday], ti.tm_mday, months[ti.tm_mon], ti.tm_year + 1900);
+    sprintf(tim, "%s %i. %s %i", i18n_day_long(ti.tm_wday), ti.tm_mday, i18n_month_short(ti.tm_mon), ti.tm_year + 1900);
     jsonDoc["Date"] = tim;
     strftime(tim, sizeof(tim), "%H:%M", &ti);
     jsonDoc["Time"] = tim;
@@ -513,6 +564,190 @@ void getCurrentStatus() {
   server.send(200, "application/json; charset=utf-8", response);
 }
 
+void getDisplaySettings() {
+  StaticJsonDocument<128> doc;
+  doc["bright"] = bright;
+  doc["sleepTimerMin"] = snoozeTime;
+  doc["alarmSnoozeMin"] = alarmSnoozeMin;
+  String out;
+  serializeJson(doc, out);
+  server.send(200, "application/json; charset=utf-8", out);
+}
+
+void setBrightWeb() {
+  if (!server.hasArg("value")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("value").toInt();
+  if (v < 0 || v > 100) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  web_apply_brightness((uint8_t)v);
+  server.send(200, "text/plain", "OK");
+}
+
+void setSleepTimerWeb() {
+  if (!server.hasArg("min")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("min").toInt();
+  if (v < 0 || v > 60) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  web_apply_sleep_timer_min((uint8_t)v);
+  server.send(200, "text/plain", "OK");
+}
+
+void setAlarmSnoozeWeb() {
+  if (!server.hasArg("min")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("min").toInt();
+  if (v < 0 || v > 10) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  web_apply_alarm_snooze_min((uint8_t)v);
+  server.send(200, "text/plain", "OK");
+}
+
+static void ui565_to_hex_json(uint16_t c, char *buf, size_t cap) {
+  uint8_t r5 = (uint8_t)((c >> 11) & 0x1F);
+  uint8_t g6 = (uint8_t)((c >> 5) & 0x3F);
+  uint8_t b5 = (uint8_t)(c & 0x1F);
+  uint8_t r = (uint8_t)((r5 * 527 + 23) >> 6);
+  uint8_t g = (uint8_t)((g6 * 259 + 33) >> 6);
+  uint8_t b = (uint8_t)((b5 * 527 + 23) >> 6);
+  snprintf(buf, cap, "#%02X%02X%02X", (unsigned)r, (unsigned)g, (unsigned)b);
+}
+
+static bool parse_hex_color565(const char *s, uint16_t *out565) {
+  if (!s || s[0] != '#' || strlen(s) != 7) return false;
+  for (int i = 1; i <= 6; i++) {
+    if (!isxdigit((unsigned char)s[i])) return false;
+  }
+  unsigned long v = strtoul(s + 1, NULL, 16);
+  uint8_t r = (uint8_t)((v >> 16) & 0xFF);
+  uint8_t g = (uint8_t)((v >> 8) & 0xFF);
+  uint8_t b = (uint8_t)(v & 0xFF);
+  *out565 = (uint16_t)(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
+  return true;
+}
+
+void getStartColors() {
+  StaticJsonDocument<768> doc;
+  char hx[10];
+  ui565_to_hex_json(ui_start_cols.bg, hx, sizeof(hx));
+  doc["bg"] = hx;
+  ui565_to_hex_json(ui_start_cols.ip, hx, sizeof(hx));
+  doc["ip"] = hx;
+  ui565_to_hex_json(ui_start_cols.sleep_sym, hx, sizeof(hx));
+  doc["sleep"] = hx;
+  ui565_to_hex_json(ui_start_cols.alarm_sym, hx, sizeof(hx));
+  doc["alarm"] = hx;
+  ui565_to_hex_json(ui_start_cols.slider, hx, sizeof(hx));
+  doc["sFill"] = hx;
+  ui565_to_hex_json(ui_start_cols.slider_bg, hx, sizeof(hx));
+  doc["sBg"] = hx;
+  ui565_to_hex_json(ui_start_cols.slider_border, hx, sizeof(hx));
+  doc["sBd"] = hx;
+  ui565_to_hex_json(ui_start_cols.date, hx, sizeof(hx));
+  doc["date"] = hx;
+  ui565_to_hex_json(ui_start_cols.time_c, hx, sizeof(hx));
+  doc["time"] = hx;
+  ui565_to_hex_json(ui_start_cols.box_bg, hx, sizeof(hx));
+  doc["boxBg"] = hx;
+  ui565_to_hex_json(ui_start_cols.box_border, hx, sizeof(hx));
+  doc["boxBd"] = hx;
+  ui565_to_hex_json(ui_start_cols.station_name, hx, sizeof(hx));
+  doc["stName"] = hx;
+  ui565_to_hex_json(ui_start_cols.station_title, hx, sizeof(hx));
+  doc["stTitle"] = hx;
+  String out;
+  serializeJson(doc, out);
+  server.send(200, "application/json; charset=utf-8", out);
+}
+
+void setStartColorsWeb() {
+  if (!server.hasArg("plain")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  StaticJsonDocument<768> jd;
+  DeserializationError err = deserializeJson(jd, server.arg("plain"));
+  if (err) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  UiStartColors n = ui_start_cols;
+  uint16_t tmp;
+  const char *s;
+  if (!jd["bg"].isNull()) {
+    s = jd["bg"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.bg = tmp;
+  }
+  if (!jd["ip"].isNull()) {
+    s = jd["ip"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.ip = tmp;
+  }
+  if (!jd["sleep"].isNull()) {
+    s = jd["sleep"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.sleep_sym = tmp;
+  }
+  if (!jd["alarm"].isNull()) {
+    s = jd["alarm"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.alarm_sym = tmp;
+  }
+  if (!jd["sFill"].isNull()) {
+    s = jd["sFill"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.slider = tmp;
+  }
+  if (!jd["sBg"].isNull()) {
+    s = jd["sBg"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.slider_bg = tmp;
+  }
+  if (!jd["sBd"].isNull()) {
+    s = jd["sBd"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.slider_border = tmp;
+  }
+  if (!jd["date"].isNull()) {
+    s = jd["date"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.date = tmp;
+  }
+  if (!jd["time"].isNull()) {
+    s = jd["time"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.time_c = tmp;
+  }
+  if (!jd["boxBg"].isNull()) {
+    s = jd["boxBg"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.box_bg = tmp;
+  }
+  if (!jd["boxBd"].isNull()) {
+    s = jd["boxBd"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.box_border = tmp;
+  }
+  if (!jd["stName"].isNull()) {
+    s = jd["stName"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.station_name = tmp;
+  }
+  if (!jd["stTitle"].isNull()) {
+    s = jd["stTitle"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.station_title = tmp;
+  }
+  ui_start_colors_apply_from_web(&n);
+  server.send(200, "text/plain", "OK");
+}
+
+void resetStartColorsWeb() {
+  ui_start_colors_reset_to_factory();
+  server.send(200, "text/plain", "OK");
+}
+
 //################ Info Tab
 // AJAX-Befehl /cmd/getInfo
 // Diese Funktion wird aufgerufen, um detaillierte Systeminformationen als JSON-Daten zurückzugeben.
@@ -522,12 +757,50 @@ void getCurrentStatus() {
 //   - Heap-Größe und freier Heap-Speicher
 //   - Sketch-Größe und freier Platz in der App-Partition (Summe = Partitionsgröße)
 //   - Chip-Modell
+void getLang() {
+  char buf[48];
+  snprintf(buf, sizeof(buf), "{\"lang\":\"%s\"}", i18n_lang_code());
+  server.send(200, "application/json; charset=utf-8", buf);
+}
+
+void setLang() {
+  if (!server.hasArg("l")) {
+    server.send(400, "text/plain", "missing l");
+    return;
+  }
+  String v = server.arg("l");
+  uint8_t l = 255;
+  if (v == "de")
+    l = 0;
+  else if (v == "en")
+    l = 1;
+  else if (v == "fr")
+    l = 2;
+  else if (v == "ru")
+    l = 3;
+  else if (v == "es")
+    l = 4;
+  else if (v == "nl")
+    l = 5;
+  else {
+    int n = v.toInt();
+    if (n >= 0 && n <= 5) l = (uint8_t)n;
+  }
+  if (l > 5) {
+    server.send(400, "text/plain", "bad lang");
+    return;
+  }
+  i18n_set_lang(l);
+  server.send(200, "text/plain", "OK");
+}
+
 void getInfo() {
   // Erstellen eines JSON-Dokuments für die Antwort
   StaticJsonDocument<512> jsonDoc;
 
   // Installierte Radio-Version
   jsonDoc["radioversion"] = RADIOVERSION;
+  jsonDoc["uiLang"] = i18n_lang_code();
   jsonDoc["httpOtaAsset"] = HTTP_OTA_FIRMWARE_FILENAME;
   jsonDoc["httpOtaFreeBytes"] = ESP.getFreeSketchSpace();
 

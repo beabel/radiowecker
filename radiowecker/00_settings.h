@@ -39,6 +39,8 @@ typedef struct {
 // Globale Variablen
 Station stationlist[STATIONS];  // Liste der verfügbaren Stationen
 
+#include "ui_start_colors.h" /* Startseite scr_clock: RGB565, Web + NVS (usc_*); Definition von ui_start_cols in tft_display.ino */
+
 /* Konfiguration als char[] statt Arduino-String: kein Heap für SSID/NTP/TZ, weniger Fragmentierung. */
 #define CFG_SSID_MAX 33         /* 802.11: SSID max. 32 Zeichen + NUL */
 #define CFG_WPA_PSK_MAX 65      /* WPA-PSK: max. 63 ASCII + NUL */

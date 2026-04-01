@@ -22,13 +22,13 @@
 /* LDR-Modus (Helligkeit 0 %): Mindest-PWM 0–255 nach Umrechnung vom ADC.
    Verhindert komplett ausgeschaltete Backlight (Slider/Stop → sonst oft unbedienbar). */
 #ifndef LDR_LED_PWM_MIN
-#define LDR_LED_PWM_MIN 4
+#define LDR_LED_PWM_MIN 1  //4
 #endif
 
 /* LDR-Modus: Anteil des neuen Messwerts am Soll-PWM (1/DIV). Größer DIV = weicher, langsamer.
    Beim Wechsel feste % → LDR startet von der zuletzt geschriebenen Backlight (kein Sprung). */
 #ifndef LDR_PWM_SMOOTH_DIV
-#define LDR_PWM_SMOOTH_DIV 4
+#define LDR_PWM_SMOOTH_DIV 2  //4
 #endif
 
 /* Optionale Hardware-Tasten (nach GND, INPUT_PULLUP): Pin < 0 = aus / nicht angeschlossen (Default).
