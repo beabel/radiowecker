@@ -15,12 +15,12 @@ const char MAIN_page[] PROGMEM = R"=====(
 <script>
 var CURRENT_UI_LANG = "de";
 var I18N = {
- de: {lang:"Sprache",title:"Web Radiowecker",w1:"Weckzeit 1:",w2:"Weckzeit 2:",save:"Speichern",cancel:"Rückgängig",list:"Liste:",name:"Name:",url:"URL:",use:"Verwenden:",pos:"Position:",btest:"Testen",bchange:"Ändern",acc_wlan:"Wlan",acc_ntp:"NTP",acc_wx:"Wetter",bsave:"Speichern",brestart:"Neustart",brestore:"Senderliste Reset",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"ChipModel:",fh:"Fehler beim Abrufen der Daten.",fe:"Fehler beim Laden der Daten.",gh_err:"Fehler beim Überprüfen auf Updates.",dow_mo:"Mo",dow_di:"Di",dow_mi:"Mi",dow_do:"Do",dow_fr:"Fr",dow_sa:"Sa",dow_so:"So",testend:"Mit OK beenden Sie den Test",ota_ask:"Firmware auf",ota_rel:"Im GitHub-Release muss die Datei angehängt sein:",ota_free:"Freier OTA-Slot (ungefähr):",ota_stop:"Das Radio wird gestoppt;",ota_iprog:"Der Fortschritt erscheint auf dem Display.",ota_reboot:"Anschließend startet das Gerät neu.",ota_web:"Diese Webseite verliert danach die Verbindung zum Gerät (erwartet) — es erscheint kein weiteres Meldungsfenster.",ota_go:"Fortfahren?",gh_new:"Neue Version:",gh_inst:"Per Web installieren…",gh_rel:"Release-Seite",gh_newer:"Du verwendest eine neuere Version",gh_than:"als die neueste offizielle Version",gh_okv:"Du verwendest bereits die neueste Version",heap_u:"Belegt:",heap_f:"Frei:",heap_t:"Heap gesamt:",heap_m:"max. Block:",fw_l:"Firmware:",fw_v:"von",fw_u:"frei für nächstes Update:",fu:"Letztes Update:",fl:"Created with",sp:"Sponsor this Project:",fgh:"Fehler beim Abrufen der GitHub-Informationen."},
- en: {lang:"Language",title:"Web clock radio",w1:"Alarm 1:",w2:"Alarm 2:",save:"Save",cancel:"Undo",list:"List:",name:"Name:",url:"URL:",use:"Use:",pos:"Position:",btest:"Test",bchange:"Apply",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weather",bsave:"Save",brestart:"Restart",brestore:"Reset station list",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chip model:",fh:"Failed to fetch data.",fe:"Failed to load data.",gh_err:"Update check failed.",dow_mo:"Mo",dow_di:"Tu",dow_mi:"We",dow_do:"Th",dow_fr:"Fr",dow_sa:"Sa",dow_so:"Su",testend:"Press OK to end the test",ota_ask:"Install firmware",ota_rel:"The GitHub release must include file:",ota_free:"Approx. free OTA slot:",ota_stop:"Playback will stop;",ota_iprog:"progress is shown on the device.",ota_reboot:"Then the device reboots.",ota_web:"This page will lose connection (expected).",ota_go:"Continue?",gh_new:"New version:",gh_inst:"Install via web…",gh_rel:"Release page",gh_newer:"You are running a newer version",gh_than:"than the latest official release",gh_okv:"You are on the latest version",heap_u:"Used:",heap_f:"Free:",heap_t:"Heap total:",heap_m:"max block:",fw_l:"Firmware:",fw_v:"of",fw_u:"free for next update:",fu:"Last update:",fl:"Created with",sp:"Sponsor this project:",fgh:"Failed to fetch GitHub info."},
- fr: {lang:"Langue",title:"Radio-réveil web",w1:"Alarme 1 :",w2:"Alarme 2 :",save:"Enregistrer",cancel:"Annuler",list:"Liste :",name:"Nom :",url:"URL :",use:"Actif :",pos:"Position :",btest:"Tester",bchange:"Modifier",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Météo",bsave:"Enregistrer",brestart:"Redémarrer",brestore:"Réinit. liste stations",lbl_ver:"Version :",lbl_heap:"TAS :",lbl_sk:"SKETCH :",lbl_chip:"Modèle puce :",fh:"Échec de lecture des données.",fe:"Échec du chargement.",gh_err:"Échec vérif. mises à jour.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Me",dow_do:"Je",dow_fr:"Ve",dow_sa:"Sa",dow_so:"Di",testend:"OK pour terminer le test",ota_ask:"Installer le firmware",ota_rel:"Le release GitHub doit contenir :",ota_free:"Espace OTA libre (approx.) :",ota_stop:"La radio s'arrête ;",ota_iprog:"la progression s'affiche sur l'appareil.",ota_reboot:"Puis redémarrage.",ota_web:"Cette page perdra la connexion (normal).",ota_go:"Continuer ?",gh_new:"Nouvelle version :",gh_inst:"Installer via le web…",gh_rel:"Page release",gh_newer:"Version plus récente que",gh_than:"la dernière version officielle",gh_okv:"Déjà la dernière version",heap_u:"Utilisé :",heap_f:"Libre :",heap_t:"Tas total :",heap_m:"bloc max :",fw_l:"Firmware :",fw_v:"sur",fw_u:"libre pour prochaine MAJ :",fu:"Dernière MAJ :",fl:"Créé avec",sp:"Soutenir le projet :",fgh:"Échec infos GitHub."},
- ru: {lang:"Язык",title:"Веб‑радиобудильник",w1:"Будильник 1:",w2:"Будильник 2:",save:"Сохранить",cancel:"Отменить",list:"Список:",name:"Имя:",url:"URL:",use:"Вкл.:",pos:"Позиция:",btest:"Тест",bchange:"Изменить",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Погода",bsave:"Сохранить",brestart:"Перезагрузка",brestore:"Сброс списка станций",lbl_ver:"Версия:",lbl_heap:"КУЧА:",lbl_sk:"ПРОШИВКА:",lbl_chip:"Чип:",fh:"Ошибка получения данных.",fe:"Ошибка загрузки.",gh_err:"Ошибка проверки обновлений.",dow_mo:"Пн",dow_di:"Вт",dow_mi:"Ср",dow_do:"Чт",dow_fr:"Пт",dow_sa:"Сб",dow_so:"Вс",testend:"Нажмите OK, чтобы завершить тест",ota_ask:"Установить прошивку",ota_rel:"В релизе GitHub должен быть файл:",ota_free:"Свободно под OTA (прибл.):",ota_stop:"Радио остановится;",ota_iprog:"прогресс на экране устройства.",ota_reboot:"Затем перезагрузка.",ota_web:"Страница потеряет связь (норма).",ota_go:"Продолжить?",gh_new:"Новая версия:",gh_inst:"Установить через веб…",gh_rel:"Страница релиза",gh_newer:"У вас новее, чем",gh_than:"последний официальный релиз",gh_okv:"Уже последняя версия",heap_u:"Занято:",heap_f:"Свободно:",heap_t:"Куча всего:",heap_m:"макс. блок:",fw_l:"Прошивка:",fw_v:"из",fw_u:"свободно для обновления:",fu:"Последнее обновление:",fl:"Создано с",sp:"Поддержать проект:",fgh:"Ошибка GitHub."},
- es: {lang:"Idioma",title:"Radio despertador web",w1:"Alarma 1:",w2:"Alarma 2:",save:"Guardar",cancel:"Deshacer",list:"Lista:",name:"Nombre:",url:"URL:",use:"Usar:",pos:"Posición:",btest:"Probar",bchange:"Aplicar",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Tiempo",bsave:"Guardar",brestart:"Reiniciar",brestore:"Restablecer lista de emisoras",lbl_ver:"Versión:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Modelo de chip:",fh:"Error al obtener los datos.",fe:"Error al cargar los datos.",gh_err:"Error al comprobar actualizaciones.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Mi",dow_do:"Ju",dow_fr:"Vi",dow_sa:"Sá",dow_so:"Do",testend:"Pulse OK para finalizar la prueba",ota_ask:"Instalar firmware",ota_rel:"El release de GitHub debe incluir el archivo:",ota_free:"Espacio OTA libre (aprox.):",ota_stop:"Se detiene la reproducción;",ota_iprog:"el progreso se muestra en el dispositivo.",ota_reboot:"Luego el dispositivo se reinicia.",ota_web:"Esta página perderá la conexión (esperado).",ota_go:"¿Continuar?",gh_new:"Nueva versión:",gh_inst:"Instalar vía web…",gh_rel:"Página del release",gh_newer:"Tiene una versión más reciente",gh_than:"que el último release oficial",gh_okv:"Ya tiene la última versión",heap_u:"Usado:",heap_f:"Libre:",heap_t:"Montón total:",heap_m:"bloque máx.:",fw_l:"Firmware:",fw_v:"de",fw_u:"libre para el próximo update:",fu:"Última actualización:",fl:"Creado con",sp:"Patrocinar el proyecto:",fgh:"Error al obtener GitHub."},
- nl: {lang:"Taal",title:"Webklokradio",w1:"Wekker 1:",w2:"Wekker 2:",save:"Opslaan",cancel:"Ongedaan maken",list:"Lijst:",name:"Naam:",url:"URL:",use:"Gebruik:",pos:"Positie:",btest:"Test",bchange:"Toepassen",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weer",bsave:"Opslaan",brestart:"Herstarten",brestore:"Zenderlijst resetten",lbl_ver:"Versie:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chipmodel:",fh:"Gegevens ophalen mislukt.",fe:"Laden mislukt.",gh_err:"Updatecontrole mislukt.",dow_mo:"Ma",dow_di:"Di",dow_mi:"Wo",dow_do:"Do",dow_fr:"Vr",dow_sa:"Za",dow_so:"Zo",testend:"Druk op OK om de test te beëindigen",ota_ask:"Firmware installeren",ota_rel:"De GitHub-release moet het bestand bevatten:",ota_free:"Vrij OTA-blok (ca.):",ota_stop:"Afspelen stopt;",ota_iprog:"voortgang op het apparaat.",ota_reboot:"Daarna start het apparaat opnieuw.",ota_web:"Deze pagina verliest de verbinding (verwacht).",ota_go:"Doorgaan?",gh_new:"Nieuwe versie:",gh_inst:"Installeren via web…",gh_rel:"Releasepagina",gh_newer:"U heeft een nieuwere versie",gh_than:"dan de laatste officiële release",gh_okv:"U heeft al de nieuwste versie",heap_u:"Bezet:",heap_f:"Vrij:",heap_t:"Heap totaal:",heap_m:"max. blok:",fw_l:"Firmware:",fw_v:"van",fw_u:"vrij voor volgende update:",fu:"Laatste update:",fl:"Gemaakt met",sp:"Project steunen:",fgh:"GitHub-info ophalen mislukt."}
+ de: {lang:"Sprache",title:"Web Radiowecker",w1:"Weckzeit 1:",w2:"Weckzeit 2:",save:"Speichern",cancel:"Rückgängig",list:"Liste:",name:"Name:",url:"URL:",use:"Verwenden:",pos:"Position:",btest:"Testen",bchange:"Ändern",acc_wlan:"Wlan",acc_ntp:"NTP",acc_wx:"Wetter",bsave:"Speichern",brestart:"Neustart",brestore:"Senderliste Reset",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"ChipModel:",fh:"Fehler beim Abrufen der Daten.",fe:"Fehler beim Laden der Daten.",gh_err:"Fehler beim Überprüfen auf Updates.",dow_mo:"Mo",dow_di:"Di",dow_mi:"Mi",dow_do:"Do",dow_fr:"Fr",dow_sa:"Sa",dow_so:"So",testend:"Mit OK beenden Sie den Test",ota_ask:"Firmware auf",ota_rel:"Im GitHub-Release muss die Datei angehängt sein:",ota_free:"Freier OTA-Slot (ungefähr):",ota_stop:"Das Radio wird gestoppt;",ota_iprog:"Der Fortschritt erscheint auf dem Display.",ota_reboot:"Anschließend startet das Gerät neu.",ota_web:"Diese Webseite verliert danach die Verbindung zum Gerät (erwartet) — es erscheint kein weiteres Meldungsfenster.",ota_go:"Fortfahren?",gh_new:"Neue Version:",gh_inst:"Per Web installieren…",gh_rel:"Release-Seite",gh_newer:"Du verwendest eine neuere Version",gh_than:"als die neueste offizielle Version",gh_okv:"Du verwendest bereits die neueste Version",heap_u:"Belegt:",heap_f:"Frei:",heap_t:"Heap gesamt:",heap_m:"max. Block:",fw_l:"Firmware:",fw_v:"von",fw_u:"frei für nächstes Update:",fu:"Letztes Update:",fl:"Created with",sp:"Sponsor this Project:",fgh:"Fehler beim Abrufen der GitHub-Informationen.",tab_disp:"Anzeige",lbl_bright:"Helligkeit (%):",hint_bright:"0 % = automatisch per Umgebungslicht (LDR), wenn am Gerät verbaut.",lbl_sleep:"Einschlafzeit (Min.):",lbl_asnooze:"Wecker-Schlummer (Min.):",hint_asnooze:"0 = Schlummer aus."},
+ en: {lang:"Language",title:"Web clock radio",w1:"Alarm 1:",w2:"Alarm 2:",save:"Save",cancel:"Undo",list:"List:",name:"Name:",url:"URL:",use:"Use:",pos:"Position:",btest:"Test",bchange:"Apply",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weather",bsave:"Save",brestart:"Restart",brestore:"Reset station list",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chip model:",fh:"Failed to fetch data.",fe:"Failed to load data.",gh_err:"Update check failed.",dow_mo:"Mo",dow_di:"Tu",dow_mi:"We",dow_do:"Th",dow_fr:"Fr",dow_sa:"Sa",dow_so:"Su",testend:"Press OK to end the test",ota_ask:"Install firmware",ota_rel:"The GitHub release must include file:",ota_free:"Approx. free OTA slot:",ota_stop:"Playback will stop;",ota_iprog:"progress is shown on the device.",ota_reboot:"Then the device reboots.",ota_web:"This page will lose connection (expected).",ota_go:"Continue?",gh_new:"New version:",gh_inst:"Install via web…",gh_rel:"Release page",gh_newer:"You are running a newer version",gh_than:"than the latest official release",gh_okv:"You are on the latest version",heap_u:"Used:",heap_f:"Free:",heap_t:"Heap total:",heap_m:"max block:",fw_l:"Firmware:",fw_v:"of",fw_u:"free for next update:",fu:"Last update:",fl:"Created with",sp:"Sponsor this project:",fgh:"Failed to fetch GitHub info.",tab_disp:"Display",lbl_bright:"Brightness (%):",hint_bright:"0% = ambient light (LDR) when fitted on the device.",lbl_sleep:"Sleep timer (min):",lbl_asnooze:"Alarm snooze (min):",hint_asnooze:"0 = snooze off."},
+ fr: {lang:"Langue",title:"Radio-réveil web",w1:"Alarme 1 :",w2:"Alarme 2 :",save:"Enregistrer",cancel:"Annuler",list:"Liste :",name:"Nom :",url:"URL :",use:"Actif :",pos:"Position :",btest:"Tester",bchange:"Modifier",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Météo",bsave:"Enregistrer",brestart:"Redémarrer",brestore:"Réinit. liste stations",lbl_ver:"Version :",lbl_heap:"TAS :",lbl_sk:"SKETCH :",lbl_chip:"Modèle puce :",fh:"Échec de lecture des données.",fe:"Échec du chargement.",gh_err:"Échec vérif. mises à jour.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Me",dow_do:"Je",dow_fr:"Ve",dow_sa:"Sa",dow_so:"Di",testend:"OK pour terminer le test",ota_ask:"Installer le firmware",ota_rel:"Le release GitHub doit contenir :",ota_free:"Espace OTA libre (approx.) :",ota_stop:"La radio s'arrête ;",ota_iprog:"la progression s'affiche sur l'appareil.",ota_reboot:"Puis redémarrage.",ota_web:"Cette page perdra la connexion (normal).",ota_go:"Continuer ?",gh_new:"Nouvelle version :",gh_inst:"Installer via le web…",gh_rel:"Page release",gh_newer:"Version plus récente que",gh_than:"la dernière version officielle",gh_okv:"Déjà la dernière version",heap_u:"Utilisé :",heap_f:"Libre :",heap_t:"Tas total :",heap_m:"bloc max :",fw_l:"Firmware :",fw_v:"sur",fw_u:"libre pour prochaine MAJ :",fu:"Dernière MAJ :",fl:"Créé avec",sp:"Soutenir le projet :",fgh:"Échec infos GitHub.",tab_disp:"Affichage",lbl_bright:"Luminosité (%) :",hint_bright:"0 % = lumière ambiante (LDR) si présent.",lbl_sleep:"Sommeil (min) :",lbl_asnooze:"Snooze alarme (min) :",hint_asnooze:"0 = snooze désactivé."},
+ ru: {lang:"Язык",title:"Веб‑радиобудильник",w1:"Будильник 1:",w2:"Будильник 2:",save:"Сохранить",cancel:"Отменить",list:"Список:",name:"Имя:",url:"URL:",use:"Вкл.:",pos:"Позиция:",btest:"Тест",bchange:"Изменить",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Погода",bsave:"Сохранить",brestart:"Перезагрузка",brestore:"Сброс списка станций",lbl_ver:"Версия:",lbl_heap:"КУЧА:",lbl_sk:"ПРОШИВКА:",lbl_chip:"Чип:",fh:"Ошибка получения данных.",fe:"Ошибка загрузки.",gh_err:"Ошибка проверки обновлений.",dow_mo:"Пн",dow_di:"Вт",dow_mi:"Ср",dow_do:"Чт",dow_fr:"Пт",dow_sa:"Сб",dow_so:"Вс",testend:"Нажмите OK, чтобы завершить тест",ota_ask:"Установить прошивку",ota_rel:"В релизе GitHub должен быть файл:",ota_free:"Свободно под OTA (прибл.):",ota_stop:"Радио остановится;",ota_iprog:"прогресс на экране устройства.",ota_reboot:"Затем перезагрузка.",ota_web:"Страница потеряет связь (норма).",ota_go:"Продолжить?",gh_new:"Новая версия:",gh_inst:"Установить через веб…",gh_rel:"Страница релиза",gh_newer:"У вас новее, чем",gh_than:"последний официальный релиз",gh_okv:"Уже последняя версия",heap_u:"Занято:",heap_f:"Свободно:",heap_t:"Куча всего:",heap_m:"макс. блок:",fw_l:"Прошивка:",fw_v:"из",fw_u:"свободно для обновления:",fu:"Последнее обновление:",fl:"Создано с",sp:"Поддержать проект:",fgh:"Ошибка GitHub.",tab_disp:"Экран",lbl_bright:"Яркость (%):",hint_bright:"0 % = по датчику освещённости (LDR), если есть.",lbl_sleep:"Таймер сна (мин):",lbl_asnooze:"Отложить будильник (мин):",hint_asnooze:"0 = выкл."},
+ es: {lang:"Idioma",title:"Radio despertador web",w1:"Alarma 1:",w2:"Alarma 2:",save:"Guardar",cancel:"Deshacer",list:"Lista:",name:"Nombre:",url:"URL:",use:"Usar:",pos:"Posición:",btest:"Probar",bchange:"Aplicar",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Tiempo",bsave:"Guardar",brestart:"Reiniciar",brestore:"Restablecer lista de emisoras",lbl_ver:"Versión:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Modelo de chip:",fh:"Error al obtener los datos.",fe:"Error al cargar los datos.",gh_err:"Error al comprobar actualizaciones.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Mi",dow_do:"Ju",dow_fr:"Vi",dow_sa:"Sá",dow_so:"Do",testend:"Pulse OK para finalizar la prueba",ota_ask:"Instalar firmware",ota_rel:"El release de GitHub debe incluir el archivo:",ota_free:"Espacio OTA libre (aprox.):",ota_stop:"Se detiene la reproducción;",ota_iprog:"el progreso se muestra en el dispositivo.",ota_reboot:"Luego el dispositivo se reinicia.",ota_web:"Esta página perderá la conexión (esperado).",ota_go:"¿Continuar?",gh_new:"Nueva versión:",gh_inst:"Instalar vía web…",gh_rel:"Página del release",gh_newer:"Tiene una versión más reciente",gh_than:"que el último release oficial",gh_okv:"Ya tiene la última versión",heap_u:"Usado:",heap_f:"Libre:",heap_t:"Montón total:",heap_m:"bloque máx.:",fw_l:"Firmware:",fw_v:"de",fw_u:"libre para el próximo update:",fu:"Última actualización:",fl:"Creado con",sp:"Patrocinar el proyecto:",fgh:"Error al obtener GitHub.",tab_disp:"Pantalla",lbl_bright:"Brillo (%):",hint_bright:"0 % = luz ambiente (LDR) si está instalado.",lbl_sleep:"Temporizador sueño (min):",lbl_asnooze:"Snooze alarma (min):",hint_asnooze:"0 = snooze desactivado."},
+ nl: {lang:"Taal",title:"Webklokradio",w1:"Wekker 1:",w2:"Wekker 2:",save:"Opslaan",cancel:"Ongedaan maken",list:"Lijst:",name:"Naam:",url:"URL:",use:"Gebruik:",pos:"Positie:",btest:"Test",bchange:"Toepassen",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weer",bsave:"Opslaan",brestart:"Herstarten",brestore:"Zenderlijst resetten",lbl_ver:"Versie:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chipmodel:",fh:"Gegevens ophalen mislukt.",fe:"Laden mislukt.",gh_err:"Updatecontrole mislukt.",dow_mo:"Ma",dow_di:"Di",dow_mi:"Wo",dow_do:"Do",dow_fr:"Vr",dow_sa:"Za",dow_so:"Zo",testend:"Druk op OK om de test te beëindigen",ota_ask:"Firmware installeren",ota_rel:"De GitHub-release moet het bestand bevatten:",ota_free:"Vrij OTA-blok (ca.):",ota_stop:"Afspelen stopt;",ota_iprog:"voortgang op het apparaat.",ota_reboot:"Daarna start het apparaat opnieuw.",ota_web:"Deze pagina verliest de verbinding (verwacht).",ota_go:"Doorgaan?",gh_new:"Nieuwe versie:",gh_inst:"Installeren via web…",gh_rel:"Releasepagina",gh_newer:"U heeft een nieuwere versie",gh_than:"dan de laatste officiële release",gh_okv:"U heeft al de nieuwste versie",heap_u:"Bezet:",heap_f:"Vrij:",heap_t:"Heap totaal:",heap_m:"max. blok:",fw_l:"Firmware:",fw_v:"van",fw_u:"vrij voor volgende update:",fu:"Laatste update:",fl:"Gemaakt met",sp:"Project steunen:",fgh:"GitHub-info ophalen mislukt.",tab_disp:"Scherm",lbl_bright:"Helderheid (%):",hint_bright:"0 % = omgevingslicht (LDR) indien aanwezig.",lbl_sleep:"Slaaptimer (min):",lbl_asnooze:"Alarm-snooze (min):",hint_asnooze:"0 = snooze uit."}
 };
 function tr(k) { var o = I18N[CURRENT_UI_LANG] || I18N.de; if (o[k] !== undefined) return o[k]; return (I18N.de[k] !== undefined) ? I18N.de[k] : k; }
 function applyWebLang(code) {
@@ -60,6 +60,7 @@ $(document).ready(function() {
   $("#btn_alarm").click(btnAlarm);// toggle Alarm zum ESP
   $("#btn_sleep").click(startSleep);// toggle Sleep zum ESP 
   GainSlider();// senden des Sliders zum ESP
+  setupDisplaySliders();
   $("#btn_bwd").click(beforeStation);// toggle beforeStation zum ESP 
   $("#btn_fwd").click(nextStation);// toggle nextStation zum ESP 
   $("#switchStation").on("change", selectStationFromDropdown);
@@ -67,18 +68,15 @@ $(document).ready(function() {
   // Zeugs um die aktuellen Daten des ESP regelmäßig zu erhalten um halbwegs sinvolle Anzeigen zu sehen
   $("#tabs").tabs({
     activate: function(event, ui) {
-      // Überprüfen, ob das aktivierte Tab die ID "#player" hat
-      if (ui.newTab.find("a").attr("href") === "#player") {
-        // starten Intervall, um die Daten alle x Sekunden abzurufen
-        var intervalId = setInterval(updateCurrentStatus, 5000); // alle 5 Sekunden
-        ui.newPanel.data("intervalId", intervalId); // Speichern der Intervall-ID im Tab-Panel-Daten
+      var href = ui.newTab.find("a").attr("href");
+      if (href === "#player") {
+        var intervalId = setInterval(updateCurrentStatus, 5000);
+        ui.newPanel.data("intervalId", intervalId);
       } else {
-        // Wenn ein anderes Tab aktiv ist, beenden des Intervall
-        var intervalId = ui.oldPanel.data("intervalId");
-        if (intervalId) {
-          clearInterval(intervalId);
-        }
+        var prevId = ui.oldPanel.data("intervalId");
+        if (prevId) clearInterval(prevId);
       }
+      if (href === "#display") loadDisplaySettings();
     }
   });
 
@@ -98,11 +96,13 @@ function getAll() {
       getSSID();
       getStationList();
       getAlarms();
+      loadDisplaySettings();
     }).fail(function() {
       applyWebLang("de");
       getSSID();
       getStationList();
       getAlarms();
+      loadDisplaySettings();
     });
 }
 
@@ -288,6 +288,55 @@ function stopPlay() {
         data:{},
         success: function () { updateCurrentStatus(); }
     });
+}
+function setupDisplaySliders() {
+  $("#slider_bright").slider({
+    min: 0,
+    max: 100,
+    slide: function (event, ui) {
+      $("#disp_bright_val").text(ui.value + "%");
+    },
+    stop: function (event, ui) {
+      $.get("/cmd/setBright", { value: ui.value });
+    }
+  });
+  $("#slider_sleep").slider({
+    min: 0,
+    max: 60,
+    slide: function (event, ui) {
+      $("#disp_sleep_val").text(ui.value);
+    },
+    stop: function (event, ui) {
+      $.get("/cmd/setSleepTimer", { min: ui.value });
+    }
+  });
+  $("#slider_asnooze").slider({
+    min: 0,
+    max: 10,
+    slide: function (event, ui) {
+      $("#disp_asnooze_val").text(ui.value);
+    },
+    stop: function (event, ui) {
+      $.get("/cmd/setAlarmSnooze", { min: ui.value });
+    }
+  });
+}
+function loadDisplaySettings() {
+  $.getJSON("/cmd/getDisplaySettings", function (d) {
+    if (!d) return;
+    if (d.bright !== undefined) {
+      $("#slider_bright").slider("option", "value", d.bright);
+      $("#disp_bright_val").text(d.bright + "%");
+    }
+    if (d.sleepTimerMin !== undefined) {
+      $("#slider_sleep").slider("option", "value", d.sleepTimerMin);
+      $("#disp_sleep_val").text(d.sleepTimerMin);
+    }
+    if (d.alarmSnoozeMin !== undefined) {
+      $("#slider_asnooze").slider("option", "value", d.alarmSnoozeMin);
+      $("#disp_asnooze_val").text(d.alarmSnoozeMin);
+    }
+  });
 }
 function GainSlider() {
   $("#GainSlider").slider({
@@ -655,6 +704,45 @@ body {
     width:300px;
     background-color: silver;
 }
+/* Eine Zeile Tab-Icons in ~300px: kein Float, wenig Padding, gleichmäßige Aufteilung */
+#tabs.ui-tabs .ui-tabs-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px 0 0;
+  margin: 0;
+}
+#tabs.ui-tabs .ui-tabs-nav li {
+  flex: 1 1 0;
+  min-width: 0;
+  float: none;
+  list-style: none;
+  margin: 0 1px 0 0;
+  top: auto;
+  padding: 0;
+}
+#tabs.ui-tabs .ui-tabs-nav li:last-child {
+  margin-right: 0;
+}
+#tabs.ui-tabs .ui-tabs-nav li a {
+  float: none;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.22em 0.05em;
+  text-align: center;
+  font-size: 1em;
+  line-height: 1.15;
+}
+#tabs.ui-tabs .ui-tabs-nav li a i {
+  font-size: 0.88em;
+  vertical-align: middle;
+}
+#tabs.ui-tabs .ui-tabs-nav li.ui-tabs-active {
+  margin-bottom: -1px;
+  padding-bottom: 1px;
+}
 label { 
   display: inline-block;
   margin-top: 5px;
@@ -719,6 +807,33 @@ input {
   min-width: 4.5em;
   max-width: 100%;
 }
+/* Kein float:left wie global bei label — sonst kollabiert die <p>-Höhe und der Slider liegt über dem Text */
+#display label {
+  float: none;
+  display: block;
+  width: 100%;
+  margin-top: 0.5em;
+  margin-bottom: 0.15em;
+}
+#display > p {
+  margin: 0;
+  clear: both;
+}
+#display .display-slider {
+  clear: both;
+  width: 100%;
+  max-width: 320px;
+  margin: 0.35em 0 0.85em 0;
+  position: relative;
+  z-index: 0;
+}
+#display .hint {
+  font-size: 0.88em;
+  opacity: 0.88;
+  margin: 0 0 0.35em 0;
+  max-width: 320px;
+  clear: both;
+}
 </style>
 </head>
 <body>
@@ -740,6 +855,7 @@ input {
         <li><a href="#player"><i class="fa fa-music"></i></a></li>    
         <li><a href="#wecker"><i class="fa fa-clock"></i></a></li>
         <li><a href="#radio"><i class="fas fa-list-ol"></i></a></li>   
+        <li><a href="#display"><i class="fas fa-sun"></i></a></li>
         <li><a href="#wlan"><i class="fa fa-gears"></i></a></li>
         <li><a href="#info"><i class="fas fa-question"></i></a></li>        
     </ul>
@@ -903,7 +1019,17 @@ input {
         <button id="btn_test" type="button" data-i18n="btest">Testen</button>
         <button id="btn_updt" type="button" data-i18n="bchange">Ändern</button>
       </div>
-    </div>         
+    </div>
+    <div id="display">
+      <p><label><span data-i18n="lbl_bright">Helligkeit (%):</span> <strong id="disp_bright_val">0</strong></label></p>
+      <p class="hint"><span data-i18n="hint_bright"></span></p>
+      <div id="slider_bright" class="display-slider"></div>
+      <p><label><span data-i18n="lbl_sleep">Einschlafzeit (Min.):</span> <strong id="disp_sleep_val">0</strong></label></p>
+      <div id="slider_sleep" class="display-slider"></div>
+      <p><label><span data-i18n="lbl_asnooze">Wecker-Schlummer (Min.):</span> <strong id="disp_asnooze_val">0</strong></label></p>
+      <p class="hint"><span data-i18n="hint_asnooze"></span></p>
+      <div id="slider_asnooze" class="display-slider"></div>
+    </div>
     <div id="wlan">
       <div id="accordion">
         <h3><i class="fa fa-wifi"></i> <span data-i18n="acc_wlan">Wlan</span></h3>

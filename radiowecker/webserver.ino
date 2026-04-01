@@ -42,6 +42,10 @@ void setup_webserver() {
   server.on("/cmd/nextStation", nextStation);            // Wechselt zur nächsten Station
   server.on("/cmd/selectStation", selectStationByIndex); // Wechselt zur gewählten Station (Web-Dropdown)
   server.on("/cmd/getCurrentStatus", getCurrentStatus);  // Ruft den aktuellen Status ab
+  server.on("/cmd/getDisplaySettings", getDisplaySettings);
+  server.on("/cmd/setBright", setBrightWeb);
+  server.on("/cmd/setSleepTimer", setSleepTimerWeb);
+  server.on("/cmd/setAlarmSnooze", setAlarmSnoozeWeb);
 
   // Info-Tab: Definiert die Route für das Abrufen von Systeminformationen
   server.on("/cmd/getInfo", getInfo);  // Ruft allgemeine Systeminformationen ab
@@ -552,6 +556,58 @@ void getCurrentStatus() {
   serializeJson(jsonDoc, response);
 
   server.send(200, "application/json; charset=utf-8", response);
+}
+
+void getDisplaySettings() {
+  StaticJsonDocument<128> doc;
+  doc["bright"] = bright;
+  doc["sleepTimerMin"] = snoozeTime;
+  doc["alarmSnoozeMin"] = alarmSnoozeMin;
+  String out;
+  serializeJson(doc, out);
+  server.send(200, "application/json; charset=utf-8", out);
+}
+
+void setBrightWeb() {
+  if (!server.hasArg("value")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("value").toInt();
+  if (v < 0 || v > 100) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  web_apply_brightness((uint8_t)v);
+  server.send(200, "text/plain", "OK");
+}
+
+void setSleepTimerWeb() {
+  if (!server.hasArg("min")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("min").toInt();
+  if (v < 0 || v > 60) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  web_apply_sleep_timer_min((uint8_t)v);
+  server.send(200, "text/plain", "OK");
+}
+
+void setAlarmSnoozeWeb() {
+  if (!server.hasArg("min")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("min").toInt();
+  if (v < 0 || v > 10) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  web_apply_alarm_snooze_min((uint8_t)v);
+  server.send(200, "text/plain", "OK");
 }
 
 //################ Info Tab

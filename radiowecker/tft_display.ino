@@ -1663,6 +1663,34 @@ void setSnoozeTime(uint16_t value) {
   ui_slider_internal = false;
 }
 
+void web_apply_brightness(uint8_t v) {
+  bright = (uint8_t)constrain((int)v, 0, 100);
+  pref.putUShort("bright", bright);
+  ui_slider_internal = true;
+  if (sl_cfg_bright) lv_slider_set_value(sl_cfg_bright, bright, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  cfg_sync_value_labels();
+  setBGLight(bright == 0 ? 0 : bright);
+}
+
+void web_apply_sleep_timer_min(uint8_t v) {
+  snoozeTime = (uint8_t)constrain((int)v, 0, 60);
+  pref.putUShort("snooze", snoozeTime);
+  ui_slider_internal = true;
+  if (sl_cfg_snooze) lv_slider_set_value(sl_cfg_snooze, snoozeTime, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  cfg_sync_value_labels();
+}
+
+void web_apply_alarm_snooze_min(uint8_t v) {
+  alarmSnoozeMin = (uint8_t)constrain((int)v, 0, 10);
+  pref.putUShort("alm_snooze", alarmSnoozeMin);
+  ui_slider_internal = true;
+  if (sl_cfg_alarm_snooze) lv_slider_set_value(sl_cfg_alarm_snooze, alarmSnoozeMin, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  cfg_sync_value_labels();
+}
+
 /* Zuletzt an TFT_LED geschriebener Wert (nach LED_ON-Invert) → logische Helligkeit 0…255 vor Invert. */
 static uint16_t ldr_logical_from_pin_pwm(uint16_t pinDuty) {
   if (pinDuty > 255) pinDuty = 255;
