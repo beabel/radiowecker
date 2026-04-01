@@ -255,7 +255,7 @@ $webPunctButtons = preg_split('//u', $punctWebOnly, -1, PREG_SPLIT_NO_EMPTY) ?: 
 
   <?php if (!$hasCpp): ?>
   <div class="upload-box">
-    <p class="hint"><strong>Schritt 1:</strong> Eigene Dateien aus dem Sketch-Ordner hochladen. Ohne <code>i18n.h</code> erscheinen die Enum-Namen als <code>I18N_0</code> … (bearbeiten geht trotzdem).</p>
+    <p class="hint"><strong>Schritt 1:</strong> Eigene Dateien aus dem Sketch-Ordner hochladen. Ohne <code>i18n.h</code> erscheinen die Enum-Namen als <code>I18N_0</code> … (bearbeiten geht trotzdem). Die Web-UI im Browser nutzt zusätzlich <code>index.h</code> (<code>I18N</code>-Objekt) — das wird hier nicht bearbeitet.</p>
     <form method="post" enctype="multipart/form-data" accept-charset="UTF-8">
       <input type="hidden" name="action" value="upload">
       <label for="file_cpp">i18n.cpp (Pflicht)</label>
@@ -268,7 +268,7 @@ $webPunctButtons = preg_split('//u', $punctWebOnly, -1, PREG_SPLIT_NO_EMPTY) ?: 
   </div>
   <?php else: ?>
 
-  <p class="hint">Texte als UTF-8 in den C-Strings; Zeilenumbruch in den Feldern wird zu <code>\n</code>. Dateien liegen nur in dieser Browser-Sitzung – nach „Änderungen übernehmen“ erscheint der Download für <code>i18n.cpp</code>; manuell in <code>radiowecker/</code> ersetzen. Zeichen unter „Latein (TFT)“ und „…«»“ sind in <code>lv_font_latin_supp_14.c</code> hinterlegt; „nur Web“ fehlen dort (TFT zeigt ggf. Platzhalter).</p>
+  <p class="hint">Texte als UTF-8 in den C-Strings; Zeilenumbruch in den Feldern wird zu <code>\n</code>. Dateien liegen nur in dieser Browser-Sitzung – nach „Änderungen übernehmen“ erscheint der Download für <code>i18n.cpp</code>; manuell in <code>radiowecker/</code> ersetzen. Zeichen unter „Latein (TFT)“ und „…«»“ sind in <code>lv_font_latin_supp_14.c</code> hinterlegt; „nur Web“ fehlen dort (TFT zeigt ggf. Platzhalter). <strong>Web-Oberfläche (Browser):</strong> weitere Übersetzungen stehen im Sketch in <code>radiowecker/index.h</code> im JavaScript-Objekt <code>I18N</code> (hier kein Editor). Neue <code>I18N_*</code>-Einträge in <code>i18n.h</code> erfordern dieselbe Anzahl neuer Strings in allen <code>S_*</code>-Arrays in <code>i18n.cpp</code>; die Tabellen auf dieser Seite folgen dann automatisch dem Enum.</p>
 
   <div class="actions" style="margin-top:0;">
     <?php if ($canDownloadCpp): ?>
