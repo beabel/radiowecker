@@ -15,12 +15,12 @@ const char MAIN_page[] PROGMEM = R"=====(
 <script>
 var CURRENT_UI_LANG = "de";
 var I18N = {
- de: {lang:"Sprache",title:"Web Radiowecker",w1:"Weckzeit 1:",w2:"Weckzeit 2:",save:"Speichern",cancel:"Rückgängig",list:"Liste:",name:"Name:",url:"URL:",use:"Verwenden:",pos:"Position:",btest:"Testen",bchange:"Ändern",acc_wlan:"Wlan",acc_ntp:"NTP",acc_wx:"Wetter",bsave:"Speichern",brestart:"Neustart",brestore:"Senderliste Reset",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"ChipModel:",fh:"Fehler beim Abrufen der Daten.",fe:"Fehler beim Laden der Daten.",gh_err:"Fehler beim Überprüfen auf Updates.",dow_mo:"Mo",dow_di:"Di",dow_mi:"Mi",dow_do:"Do",dow_fr:"Fr",dow_sa:"Sa",dow_so:"So",testend:"Mit OK beenden Sie den Test",ota_ask:"Firmware auf",ota_rel:"Im GitHub-Release muss die Datei angehängt sein:",ota_free:"Freier OTA-Slot (ungefähr):",ota_stop:"Das Radio wird gestoppt;",ota_iprog:"Der Fortschritt erscheint auf dem Display.",ota_reboot:"Anschließend startet das Gerät neu.",ota_web:"Diese Webseite verliert danach die Verbindung zum Gerät (erwartet) — es erscheint kein weiteres Meldungsfenster.",ota_go:"Fortfahren?",gh_new:"Neue Version:",gh_inst:"Per Web installieren…",gh_rel:"Release-Seite",gh_newer:"Du verwendest eine neuere Version",gh_than:"als die neueste offizielle Version",gh_okv:"Du verwendest bereits die neueste Version",heap_u:"Belegt:",heap_f:"Frei:",heap_t:"Heap gesamt:",heap_m:"max. Block:",fw_l:"Firmware:",fw_v:"von",fw_u:"frei für nächstes Update:",fu:"Letztes Update:",fl:"Created with",sp:"Sponsor this Project:",fgh:"Fehler beim Abrufen der GitHub-Informationen.",tab_disp:"Anzeige",lbl_bright:"Helligkeit (%):",hint_bright:"0 % = automatisch per Umgebungslicht (LDR), wenn am Gerät verbaut.",lbl_sleep:"Einschlafzeit (Min.):",lbl_asnooze:"Wecker-Schlummer (Min.):",hint_asnooze:"0 = Schlummer aus."},
- en: {lang:"Language",title:"Web clock radio",w1:"Alarm 1:",w2:"Alarm 2:",save:"Save",cancel:"Undo",list:"List:",name:"Name:",url:"URL:",use:"Use:",pos:"Position:",btest:"Test",bchange:"Apply",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weather",bsave:"Save",brestart:"Restart",brestore:"Reset station list",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chip model:",fh:"Failed to fetch data.",fe:"Failed to load data.",gh_err:"Update check failed.",dow_mo:"Mo",dow_di:"Tu",dow_mi:"We",dow_do:"Th",dow_fr:"Fr",dow_sa:"Sa",dow_so:"Su",testend:"Press OK to end the test",ota_ask:"Install firmware",ota_rel:"The GitHub release must include file:",ota_free:"Approx. free OTA slot:",ota_stop:"Playback will stop;",ota_iprog:"progress is shown on the device.",ota_reboot:"Then the device reboots.",ota_web:"This page will lose connection (expected).",ota_go:"Continue?",gh_new:"New version:",gh_inst:"Install via web…",gh_rel:"Release page",gh_newer:"You are running a newer version",gh_than:"than the latest official release",gh_okv:"You are on the latest version",heap_u:"Used:",heap_f:"Free:",heap_t:"Heap total:",heap_m:"max block:",fw_l:"Firmware:",fw_v:"of",fw_u:"free for next update:",fu:"Last update:",fl:"Created with",sp:"Sponsor this project:",fgh:"Failed to fetch GitHub info.",tab_disp:"Display",lbl_bright:"Brightness (%):",hint_bright:"0% = ambient light (LDR) when fitted on the device.",lbl_sleep:"Sleep timer (min):",lbl_asnooze:"Alarm snooze (min):",hint_asnooze:"0 = snooze off."},
- fr: {lang:"Langue",title:"Radio-réveil web",w1:"Alarme 1 :",w2:"Alarme 2 :",save:"Enregistrer",cancel:"Annuler",list:"Liste :",name:"Nom :",url:"URL :",use:"Actif :",pos:"Position :",btest:"Tester",bchange:"Modifier",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Météo",bsave:"Enregistrer",brestart:"Redémarrer",brestore:"Réinit. liste stations",lbl_ver:"Version :",lbl_heap:"TAS :",lbl_sk:"SKETCH :",lbl_chip:"Modèle puce :",fh:"Échec de lecture des données.",fe:"Échec du chargement.",gh_err:"Échec vérif. mises à jour.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Me",dow_do:"Je",dow_fr:"Ve",dow_sa:"Sa",dow_so:"Di",testend:"OK pour terminer le test",ota_ask:"Installer le firmware",ota_rel:"Le release GitHub doit contenir :",ota_free:"Espace OTA libre (approx.) :",ota_stop:"La radio s'arrête ;",ota_iprog:"la progression s'affiche sur l'appareil.",ota_reboot:"Puis redémarrage.",ota_web:"Cette page perdra la connexion (normal).",ota_go:"Continuer ?",gh_new:"Nouvelle version :",gh_inst:"Installer via le web…",gh_rel:"Page release",gh_newer:"Version plus récente que",gh_than:"la dernière version officielle",gh_okv:"Déjà la dernière version",heap_u:"Utilisé :",heap_f:"Libre :",heap_t:"Tas total :",heap_m:"bloc max :",fw_l:"Firmware :",fw_v:"sur",fw_u:"libre pour prochaine MAJ :",fu:"Dernière MAJ :",fl:"Créé avec",sp:"Soutenir le projet :",fgh:"Échec infos GitHub.",tab_disp:"Affichage",lbl_bright:"Luminosité (%) :",hint_bright:"0 % = lumière ambiante (LDR) si présent.",lbl_sleep:"Sommeil (min) :",lbl_asnooze:"Snooze alarme (min) :",hint_asnooze:"0 = snooze désactivé."},
- ru: {lang:"Язык",title:"Веб‑радиобудильник",w1:"Будильник 1:",w2:"Будильник 2:",save:"Сохранить",cancel:"Отменить",list:"Список:",name:"Имя:",url:"URL:",use:"Вкл.:",pos:"Позиция:",btest:"Тест",bchange:"Изменить",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Погода",bsave:"Сохранить",brestart:"Перезагрузка",brestore:"Сброс списка станций",lbl_ver:"Версия:",lbl_heap:"КУЧА:",lbl_sk:"ПРОШИВКА:",lbl_chip:"Чип:",fh:"Ошибка получения данных.",fe:"Ошибка загрузки.",gh_err:"Ошибка проверки обновлений.",dow_mo:"Пн",dow_di:"Вт",dow_mi:"Ср",dow_do:"Чт",dow_fr:"Пт",dow_sa:"Сб",dow_so:"Вс",testend:"Нажмите OK, чтобы завершить тест",ota_ask:"Установить прошивку",ota_rel:"В релизе GitHub должен быть файл:",ota_free:"Свободно под OTA (прибл.):",ota_stop:"Радио остановится;",ota_iprog:"прогресс на экране устройства.",ota_reboot:"Затем перезагрузка.",ota_web:"Страница потеряет связь (норма).",ota_go:"Продолжить?",gh_new:"Новая версия:",gh_inst:"Установить через веб…",gh_rel:"Страница релиза",gh_newer:"У вас новее, чем",gh_than:"последний официальный релиз",gh_okv:"Уже последняя версия",heap_u:"Занято:",heap_f:"Свободно:",heap_t:"Куча всего:",heap_m:"макс. блок:",fw_l:"Прошивка:",fw_v:"из",fw_u:"свободно для обновления:",fu:"Последнее обновление:",fl:"Создано с",sp:"Поддержать проект:",fgh:"Ошибка GitHub.",tab_disp:"Экран",lbl_bright:"Яркость (%):",hint_bright:"0 % = по датчику освещённости (LDR), если есть.",lbl_sleep:"Таймер сна (мин):",lbl_asnooze:"Отложить будильник (мин):",hint_asnooze:"0 = выкл."},
- es: {lang:"Idioma",title:"Radio despertador web",w1:"Alarma 1:",w2:"Alarma 2:",save:"Guardar",cancel:"Deshacer",list:"Lista:",name:"Nombre:",url:"URL:",use:"Usar:",pos:"Posición:",btest:"Probar",bchange:"Aplicar",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Tiempo",bsave:"Guardar",brestart:"Reiniciar",brestore:"Restablecer lista de emisoras",lbl_ver:"Versión:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Modelo de chip:",fh:"Error al obtener los datos.",fe:"Error al cargar los datos.",gh_err:"Error al comprobar actualizaciones.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Mi",dow_do:"Ju",dow_fr:"Vi",dow_sa:"Sá",dow_so:"Do",testend:"Pulse OK para finalizar la prueba",ota_ask:"Instalar firmware",ota_rel:"El release de GitHub debe incluir el archivo:",ota_free:"Espacio OTA libre (aprox.):",ota_stop:"Se detiene la reproducción;",ota_iprog:"el progreso se muestra en el dispositivo.",ota_reboot:"Luego el dispositivo se reinicia.",ota_web:"Esta página perderá la conexión (esperado).",ota_go:"¿Continuar?",gh_new:"Nueva versión:",gh_inst:"Instalar vía web…",gh_rel:"Página del release",gh_newer:"Tiene una versión más reciente",gh_than:"que el último release oficial",gh_okv:"Ya tiene la última versión",heap_u:"Usado:",heap_f:"Libre:",heap_t:"Montón total:",heap_m:"bloque máx.:",fw_l:"Firmware:",fw_v:"de",fw_u:"libre para el próximo update:",fu:"Última actualización:",fl:"Creado con",sp:"Patrocinar el proyecto:",fgh:"Error al obtener GitHub.",tab_disp:"Pantalla",lbl_bright:"Brillo (%):",hint_bright:"0 % = luz ambiente (LDR) si está instalado.",lbl_sleep:"Temporizador sueño (min):",lbl_asnooze:"Snooze alarma (min):",hint_asnooze:"0 = snooze desactivado."},
- nl: {lang:"Taal",title:"Webklokradio",w1:"Wekker 1:",w2:"Wekker 2:",save:"Opslaan",cancel:"Ongedaan maken",list:"Lijst:",name:"Naam:",url:"URL:",use:"Gebruik:",pos:"Positie:",btest:"Test",bchange:"Toepassen",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weer",bsave:"Opslaan",brestart:"Herstarten",brestore:"Zenderlijst resetten",lbl_ver:"Versie:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chipmodel:",fh:"Gegevens ophalen mislukt.",fe:"Laden mislukt.",gh_err:"Updatecontrole mislukt.",dow_mo:"Ma",dow_di:"Di",dow_mi:"Wo",dow_do:"Do",dow_fr:"Vr",dow_sa:"Za",dow_so:"Zo",testend:"Druk op OK om de test te beëindigen",ota_ask:"Firmware installeren",ota_rel:"De GitHub-release moet het bestand bevatten:",ota_free:"Vrij OTA-blok (ca.):",ota_stop:"Afspelen stopt;",ota_iprog:"voortgang op het apparaat.",ota_reboot:"Daarna start het apparaat opnieuw.",ota_web:"Deze pagina verliest de verbinding (verwacht).",ota_go:"Doorgaan?",gh_new:"Nieuwe versie:",gh_inst:"Installeren via web…",gh_rel:"Releasepagina",gh_newer:"U heeft een nieuwere versie",gh_than:"dan de laatste officiële release",gh_okv:"U heeft al de nieuwste versie",heap_u:"Bezet:",heap_f:"Vrij:",heap_t:"Heap totaal:",heap_m:"max. blok:",fw_l:"Firmware:",fw_v:"van",fw_u:"vrij voor volgende update:",fu:"Laatste update:",fl:"Gemaakt met",sp:"Project steunen:",fgh:"GitHub-info ophalen mislukt.",tab_disp:"Scherm",lbl_bright:"Helderheid (%):",hint_bright:"0 % = omgevingslicht (LDR) indien aanwezig.",lbl_sleep:"Slaaptimer (min):",lbl_asnooze:"Alarm-snooze (min):",hint_asnooze:"0 = snooze uit."}
+ de: {lang:"Sprache",title:"Web Radiowecker",w1:"Weckzeit 1:",w2:"Weckzeit 2:",save:"Speichern",cancel:"Rückgängig",list:"Liste:",name:"Name:",url:"URL:",use:"Verwenden:",pos:"Position:",btest:"Testen",bchange:"Ändern",acc_wlan:"Wlan",acc_ntp:"NTP",acc_wx:"Wetter",bsave:"Speichern",brestart:"Neustart",brestore:"Senderliste Reset",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"ChipModel:",fh:"Fehler beim Abrufen der Daten.",fe:"Fehler beim Laden der Daten.",gh_err:"Fehler beim Überprüfen auf Updates.",dow_mo:"Mo",dow_di:"Di",dow_mi:"Mi",dow_do:"Do",dow_fr:"Fr",dow_sa:"Sa",dow_so:"So",testend:"Mit OK beenden Sie den Test",ota_ask:"Firmware auf",ota_rel:"Im GitHub-Release muss die Datei angehängt sein:",ota_free:"Freier OTA-Slot (ungefähr):",ota_stop:"Das Radio wird gestoppt;",ota_iprog:"Der Fortschritt erscheint auf dem Display.",ota_reboot:"Anschließend startet das Gerät neu.",ota_web:"Diese Webseite verliert danach die Verbindung zum Gerät (erwartet) — es erscheint kein weiteres Meldungsfenster.",ota_go:"Fortfahren?",gh_new:"Neue Version:",gh_inst:"Per Web installieren…",gh_rel:"Release-Seite",gh_newer:"Du verwendest eine neuere Version",gh_than:"als die neueste offizielle Version",gh_okv:"Du verwendest bereits die neueste Version",heap_u:"Belegt:",heap_f:"Frei:",heap_t:"Heap gesamt:",heap_m:"max. Block:",fw_l:"Firmware:",fw_v:"von",fw_u:"frei für nächstes Update:",fu:"Letztes Update:",fl:"Created with",sp:"Sponsor this Project:",fgh:"Fehler beim Abrufen der GitHub-Informationen.",tab_disp:"Anzeige",lbl_bright:"Helligkeit (%):",hint_bright:"0 % = automatisch per Umgebungslicht (LDR), wenn am Gerät verbaut.",lbl_sleep:"Einschlafzeit (Min.):",lbl_asnooze:"Wecker-Schlummer (Min.):",hint_asnooze:"0 = Schlummer aus.",colors_title:"Startbildschirm-Farben",colors_hint:"Sofort auf dem Gerät sichtbar. Werksfarben = Standard wie bei Erstinstallation.",colors_save:"Farben speichern",colors_reset:"Werksfarben",c_bg:"Hintergrund",c_ip:"IP-Zeile",c_sleep:"Schlaf-Symbol",c_alarm:"Wecker (aktiv)",c_sFill:"Slider Füllung",c_sBg:"Slider Hintergrund",c_sBd:"Slider Rahmen",c_date:"Datum",c_time:"Uhrzeit",c_boxBg:"Kästen (Wetter/Radio)",c_boxBd:"Kasten-Rahmen",c_stName:"Sendername",c_stTitle:"Titel & Wetter"},
+ en: {lang:"Language",title:"Web clock radio",w1:"Alarm 1:",w2:"Alarm 2:",save:"Save",cancel:"Undo",list:"List:",name:"Name:",url:"URL:",use:"Use:",pos:"Position:",btest:"Test",bchange:"Apply",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weather",bsave:"Save",brestart:"Restart",brestore:"Reset station list",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chip model:",fh:"Failed to fetch data.",fe:"Failed to load data.",gh_err:"Update check failed.",dow_mo:"Mo",dow_di:"Tu",dow_mi:"We",dow_do:"Th",dow_fr:"Fr",dow_sa:"Sa",dow_so:"Su",testend:"Press OK to end the test",ota_ask:"Install firmware",ota_rel:"The GitHub release must include file:",ota_free:"Approx. free OTA slot:",ota_stop:"Playback will stop;",ota_iprog:"progress is shown on the device.",ota_reboot:"Then the device reboots.",ota_web:"This page will lose connection (expected).",ota_go:"Continue?",gh_new:"New version:",gh_inst:"Install via web…",gh_rel:"Release page",gh_newer:"You are running a newer version",gh_than:"than the latest official release",gh_okv:"You are on the latest version",heap_u:"Used:",heap_f:"Free:",heap_t:"Heap total:",heap_m:"max block:",fw_l:"Firmware:",fw_v:"of",fw_u:"free for next update:",fu:"Last update:",fl:"Created with",sp:"Sponsor this project:",fgh:"Failed to fetch GitHub info.",tab_disp:"Display",lbl_bright:"Brightness (%):",hint_bright:"0% = ambient light (LDR) when fitted on the device.",lbl_sleep:"Sleep timer (min):",lbl_asnooze:"Alarm snooze (min):",hint_asnooze:"0 = snooze off.",colors_title:"Home screen colors",colors_hint:"Applied on the device at once. Factory = default theme.",colors_save:"Save colors",colors_reset:"Factory colors",c_bg:"Background",c_ip:"IP line",c_sleep:"Sleep icon",c_alarm:"Alarm (on)",c_sFill:"Volume fill",c_sBg:"Volume track",c_sBd:"Volume border",c_date:"Date",c_time:"Time",c_boxBg:"Weather/radio boxes",c_boxBd:"Box border",c_stName:"Station name",c_stTitle:"Title & weather"},
+ fr: {lang:"Langue",title:"Radio-réveil web",w1:"Alarme 1 :",w2:"Alarme 2 :",save:"Enregistrer",cancel:"Annuler",list:"Liste :",name:"Nom :",url:"URL :",use:"Actif :",pos:"Position :",btest:"Tester",bchange:"Modifier",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Météo",bsave:"Enregistrer",brestart:"Redémarrer",brestore:"Réinit. liste stations",lbl_ver:"Version :",lbl_heap:"TAS :",lbl_sk:"SKETCH :",lbl_chip:"Modèle puce :",fh:"Échec de lecture des données.",fe:"Échec du chargement.",gh_err:"Échec vérif. mises à jour.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Me",dow_do:"Je",dow_fr:"Ve",dow_sa:"Sa",dow_so:"Di",testend:"OK pour terminer le test",ota_ask:"Installer le firmware",ota_rel:"Le release GitHub doit contenir :",ota_free:"Espace OTA libre (approx.) :",ota_stop:"La radio s'arrête ;",ota_iprog:"la progression s'affiche sur l'appareil.",ota_reboot:"Puis redémarrage.",ota_web:"Cette page perdra la connexion (normal).",ota_go:"Continuer ?",gh_new:"Nouvelle version :",gh_inst:"Installer via le web…",gh_rel:"Page release",gh_newer:"Version plus récente que",gh_than:"la dernière version officielle",gh_okv:"Déjà la dernière version",heap_u:"Utilisé :",heap_f:"Libre :",heap_t:"Tas total :",heap_m:"bloc max :",fw_l:"Firmware :",fw_v:"sur",fw_u:"libre pour prochaine MAJ :",fu:"Dernière MAJ :",fl:"Créé avec",sp:"Soutenir le projet :",fgh:"Échec infos GitHub.",tab_disp:"Affichage",lbl_bright:"Luminosité (%) :",hint_bright:"0 % = lumière ambiante (LDR) si présent.",lbl_sleep:"Sommeil (min) :",lbl_asnooze:"Snooze alarme (min) :",hint_asnooze:"0 = snooze désactivé.",colors_title:"Couleurs écran d’accueil",colors_hint:"Appliquées tout de suite. Usine = défaut.",colors_save:"Enregistrer",colors_reset:"Couleurs d’usine",c_bg:"Fond",c_ip:"Ligne IP",c_sleep:"Icône sommeil",c_alarm:"Alarme (actif)",c_sFill:"Curseur (rempl.)",c_sBg:"Curseur (piste)",c_sBd:"Curseur (bord)",c_date:"Date",c_time:"Heure",c_boxBg:"Boîtes météo/radio",c_boxBd:"Bord des boîtes",c_stName:"Nom station",c_stTitle:"Titre & météo"},
+ ru: {lang:"Язык",title:"Веб‑радиобудильник",w1:"Будильник 1:",w2:"Будильник 2:",save:"Сохранить",cancel:"Отменить",list:"Список:",name:"Имя:",url:"URL:",use:"Вкл.:",pos:"Позиция:",btest:"Тест",bchange:"Изменить",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Погода",bsave:"Сохранить",brestart:"Перезагрузка",brestore:"Сброс списка станций",lbl_ver:"Версия:",lbl_heap:"КУЧА:",lbl_sk:"ПРОШИВКА:",lbl_chip:"Чип:",fh:"Ошибка получения данных.",fe:"Ошибка загрузки.",gh_err:"Ошибка проверки обновлений.",dow_mo:"Пн",dow_di:"Вт",dow_mi:"Ср",dow_do:"Чт",dow_fr:"Пт",dow_sa:"Сб",dow_so:"Вс",testend:"Нажмите OK, чтобы завершить тест",ota_ask:"Установить прошивку",ota_rel:"В релизе GitHub должен быть файл:",ota_free:"Свободно под OTA (прибл.):",ota_stop:"Радио остановится;",ota_iprog:"прогресс на экране устройства.",ota_reboot:"Затем перезагрузка.",ota_web:"Страница потеряет связь (норма).",ota_go:"Продолжить?",gh_new:"Новая версия:",gh_inst:"Установить через веб…",gh_rel:"Страница релиза",gh_newer:"У вас новее, чем",gh_than:"последний официальный релиз",gh_okv:"Уже последняя версия",heap_u:"Занято:",heap_f:"Свободно:",heap_t:"Куча всего:",heap_m:"макс. блок:",fw_l:"Прошивка:",fw_v:"из",fw_u:"свободно для обновления:",fu:"Последнее обновление:",fl:"Создано с",sp:"Поддержать проект:",fgh:"Ошибка GitHub.",tab_disp:"Экран",lbl_bright:"Яркость (%):",hint_bright:"0 % = по датчику освещённости (LDR), если есть.",lbl_sleep:"Таймер сна (мин):",lbl_asnooze:"Отложить будильник (мин):",hint_asnooze:"0 = выкл.",colors_title:"Цвета главного экрана",colors_hint:"Сразу на устройстве. Завод = по умолчанию.",colors_save:"Сохранить",colors_reset:"Сброс цветов",c_bg:"Фон",c_ip:"Строка IP",c_sleep:"Сон",c_alarm:"Будильник",c_sFill:"Громкость заливка",c_sBg:"Громкость фон",c_sBd:"Громкость рамка",c_date:"Дата",c_time:"Время",c_boxBg:"Блоки погоды/радио",c_boxBd:"Рамка блоков",c_stName:"Станция",c_stTitle:"Текст и погода"},
+ es: {lang:"Idioma",title:"Radio despertador web",w1:"Alarma 1:",w2:"Alarma 2:",save:"Guardar",cancel:"Deshacer",list:"Lista:",name:"Nombre:",url:"URL:",use:"Usar:",pos:"Posición:",btest:"Probar",bchange:"Aplicar",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Tiempo",bsave:"Guardar",brestart:"Reiniciar",brestore:"Restablecer lista de emisoras",lbl_ver:"Versión:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Modelo de chip:",fh:"Error al obtener los datos.",fe:"Error al cargar los datos.",gh_err:"Error al comprobar actualizaciones.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Mi",dow_do:"Ju",dow_fr:"Vi",dow_sa:"Sá",dow_so:"Do",testend:"Pulse OK para finalizar la prueba",ota_ask:"Instalar firmware",ota_rel:"El release de GitHub debe incluir el archivo:",ota_free:"Espacio OTA libre (aprox.):",ota_stop:"Se detiene la reproducción;",ota_iprog:"el progreso se muestra en el dispositivo.",ota_reboot:"Luego el dispositivo se reinicia.",ota_web:"Esta página perderá la conexión (esperado).",ota_go:"¿Continuar?",gh_new:"Nueva versión:",gh_inst:"Instalar vía web…",gh_rel:"Página del release",gh_newer:"Tiene una versión más reciente",gh_than:"que el último release oficial",gh_okv:"Ya tiene la última versión",heap_u:"Usado:",heap_f:"Libre:",heap_t:"Montón total:",heap_m:"bloque máx.:",fw_l:"Firmware:",fw_v:"de",fw_u:"libre para el próximo update:",fu:"Última actualización:",fl:"Creado con",sp:"Patrocinar el proyecto:",fgh:"Error al obtener GitHub.",tab_disp:"Pantalla",lbl_bright:"Brillo (%):",hint_bright:"0 % = luz ambiente (LDR) si está instalado.",lbl_sleep:"Temporizador sueño (min):",lbl_asnooze:"Snooze alarma (min):",hint_asnooze:"0 = snooze desactivado.",colors_title:"Colores pantalla inicio",colors_hint:"Se aplican al instante. Fábrica = predeterminado.",colors_save:"Guardar",colors_reset:"Colores de fábrica",c_bg:"Fondo",c_ip:"Línea IP",c_sleep:"Icono sueño",c_alarm:"Alarma (on)",c_sFill:"Volumen relleno",c_sBg:"Volumen pista",c_sBd:"Volumen borde",c_date:"Fecha",c_time:"Hora",c_boxBg:"Cajas clima/radio",c_boxBd:"Borde caja",c_stName:"Emisora",c_stTitle:"Título y clima"},
+ nl: {lang:"Taal",title:"Webklokradio",w1:"Wekker 1:",w2:"Wekker 2:",save:"Opslaan",cancel:"Ongedaan maken",list:"Lijst:",name:"Naam:",url:"URL:",use:"Gebruik:",pos:"Positie:",btest:"Test",bchange:"Toepassen",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weer",bsave:"Opslaan",brestart:"Herstarten",brestore:"Zenderlijst resetten",lbl_ver:"Versie:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chipmodel:",fh:"Gegevens ophalen mislukt.",fe:"Laden mislukt.",gh_err:"Updatecontrole mislukt.",dow_mo:"Ma",dow_di:"Di",dow_mi:"Wo",dow_do:"Do",dow_fr:"Vr",dow_sa:"Za",dow_so:"Zo",testend:"Druk op OK om de test te beëindigen",ota_ask:"Firmware installeren",ota_rel:"De GitHub-release moet het bestand bevatten:",ota_free:"Vrij OTA-blok (ca.):",ota_stop:"Afspelen stopt;",ota_iprog:"voortgang op het apparaat.",ota_reboot:"Daarna start het apparaat opnieuw.",ota_web:"Deze pagina verliest de verbinding (verwacht).",ota_go:"Doorgaan?",gh_new:"Nieuwe versie:",gh_inst:"Installeren via web…",gh_rel:"Releasepagina",gh_newer:"U heeft een nieuwere versie",gh_than:"dan de laatste officiële release",gh_okv:"U heeft al de nieuwste versie",heap_u:"Bezet:",heap_f:"Vrij:",heap_t:"Heap totaal:",heap_m:"max. blok:",fw_l:"Firmware:",fw_v:"van",fw_u:"vrij voor volgende update:",fu:"Laatste update:",fl:"Gemaakt met",sp:"Project steunen:",fgh:"GitHub-info ophalen mislukt.",tab_disp:"Scherm",lbl_bright:"Helderheid (%):",hint_bright:"0 % = omgevingslicht (LDR) indien aanwezig.",lbl_sleep:"Slaaptimer (min):",lbl_asnooze:"Alarm-snooze (min):",hint_asnooze:"0 = snooze uit.",colors_title:"Kleuren startscherm",colors_hint:"Meteen op het apparaat. Fabriek = standaard.",colors_save:"Opslaan",colors_reset:"Fabriekskleuren",c_bg:"Achtergrond",c_ip:"IP-regel",c_sleep:"Slaap-icoon",c_alarm:"Wekker (aan)",c_sFill:"Volume vulling",c_sBg:"Volume spoor",c_sBd:"Volume rand",c_date:"Datum",c_time:"Tijd",c_boxBg:"Weer/radio-vakken",c_boxBd:"Vakrand",c_stName:"Zendernaam",c_stTitle:"Titel & weer"}
 };
 function tr(k) { var o = I18N[CURRENT_UI_LANG] || I18N.de; if (o[k] !== undefined) return o[k]; return (I18N.de[k] !== undefined) ? I18N.de[k] : k; }
 function applyWebLang(code) {
@@ -64,6 +64,8 @@ $(document).ready(function() {
   $("#btn_bwd").click(beforeStation);// toggle beforeStation zum ESP 
   $("#btn_fwd").click(nextStation);// toggle nextStation zum ESP 
   $("#switchStation").on("change", selectStationFromDropdown);
+  $("#btn_colors_save").click(saveStartColors);
+  $("#btn_colors_reset").click(resetStartColors);
 
   // Zeugs um die aktuellen Daten des ESP regelmäßig zu erhalten um halbwegs sinvolle Anzeigen zu sehen
   $("#tabs").tabs({
@@ -76,7 +78,10 @@ $(document).ready(function() {
         var prevId = ui.oldPanel.data("intervalId");
         if (prevId) clearInterval(prevId);
       }
-      if (href === "#display") loadDisplaySettings();
+      if (href === "#display") {
+        loadDisplaySettings();
+        loadStartColors();
+      }
     }
   });
 
@@ -97,12 +102,14 @@ function getAll() {
       getStationList();
       getAlarms();
       loadDisplaySettings();
+      loadStartColors();
     }).fail(function() {
       applyWebLang("de");
       getSSID();
       getStationList();
       getAlarms();
       loadDisplaySettings();
+      loadStartColors();
     });
 }
 
@@ -335,6 +342,60 @@ function loadDisplaySettings() {
     if (d.alarmSnoozeMin !== undefined) {
       $("#slider_asnooze").slider("option", "value", d.alarmSnoozeMin);
       $("#disp_asnooze_val").text(d.alarmSnoozeMin);
+    }
+  });
+}
+var START_COLOR_FIELDS = [
+  ["col_bg", "bg"],
+  ["col_ip", "ip"],
+  ["col_sleep", "sleep"],
+  ["col_alarm", "alarm"],
+  ["col_sFill", "sFill"],
+  ["col_sBg", "sBg"],
+  ["col_sBd", "sBd"],
+  ["col_date", "date"],
+  ["col_time", "time"],
+  ["col_boxBg", "boxBg"],
+  ["col_boxBd", "boxBd"],
+  ["col_stName", "stName"],
+  ["col_stTitle", "stTitle"]
+];
+function loadStartColors() {
+  $.getJSON("/cmd/getStartColors", function (d) {
+    if (!d) return;
+    START_COLOR_FIELDS.forEach(function (pair) {
+      var v = d[pair[1]];
+      if (v) $("#" + pair[0]).val(v);
+    });
+  });
+}
+function saveStartColors() {
+  var o = {};
+  START_COLOR_FIELDS.forEach(function (pair) {
+    o[pair[1]] = $("#" + pair[0]).val();
+  });
+  $.ajax({
+    type: "POST",
+    url: "/cmd/setStartColors",
+    contentType: "application/json; charset=UTF-8",
+    data: JSON.stringify(o),
+    success: function () {
+      loadStartColors();
+    },
+    error: function () {
+      alert(tr("fe"));
+    }
+  });
+}
+function resetStartColors() {
+  $.ajax({
+    type: "POST",
+    url: "/cmd/resetStartColors",
+    success: function () {
+      loadStartColors();
+    },
+    error: function () {
+      alert(tr("fe"));
     }
   });
 }
@@ -834,6 +895,31 @@ input {
   max-width: 320px;
   clear: both;
 }
+#display .color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0.15em 0;
+  max-width: 300px;
+}
+#display .color-row label {
+  float: none;
+  width: auto;
+  flex: 1;
+  margin: 0;
+  font-size: 0.78em;
+  line-height: 1.2;
+}
+#display input[type="color"] {
+  width: 34px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+#display hr.disp-sep { margin: 0.85em 0; border: 0; border-top: 1px solid #999; }
 </style>
 </head>
 <body>
@@ -1029,6 +1115,28 @@ input {
       <p><label><span data-i18n="lbl_asnooze">Wecker-Schlummer (Min.):</span> <strong id="disp_asnooze_val">0</strong></label></p>
       <p class="hint"><span data-i18n="hint_asnooze"></span></p>
       <div id="slider_asnooze" class="display-slider"></div>
+      <hr class="disp-sep" />
+      <p><strong data-i18n="colors_title">Startbildschirm-Farben</strong></p>
+      <p class="hint"><span data-i18n="colors_hint"></span></p>
+      <div id="start_color_inputs">
+        <div class="color-row"><label for="col_bg" data-i18n="c_bg">Hintergrund</label><input type="color" id="col_bg" /></div>
+        <div class="color-row"><label for="col_ip" data-i18n="c_ip">IP</label><input type="color" id="col_ip" /></div>
+        <div class="color-row"><label for="col_sleep" data-i18n="c_sleep">Schlaf</label><input type="color" id="col_sleep" /></div>
+        <div class="color-row"><label for="col_alarm" data-i18n="c_alarm">Wecker</label><input type="color" id="col_alarm" /></div>
+        <div class="color-row"><label for="col_sFill" data-i18n="c_sFill">Slider</label><input type="color" id="col_sFill" /></div>
+        <div class="color-row"><label for="col_sBg" data-i18n="c_sBg">Slider-BG</label><input type="color" id="col_sBg" /></div>
+        <div class="color-row"><label for="col_sBd" data-i18n="c_sBd">Slider-Rahmen</label><input type="color" id="col_sBd" /></div>
+        <div class="color-row"><label for="col_date" data-i18n="c_date">Datum</label><input type="color" id="col_date" /></div>
+        <div class="color-row"><label for="col_time" data-i18n="c_time">Uhrzeit</label><input type="color" id="col_time" /></div>
+        <div class="color-row"><label for="col_boxBg" data-i18n="c_boxBg">Kästen</label><input type="color" id="col_boxBg" /></div>
+        <div class="color-row"><label for="col_boxBd" data-i18n="c_boxBd">Kasten-Rahmen</label><input type="color" id="col_boxBd" /></div>
+        <div class="color-row"><label for="col_stName" data-i18n="c_stName">Sender</label><input type="color" id="col_stName" /></div>
+        <div class="color-row"><label for="col_stTitle" data-i18n="c_stTitle">Titel</label><input type="color" id="col_stTitle" /></div>
+      </div>
+      <div align="center" style="margin-top:8px">
+        <button type="button" id="btn_colors_save" data-i18n="colors_save">Speichern</button>
+        <button type="button" id="btn_colors_reset" data-i18n="colors_reset">Werksfarben</button>
+      </div>
     </div>
     <div id="wlan">
       <div id="accordion">

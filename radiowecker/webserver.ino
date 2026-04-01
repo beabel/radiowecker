@@ -1,8 +1,11 @@
 //home page and templatefor options
 #include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
 #include "index.h"
 #include "ArduinoJson.h"
 #include "i18n.h"
+#include "ui_start_colors.h"
 
 void handleStartHttpUpdate(void);
 void getLang(void);
@@ -46,6 +49,9 @@ void setup_webserver() {
   server.on("/cmd/setBright", setBrightWeb);
   server.on("/cmd/setSleepTimer", setSleepTimerWeb);
   server.on("/cmd/setAlarmSnooze", setAlarmSnoozeWeb);
+  server.on("/cmd/getStartColors", getStartColors);
+  server.on("/cmd/setStartColors", HTTP_POST, setStartColorsWeb, nullptr);
+  server.on("/cmd/resetStartColors", HTTP_POST, resetStartColorsWeb, nullptr);
 
   // Info-Tab: Definiert die Route für das Abrufen von Systeminformationen
   server.on("/cmd/getInfo", getInfo);  // Ruft allgemeine Systeminformationen ab
@@ -607,6 +613,138 @@ void setAlarmSnoozeWeb() {
     return;
   }
   web_apply_alarm_snooze_min((uint8_t)v);
+  server.send(200, "text/plain", "OK");
+}
+
+static void ui565_to_hex_json(uint16_t c, char *buf, size_t cap) {
+  uint8_t r5 = (uint8_t)((c >> 11) & 0x1F);
+  uint8_t g6 = (uint8_t)((c >> 5) & 0x3F);
+  uint8_t b5 = (uint8_t)(c & 0x1F);
+  uint8_t r = (uint8_t)((r5 * 527 + 23) >> 6);
+  uint8_t g = (uint8_t)((g6 * 259 + 33) >> 6);
+  uint8_t b = (uint8_t)((b5 * 527 + 23) >> 6);
+  snprintf(buf, cap, "#%02X%02X%02X", (unsigned)r, (unsigned)g, (unsigned)b);
+}
+
+static bool parse_hex_color565(const char *s, uint16_t *out565) {
+  if (!s || s[0] != '#' || strlen(s) != 7) return false;
+  for (int i = 1; i <= 6; i++) {
+    if (!isxdigit((unsigned char)s[i])) return false;
+  }
+  unsigned long v = strtoul(s + 1, NULL, 16);
+  uint8_t r = (uint8_t)((v >> 16) & 0xFF);
+  uint8_t g = (uint8_t)((v >> 8) & 0xFF);
+  uint8_t b = (uint8_t)(v & 0xFF);
+  *out565 = (uint16_t)(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
+  return true;
+}
+
+void getStartColors() {
+  StaticJsonDocument<768> doc;
+  char hx[10];
+  ui565_to_hex_json(ui_start_cols.bg, hx, sizeof(hx));
+  doc["bg"] = hx;
+  ui565_to_hex_json(ui_start_cols.ip, hx, sizeof(hx));
+  doc["ip"] = hx;
+  ui565_to_hex_json(ui_start_cols.sleep_sym, hx, sizeof(hx));
+  doc["sleep"] = hx;
+  ui565_to_hex_json(ui_start_cols.alarm_sym, hx, sizeof(hx));
+  doc["alarm"] = hx;
+  ui565_to_hex_json(ui_start_cols.slider, hx, sizeof(hx));
+  doc["sFill"] = hx;
+  ui565_to_hex_json(ui_start_cols.slider_bg, hx, sizeof(hx));
+  doc["sBg"] = hx;
+  ui565_to_hex_json(ui_start_cols.slider_border, hx, sizeof(hx));
+  doc["sBd"] = hx;
+  ui565_to_hex_json(ui_start_cols.date, hx, sizeof(hx));
+  doc["date"] = hx;
+  ui565_to_hex_json(ui_start_cols.time_c, hx, sizeof(hx));
+  doc["time"] = hx;
+  ui565_to_hex_json(ui_start_cols.box_bg, hx, sizeof(hx));
+  doc["boxBg"] = hx;
+  ui565_to_hex_json(ui_start_cols.box_border, hx, sizeof(hx));
+  doc["boxBd"] = hx;
+  ui565_to_hex_json(ui_start_cols.station_name, hx, sizeof(hx));
+  doc["stName"] = hx;
+  ui565_to_hex_json(ui_start_cols.station_title, hx, sizeof(hx));
+  doc["stTitle"] = hx;
+  String out;
+  serializeJson(doc, out);
+  server.send(200, "application/json; charset=utf-8", out);
+}
+
+void setStartColorsWeb() {
+  if (!server.hasArg("plain")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  StaticJsonDocument<768> jd;
+  DeserializationError err = deserializeJson(jd, server.arg("plain"));
+  if (err) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  UiStartColors n = ui_start_cols;
+  uint16_t tmp;
+  const char *s;
+  if (!jd["bg"].isNull()) {
+    s = jd["bg"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.bg = tmp;
+  }
+  if (!jd["ip"].isNull()) {
+    s = jd["ip"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.ip = tmp;
+  }
+  if (!jd["sleep"].isNull()) {
+    s = jd["sleep"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.sleep_sym = tmp;
+  }
+  if (!jd["alarm"].isNull()) {
+    s = jd["alarm"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.alarm_sym = tmp;
+  }
+  if (!jd["sFill"].isNull()) {
+    s = jd["sFill"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.slider = tmp;
+  }
+  if (!jd["sBg"].isNull()) {
+    s = jd["sBg"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.slider_bg = tmp;
+  }
+  if (!jd["sBd"].isNull()) {
+    s = jd["sBd"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.slider_border = tmp;
+  }
+  if (!jd["date"].isNull()) {
+    s = jd["date"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.date = tmp;
+  }
+  if (!jd["time"].isNull()) {
+    s = jd["time"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.time_c = tmp;
+  }
+  if (!jd["boxBg"].isNull()) {
+    s = jd["boxBg"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.box_bg = tmp;
+  }
+  if (!jd["boxBd"].isNull()) {
+    s = jd["boxBd"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.box_border = tmp;
+  }
+  if (!jd["stName"].isNull()) {
+    s = jd["stName"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.station_name = tmp;
+  }
+  if (!jd["stTitle"].isNull()) {
+    s = jd["stTitle"].as<const char *>();
+    if (s && parse_hex_color565(s, &tmp)) n.station_title = tmp;
+  }
+  ui_start_colors_apply_from_web(&n);
+  server.send(200, "text/plain", "OK");
+}
+
+void resetStartColorsWeb() {
+  ui_start_colors_reset_to_factory();
   server.send(200, "text/plain", "OK");
 }
 
