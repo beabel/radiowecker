@@ -14,7 +14,7 @@ extern "C" int esp_bt_controller_mem_release(int mode);
 // Vor tft_display.ino (Arduino fügt die .ino alphabetisch danach ein)
 extern AudioGenerator *decoder;  // Definition in audio.ino
 void showStartPage(void);
-void toggleRadio(boolean off, boolean keepAlarmSnoozePending = false);
+void toggleRadio(boolean off, boolean keepAlarmSnoozePending = false, boolean useAlarmGainWhenStarting = false);
 void alarm_action_stop(void);
 void alarm_action_snooze(void);
 
@@ -130,6 +130,9 @@ void setup() {
 
   alarmSnoozeMin = 0;
   if (pref.isKey("alm_snooze")) alarmSnoozeMin = (uint8_t)constrain((int)pref.getUShort("alm_snooze"), 0, 10);
+
+  alarmGain = 50;
+  if (pref.isKey("alm_gain")) alarmGain = (uint8_t)constrain((int)pref.getUShort("alm_gain"), 0, 100);
 
   bright = 80;                                                  // Standardwert für Helligkeit in Prozent
   if (pref.isKey("bright")) bright = pref.getUShort("bright");  // Abrufen des Helligkeitswerts
@@ -326,7 +329,7 @@ void loop() {
     if (alarmSnoozeUntil != 0 && millis() >= alarmSnoozeUntil) {
       alarmSnoozeUntil = 0;
       alarmActionsVisible = true;
-      toggleRadio(false);
+      toggleRadio(false, false, true);
     }
 
     // Hole das Datum und die Uhrzeit
@@ -347,13 +350,13 @@ void loop() {
 
     }
 
-    // Wenn ein Alarm aktiviert ist, überprüfe den Tag und die Zeit
-    if ((alarmday < 8) && getLocalTime(&ti)) {
+    // Wenn ein Alarm aktiviert ist, überprüfe den Tag und die Zeit (nur wenn Wecker in NVS eingeschaltet)
+    if (pref.isKey("alarmon") && pref.getBool("alarmon") && (alarmday < 8) && getLocalTime(&ti)) {
       // Wenn der Alarmtag und die Zeit erreicht sind, schalte das Radio ein und berechne die Werte für den nächsten erwarteten Alarm
       if ((alarmday == weekday) && (minutes == alarmtime) && !alarmTriggered) {
         alarmTriggered = true;  // verhindert mehrfaches Auslösen
         alarmActionsVisible = true;
-        toggleRadio(false);  // Schalte das Radio an
+        toggleRadio(false, false, true);  // Radio an mit Wecklautstärke
         showRadio();         // Zeige Radio-Informationen an
         findNextAlarm();     // Berechne den nächsten Alarm
         showNextAlarm();     // Zeige den nächsten Alarm an

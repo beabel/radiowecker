@@ -10,6 +10,7 @@
 void handleStartHttpUpdate(void);
 void getLang(void);
 void setLang(void);
+void setAlarmGainWeb(void);
 
 WebServer server(80);
 
@@ -49,6 +50,7 @@ void setup_webserver() {
   server.on("/cmd/setBright", setBrightWeb);
   server.on("/cmd/setSleepTimer", setSleepTimerWeb);
   server.on("/cmd/setAlarmSnooze", setAlarmSnoozeWeb);
+  server.on("/cmd/setAlarmGain", setAlarmGainWeb);
   server.on("/cmd/getStartColors", getStartColors);
   server.on("/cmd/setStartColors", HTTP_POST, setStartColorsWeb, nullptr);
   server.on("/cmd/resetStartColors", HTTP_POST, resetStartColorsWeb, nullptr);
@@ -296,7 +298,8 @@ void setAlarms() {
   // Debug-Ausgabe der Wochentags-Flags
   RADIO_SERIAL(Serial.printf("days1 %x days2 %x\n", alarmday1, alarmday2));
 
-  // Nächster Alarm berechnen; Kopfzeile nur aktualisieren, wenn Startseite sichtbar ist
+  /* Speichern im Web-Tab Wecker: Wecker sicher einschalten und nächsten Termin suchen */
+  pref.putBool("alarmon", true);
   findNextAlarm();
   if (startpage) showNextAlarm();
 
@@ -519,14 +522,16 @@ void getCurrentStatus() {
 
   // Lautstärke des Radios
   jsonDoc["gain"] = curGain;
+  jsonDoc["alarmGain"] = alarmGain;
 
-  // Status des Alarms
-  if (alarmday < 8) {  // Alarm ist aktiv
+  // Status des Alarms (wie Gerät: nur „an“, wenn NVS alarmon und nächster Termin bekannt)
+  const bool alarm_sched_on = pref.isKey("alarmon") && pref.getBool("alarmon");
+  if (alarm_sched_on && alarmday < 8) {
     h = alarmtime / 60;
     m = alarmtime % 60;
     sprintf(txt, "%s %02i:%02i", i18n_day_short((int)alarmday), h, m);
     jsonDoc["alarm"] = "1";
-  } else {  // Alarm ist ausgeschaltet
+  } else {
     snprintf(txt, sizeof(txt), "%s", i18n_str(I18N_ALARM_OFF));
     jsonDoc["alarm"] = "0";
   }
@@ -565,10 +570,11 @@ void getCurrentStatus() {
 }
 
 void getDisplaySettings() {
-  StaticJsonDocument<128> doc;
+  StaticJsonDocument<192> doc;
   doc["bright"] = bright;
   doc["sleepTimerMin"] = snoozeTime;
   doc["alarmSnoozeMin"] = alarmSnoozeMin;
+  doc["alarmGain"] = alarmGain;
   String out;
   serializeJson(doc, out);
   server.send(200, "application/json; charset=utf-8", out);
@@ -613,6 +619,20 @@ void setAlarmSnoozeWeb() {
     return;
   }
   web_apply_alarm_snooze_min((uint8_t)v);
+  server.send(200, "text/plain", "OK");
+}
+
+void setAlarmGainWeb() {
+  if (!server.hasArg("value")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("value").toInt();
+  if (v < 0 || v > 100) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  web_apply_alarm_gain((uint8_t)v);
   server.send(200, "text/plain", "OK");
 }
 

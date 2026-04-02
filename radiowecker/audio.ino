@@ -1,4 +1,5 @@
 void DrawFooterButtons_Power_Sleep_Alarm(void);
+bool startUrl(const char *url, bool useAlarmGain = false);
 
 /* Stream-/Codec per malloc beim ersten startUrl — nicht in setup nach LVGL (sonst ~100 KiB Heap → LwIP/Wetter). */
 const int preallocateBufferSize = 40 * 1024;
@@ -119,7 +120,7 @@ static void audio_recover_or_stop(void) {
   stopPlaying();
   if (radio && connected && actStation < STATIONS) {
     RADIO_SERIAL(Serial.printf_P(PSTR("Stream unterbrochen — Reconnect %s\n"), stationlist[actStation].name));
-    if (startUrl(stationlist[actStation].url)) {
+    if (startUrl(stationlist[actStation].url, alarmActionsVisible && radio)) {
       DrawFooterButtons_Power_Sleep_Alarm();
       return;
     }
@@ -292,7 +293,7 @@ void stopPlaying() {
 }
 
 // Startet das Abspielen eines Streams von der angegebenen Station (URL aus stationlist[].url o. Ä.)
-bool startUrl(const char *url) {
+bool startUrl(const char *url, bool useAlarmGain) {
   stopPlaying();  // Zuerst bestehende Streams schließen
 
   if (!url || !*url) {
@@ -345,7 +346,7 @@ bool startUrl(const char *url) {
       yield();
     }
   }
-  setGain(curGain);
+  setGain(useAlarmGain ? alarmGain : curGain);
   RADIO_SERIAL(Serial.printf_P(PSTR("MP3 ok running=%d\n"), decoder->isRunning() ? 1 : 0));
 
   return decoder->isRunning();
