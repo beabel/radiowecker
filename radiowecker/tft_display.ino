@@ -23,6 +23,7 @@ void alarm_action_snooze(void);
 void startSnooze(void);
 void safeAlarmTime(void);
 void showAlarms_Day_and_Time(void);
+void updateStation(void);
 
 // --- Alarm-Edit (wie zuvor) ---
 typedef struct {
@@ -156,10 +157,34 @@ static void ui_footer_register_state_row(lv_obj_t *bp, lv_obj_t *lp, lv_obj_t *b
   g_ft_n++;
 }
 
-static void ui_refresh_footer_icons(void) {
+static void ui_footer_clear_registered(void) {
+  for (uint8_t i = 0; i < g_ft_n; i++) {
+    g_ft_pwr_btn[i] = NULL;
+    g_ft_pwr_lbl[i] = NULL;
+    g_ft_snz_btn[i] = NULL;
+    g_ft_snz_lbl[i] = NULL;
+    g_ft_alm_btn[i] = NULL;
+    g_ft_alm_lbl[i] = NULL;
+  }
+  g_ft_n = 0;
+}
+
+/* Footer-Play/Schlummer/Wecker nur auf Unterseiten (radio/config/alarm), nicht auf scr_clock.
+   Ohne Filter: jeder Aufruf (z. B. jede Sekunde in updateTime) setzt LVGL-Text/Stile auf allen
+   registrierten Zeilen — obwohl nur eine sichtbar ist. Nur Zeile(n) zum aktiven Screen aktualisieren.
+   Nach setup_display einmal all_rows: sichtbarer Screen ist oft noch scr_msg — sonst blieben Default-Symbole. */
+static void ui_refresh_footer_icons_impl(bool all_rows) {
+  lv_obj_t *act = lv_screen_active();
   const bool alarm_on = (alarmday < 8);
   const bool snooze_active = (snoozeTimeEnd != 0 && millis() < snoozeTimeEnd);
   for (uint8_t i = 0; i < g_ft_n; i++) {
+    if (!all_rows) {
+      lv_obj_t *ref = g_ft_pwr_btn[i];
+      if (!ref) ref = g_ft_snz_btn[i];
+      if (!ref) ref = g_ft_alm_btn[i];
+      if (!ref || lv_obj_get_screen(ref) != act) continue;
+    }
+
     if (g_ft_pwr_lbl[i]) {
       lv_label_set_text(g_ft_pwr_lbl[i], radio ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY);
       if (g_ft_pwr_btn[i])
@@ -167,21 +192,22 @@ static void ui_refresh_footer_icons(void) {
                                   radio ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
                                   LV_PART_MAIN);
     }
-    if (g_ft_snz_lbl[i]) {
-      lv_label_set_text(g_ft_snz_lbl[i], snooze_active ? LV_SYMBOL_REFRESH : "Zz");
-      if (g_ft_snz_btn[i])
-        lv_obj_set_style_bg_color(g_ft_snz_btn[i],
-                                  snooze_active ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
-                                  LV_PART_MAIN);
+    /* Schlummer / Wecker: Text bleibt „Zz“ / Glocke (wie in add_radio_footer) — nur Hintergrundfarbe dynamisch. */
+    if (g_ft_snz_btn[i]) {
+      lv_obj_set_style_bg_color(g_ft_snz_btn[i],
+                                snooze_active ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
+                                LV_PART_MAIN);
     }
-    if (g_ft_alm_lbl[i]) {
-      lv_label_set_text(g_ft_alm_lbl[i], alarm_on ? LV_SYMBOL_BELL : LV_SYMBOL_CLOSE);
-      if (g_ft_alm_btn[i])
-        lv_obj_set_style_bg_color(g_ft_alm_btn[i],
-                                  alarm_on ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
-                                  LV_PART_MAIN);
+    if (g_ft_alm_btn[i]) {
+      lv_obj_set_style_bg_color(g_ft_alm_btn[i],
+                                alarm_on ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
+                                LV_PART_MAIN);
     }
   }
+}
+
+static void ui_refresh_footer_icons(void) {
+  ui_refresh_footer_icons_impl(false);
 }
 
 /* Touch: bei falscher Zuordnung nacheinander probieren: TS_SWAP_XY, TS_INVERT_X/Y */
@@ -409,6 +435,7 @@ bool station_navigate_select(uint8_t idx) {
 }
 
 static void rebuild_favorites(void) {
+  if (!scr_radio) return;
   fav_count = 0;
   for (int i = 0; i < STATIONS && fav_count < 10; i++) {
     if (stationlist[i].enabled) {
@@ -926,6 +953,11 @@ static void build_clock_screen(void) {
   lbl_stream_title = lv_label_create(mid_radio);
   lv_obj_set_width(lbl_stream_title, LV_PCT(100));
   lv_label_set_long_mode(lbl_stream_title, LV_LABEL_LONG_WRAP);
+    /* WRAP + feste Höhe (≠ LV_SIZE_CONTENT): alles über 2 Zeilen wird von LVGL abgeschnitten (s. Label-Doku). */
+  {
+    lv_coord_t lh = lv_font_get_line_height(&font_radio_meta);
+    lv_obj_set_height(lbl_stream_title, lh * 2);
+  }
   lv_obj_set_style_text_align(lbl_stream_title, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN);
   lv_obj_set_style_text_color(lbl_stream_title, rgb565_to_lv(ui_start_cols.station_title), LV_PART_MAIN);
   lv_obj_set_style_text_font(lbl_stream_title, &font_radio_meta, LV_PART_MAIN);
@@ -990,7 +1022,7 @@ static void build_clock_screen(void) {
   footer_style_btn(alarm_btn_stop);
   lv_obj_t *lbl_as = lv_label_create(alarm_btn_stop);
   lv_label_set_text(lbl_as, LV_SYMBOL_STOP);
-  lv_obj_set_style_text_font(lbl_as, &lv_font_montserrat_24, LV_PART_MAIN);
+  lv_obj_set_style_text_font(lbl_as, &lv_font_montserrat_18, LV_PART_MAIN);
   lv_obj_center(lbl_as);
   lv_obj_add_event_cb(alarm_btn_stop, evt_alarm_stop, LV_EVENT_CLICKED, NULL);
 
@@ -1000,7 +1032,7 @@ static void build_clock_screen(void) {
   lv_obj_t *lbl_az = lv_label_create(alarm_btn_snooze);
   /* wie aktiver Sleep-/Schlummer-Hinweis im Footer */
   lv_label_set_text(lbl_az, LV_SYMBOL_REFRESH);
-  lv_obj_set_style_text_font(lbl_az, &lv_font_montserrat_24, LV_PART_MAIN);
+  lv_obj_set_style_text_font(lbl_az, &lv_font_montserrat_18, LV_PART_MAIN);
   lv_obj_center(lbl_az);
   lv_obj_add_event_cb(alarm_btn_snooze, evt_alarm_snooze, LV_EVENT_CLICKED, NULL);
 
@@ -1380,7 +1412,7 @@ static void build_alarm_screen(void) {
   lv_obj_t *b3 = lv_button_create(row);
   footer_style_btn(b3);
   lv_obj_t *x3 = lv_label_create(b3);
-  lv_label_set_text(x3, LV_SYMBOL_OK);
+  lv_label_set_text(x3, LV_SYMBOL_SAVE);
   lv_obj_center(x3);
   lv_obj_add_event_cb(b3, evt_footer_save_alarm, LV_EVENT_CLICKED, NULL);
   lv_obj_t *b4 = lv_button_create(row);
@@ -1391,6 +1423,102 @@ static void build_alarm_screen(void) {
   lv_obj_add_event_cb(b4, evt_footer_home_alarm, LV_EVENT_CLICKED, NULL);
 
   ui_footer_register_state_row(b0, x0, b1, x1, b2, x2);
+}
+
+static void teardown_scr_radio(void) {
+  if (!scr_radio) return;
+  if (scr_clock && lv_screen_active() == scr_radio) lv_screen_load(scr_clock);
+  ui_footer_clear_registered();
+  lv_obj_delete(scr_radio);
+  scr_radio = NULL;
+  sl_radio_gain = NULL;
+  for (int i = 0; i < 10; i++) {
+    fav_btn[i] = NULL;
+    fav_lbl[i] = NULL;
+  }
+  lbl_station_radio = NULL;
+}
+
+static void teardown_scr_config(void) {
+  if (!scr_config) return;
+  if (scr_clock && lv_screen_active() == scr_config) lv_screen_load(scr_clock);
+  ui_footer_clear_registered();
+  lv_obj_delete(scr_config);
+  scr_config = NULL;
+  sl_cfg_gain = NULL;
+  sl_cfg_bright = NULL;
+  sl_cfg_snooze = NULL;
+  sl_cfg_alarm_snooze = NULL;
+  lbl_cfg_gain_val = NULL;
+  lbl_cfg_bright_val = NULL;
+  lbl_cfg_snooze_val = NULL;
+  lbl_cfg_alarm_snooze_val = NULL;
+  lbl_cfg_title_gain = NULL;
+  lbl_cfg_title_bright = NULL;
+  lbl_cfg_title_snooze = NULL;
+  lbl_cfg_title_alarm_snooze = NULL;
+  btn_cfg_lang = NULL;
+  lbl_cfg_lang = NULL;
+}
+
+static void teardown_scr_alarm(void) {
+  if (!scr_alarm) return;
+  if (scr_clock && lv_screen_active() == scr_alarm) lv_screen_load(scr_clock);
+  ui_footer_clear_registered();
+  lv_obj_delete(scr_alarm);
+  scr_alarm = NULL;
+  for (uint8_t row = 0; row < 2; row++) {
+    for (uint8_t col = 0; col < 7; col++) {
+      al_day_btn[row][col] = NULL;
+    }
+  }
+  lbl_al_t1 = NULL;
+  lbl_al_t2 = NULL;
+}
+
+static void teardown_all_subscreens(void) {
+  teardown_scr_radio();
+  teardown_scr_config();
+  teardown_scr_alarm();
+}
+
+static void sync_scr_config_sliders_from_prefs(void) {
+  ui_slider_internal = true;
+  if (sl_cfg_gain) lv_slider_set_value(sl_cfg_gain, constrain((int)curGain, 0, 100), LV_ANIM_OFF);
+  if (sl_cfg_bright) lv_slider_set_value(sl_cfg_bright, bright, LV_ANIM_OFF);
+  if (sl_cfg_snooze) lv_slider_set_value(sl_cfg_snooze, snoozeTime, LV_ANIM_OFF);
+  if (sl_cfg_alarm_snooze) lv_slider_set_value(sl_cfg_alarm_snooze, alarmSnoozeMin, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  cfg_sync_value_labels();
+}
+
+static void ensure_scr_radio(void) {
+  if (scr_radio) return;
+  teardown_scr_config();
+  teardown_scr_alarm();
+  build_radio_screen();
+  yield();
+  ui_sync_all_gain_sliders();
+  curStation = actStation;
+  updateStation();
+  rebuild_favorites();
+}
+
+static void ensure_scr_config(void) {
+  if (scr_config) return;
+  teardown_scr_radio();
+  teardown_scr_alarm();
+  build_config_screen();
+  yield();
+  sync_scr_config_sliders_from_prefs();
+}
+
+static void ensure_scr_alarm(void) {
+  if (scr_alarm) return;
+  teardown_scr_radio();
+  teardown_scr_config();
+  build_alarm_screen();
+  yield();
 }
 
 static void ui_refresh_header(void) {
@@ -1591,19 +1719,11 @@ void setup_display(void) {
   ui_start_colors_load_from_prefs();
   build_clock_screen();
   yield();
-  build_radio_screen();
-  yield();
-  build_config_screen();
-  yield();
-  build_alarm_screen();
-  yield();
+  /* scr_radio / scr_config / scr_alarm: bei Bedarf + teardown beim Verlassen → weniger dauerhafter Heap */
 
-  ui_refresh_footer_icons();
   ui_sync_all_gain_sliders();
-  lv_slider_set_value(sl_cfg_bright, bright, LV_ANIM_OFF);
-  lv_slider_set_value(sl_cfg_snooze, snoozeTime, LV_ANIM_OFF);
-  lv_slider_set_value(sl_cfg_alarm_snooze, alarmSnoozeMin, LV_ANIM_OFF);
   cfg_sync_value_labels();
+  ui_refresh_footer_icons_impl(true);
 }
 
 void displayClear(void) {
@@ -1966,10 +2086,7 @@ void showFavoritenPage(void) {
   favoritenpage = true;
   settingspage = false;
   alarmpage = false;
-  showGain();
-  showBrightness();
-  showSnoozeTime();
-  showAlarmSnoozeMin();
+  ensure_scr_config();
   showStationList();
   lv_screen_load(scr_config);
   ui_refresh_footer_icons();
@@ -1982,19 +2099,19 @@ void showSettingsPage(void) {
   favoritenpage = false;
   settingspage = true;
   alarmpage = false;
-  showGain();
-  rebuild_favorites();
-  showStationList();
+  ensure_scr_radio();
   lv_screen_load(scr_radio);
   ui_refresh_footer_icons();
   start_conf = millis();
 }
 
 void showAlarms_Day_and_Time(void) {
+  if (!scr_alarm || !lbl_al_t1 || !lbl_al_t2) return;
   char buf[24];
   for (uint8_t row = 0; row < 2; row++) {
     uint8_t maskbyte = (row == 0) ? alarmConfig.alarmday_1 : alarmConfig.alarmday_2;
     for (uint8_t col = 0; col < 7; col++) {
+      if (!al_day_btn[row][col]) continue;
       uint8_t m = day_mask_from_col(col);
       bool on = (maskbyte & m) != 0;
       lv_obj_set_style_bg_color(al_day_btn[row][col], on ? lv_palette_main(LV_PALETTE_GREEN) : rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
@@ -2018,6 +2135,7 @@ void showAlarmPage(void) {
   favoritenpage = false;
   settingspage = false;
   alarmpage = true;
+  ensure_scr_alarm();
   showAlarms_Day_and_Time();
   lv_screen_load(scr_alarm);
   ui_refresh_footer_icons();
@@ -2096,7 +2214,9 @@ void showStartPage(void) {
   settingspage = false;
   alarmpage = false;
   setBGLight(bright);
+  /* Zuerst Uhr laden — sonst lv_obj_delete auf dem noch aktiven Unterscreen */
   lv_screen_load(scr_clock);
+  teardown_all_subscreens();
   lastdate[0] = 0;
   lasttime[0] = 0;
   updateTime(true);
