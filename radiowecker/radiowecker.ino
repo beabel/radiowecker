@@ -15,6 +15,7 @@ extern "C" int esp_bt_controller_mem_release(int mode);
 extern AudioGenerator *decoder;  // Definition in audio.ino
 void showStartPage(void);
 void toggleRadio(boolean off, boolean keepAlarmSnoozePending = false, boolean useAlarmGainWhenStarting = false);
+void alarm_beep_start(void);
 void alarm_action_stop(void);
 void alarm_action_snooze(void);
 
@@ -134,6 +135,9 @@ void setup() {
   alarmGain = 50;
   if (pref.isKey("alm_gain")) alarmGain = (uint8_t)constrain((int)pref.getUShort("alm_gain"), 0, 100);
 
+  alarmWakeMode = 0;
+  if (pref.isKey("alm_wake")) alarmWakeMode = (uint8_t)(pref.getUChar("alm_wake") & 1u);
+
   bright = 80;                                                  // Standardwert für Helligkeit in Prozent
   if (pref.isKey("bright")) bright = pref.getUShort("bright");  // Abrufen des Helligkeitswerts
 
@@ -240,7 +244,7 @@ void loop() {
   ArduinoOTA.handle();
 
   /* Audio vor Webserver/LVGL: weniger Pufferunderruns bei gleichzeitigem WLAN-Traffic und UI. */
-  if (connected && (radio || decoder)) {
+  if (connected && (radio || decoder || alarmBeepActive)) {
     audio_loop();
   }
 
@@ -257,7 +261,7 @@ void loop() {
   }
 
   /* Nach LVGL: nochmal füttern — Screen-Wechsel kann lv_timer_handler länger blocken (Underruns/Knackser). */
-  if (connected && (radio || decoder)) {
+  if (connected && (radio || decoder || alarmBeepActive)) {
     audio_loop();
   }
 
@@ -329,7 +333,13 @@ void loop() {
     if (alarmSnoozeUntil != 0 && millis() >= alarmSnoozeUntil) {
       alarmSnoozeUntil = 0;
       alarmActionsVisible = true;
-      toggleRadio(false, false, true);
+      if (alarmWakeMode == 1) {
+        alarm_beep_start();
+      } else {
+        toggleRadio(false, false, true);
+      }
+      /* Nach Schlummer: Piep ohne toggleRadio — Overlay wie beim ersten Wecken */
+      showRadio();
     }
 
     // Hole das Datum und die Uhrzeit
@@ -356,7 +366,11 @@ void loop() {
       if ((alarmday == weekday) && (minutes == alarmtime) && !alarmTriggered) {
         alarmTriggered = true;  // verhindert mehrfaches Auslösen
         alarmActionsVisible = true;
-        toggleRadio(false, false, true);  // Radio an mit Wecklautstärke
+        if (alarmWakeMode == 1) {
+          alarm_beep_start();
+        } else {
+          toggleRadio(false, false, true);  // Radio an mit Wecklautstärke
+        }
         showRadio();         // Zeige Radio-Informationen an
         findNextAlarm();     // Berechne den nächsten Alarm
         showNextAlarm();     // Zeige den nächsten Alarm an

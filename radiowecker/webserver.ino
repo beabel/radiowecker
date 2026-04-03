@@ -11,6 +11,7 @@ void handleStartHttpUpdate(void);
 void getLang(void);
 void setLang(void);
 void setAlarmGainWeb(void);
+void setAlarmWakeWeb(void);
 
 WebServer server(80);
 
@@ -51,6 +52,7 @@ void setup_webserver() {
   server.on("/cmd/setSleepTimer", setSleepTimerWeb);
   server.on("/cmd/setAlarmSnooze", setAlarmSnoozeWeb);
   server.on("/cmd/setAlarmGain", setAlarmGainWeb);
+  server.on("/cmd/setAlarmWake", setAlarmWakeWeb);
   server.on("/cmd/getStartColors", getStartColors);
   server.on("/cmd/setStartColors", HTTP_POST, setStartColorsWeb, nullptr);
   server.on("/cmd/resetStartColors", HTTP_POST, resetStartColorsWeb, nullptr);
@@ -523,6 +525,7 @@ void getCurrentStatus() {
   // Lautstärke des Radios
   jsonDoc["gain"] = curGain;
   jsonDoc["alarmGain"] = alarmGain;
+  jsonDoc["alarmWakeMode"] = alarmWakeMode;
 
   // Status des Alarms (wie Gerät: nur „an“, wenn NVS alarmon und nächster Termin bekannt)
   const bool alarm_sched_on = pref.isKey("alarmon") && pref.getBool("alarmon");
@@ -539,7 +542,7 @@ void getCurrentStatus() {
 
   // Radio-Status
   jsonDoc["actStation"] = actStation;
-  jsonDoc["radioPlaying"] = radio ? 1 : 0;
+  jsonDoc["radioPlaying"] = (radio || alarmBeepActive) ? 1 : 0;
   if (radio) {
     jsonDoc["radioStation"] = stationlist[actStation].name;
     jsonDoc["radioTitle"] = title;
@@ -570,11 +573,12 @@ void getCurrentStatus() {
 }
 
 void getDisplaySettings() {
-  StaticJsonDocument<192> doc;
+  StaticJsonDocument<224> doc;
   doc["bright"] = bright;
   doc["sleepTimerMin"] = snoozeTime;
   doc["alarmSnoozeMin"] = alarmSnoozeMin;
   doc["alarmGain"] = alarmGain;
+  doc["alarmWakeMode"] = alarmWakeMode;
   String out;
   serializeJson(doc, out);
   server.send(200, "application/json; charset=utf-8", out);
@@ -633,6 +637,20 @@ void setAlarmGainWeb() {
     return;
   }
   web_apply_alarm_gain((uint8_t)v);
+  server.send(200, "text/plain", "OK");
+}
+
+void setAlarmWakeWeb() {
+  if (!server.hasArg("value")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("value").toInt();
+  if (v != 0 && v != 1) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  web_apply_alarm_wake((uint8_t)v);
   server.send(200, "text/plain", "OK");
 }
 

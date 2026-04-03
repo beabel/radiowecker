@@ -56,6 +56,8 @@ uint8_t curGain = 50;            // Aktuelle Lautstärke 0–100 (Slider)
 uint8_t snoozeTime = 30;         // Einschlafzeit (Sleep-Timer) in Minuten
 uint8_t alarmSnoozeMin = 0;      // Wecker-Schlummer 0–10 min (0 = Funktion aus)
 uint8_t alarmGain = 50;          // Wecklautstärke 0–100 (während Weckwiedergabe; danach curGain)
+uint8_t alarmWakeMode = 0;       // 0 = Radio, 1 = Piep (ESP32: I2S-Ton; sonst Fallback Radio)
+bool alarmBeepActive = false;    // true = Piep-Wecker läuft (kein Stream, nur ESP32)
 uint16_t alarm1 = 390;           // Erste Alarmzeit (6:30 Uhr in Minuten nach Mitternacht)
 uint8_t alarmday1 = 0B00111110;  // Gültige Wochentage für den ersten Alarm (Beispiel: 00111110 = Montag bis Freitag)
 uint16_t alarm2 = 480;           // Zweite Alarmzeit (8:00 Uhr in Minuten nach Mitternacht)

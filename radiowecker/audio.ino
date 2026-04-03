@@ -1,6 +1,8 @@
 void DrawFooterButtons_Power_Sleep_Alarm(void);
 bool startUrl(const char *url, bool useAlarmGain = false);
 
+#include <math.h>
+
 /* Stream-/Codec per malloc beim ersten startUrl — nicht in setup nach LVGL (sonst ~100 KiB Heap → LwIP/Wetter). */
 const int preallocateBufferSize = 40 * 1024;
 const int preallocateCodecSize = 29192;  // MP3-Decoder (ESP8266Audio)
@@ -118,7 +120,7 @@ static uint16_t s_audio_soft_fail_streak = 0;
 
 static void audio_recover_or_stop(void) {
   stopPlaying();
-  if (radio && connected && actStation < STATIONS) {
+  if (radio && connected && !alarmBeepActive && actStation < STATIONS) {
     RADIO_SERIAL(Serial.printf_P(PSTR("Stream unterbrochen — Reconnect %s\n"), stationlist[actStation].name));
     if (startUrl(stationlist[actStation].url, alarmActionsVisible && radio)) {
       DrawFooterButtons_Power_Sleep_Alarm();
@@ -130,8 +132,37 @@ static void audio_recover_or_stop(void) {
   DrawFooterButtons_Power_Sleep_Alarm();
 }
 
+#if defined(ESP32)
+/* Piep-Wecker: Rechteck/Sinus ca. 880 Hz, 200 ms an / 300 ms aus, Lautstärke ~alarmGain */
+static void alarm_beep_pump(void) {
+  if (!out || !alarmBeepActive) return;
+  static float ph = 0.f;
+  const float dph = 2.f * 3.14159265f * 880.f / 44100.f;
+  /* Volle Amplitude wie Stream-Samples; Lautstärke nur über setGain(alarmGain) (wie Radio-Wecker) */
+  const float ampf = 30000.f;
+  uint32_t c = millis() % 500u;
+  bool on = (c < 200u);
+  for (int n = 0; n < 128; n++) {
+    int16_t v = 0;
+    if (on) {
+      v = (int16_t)(sinf(ph) * ampf);
+      ph += dph;
+      if (ph > 6.28318f) ph -= 6.28318f;
+    }
+    int16_t st[2] = {v, v};
+    if (!out->ConsumeSample(st)) break;
+  }
+}
+#endif
+
 // Diese Funktion überprüft, ob der Decoder läuft
 void audio_loop() {
+#if defined(ESP32)
+  if (alarmBeepActive && out) {
+    alarm_beep_pump();
+    return;
+  }
+#endif
   if (!decoder) return;
 
   if (!decoder->isRunning()) {
@@ -265,6 +296,7 @@ void MDCallback(void *cbData, const char *type, bool isUnicode, const char *stri
 
 // Stoppt das Abspielen des Eingabestreams, gibt den Speicher frei und löscht die Instanzen
 void stopPlaying() {
+  alarmBeepActive = false;
   if (decoder) {
     decoder->stop();  // Stoppt das Abspielen
     delete decoder;   // Gibt den Decoder und seinen Speicher frei
@@ -363,4 +395,23 @@ void setGain(float gain) {
   if (v > 4.0f) v = 4.0f;
   out->SetGain(v);
   RADIO_SERIAL(Serial.printf_P(PSTR("New volume = %4.2f\n"), v));
+}
+
+/* Weckton Piep (ESP32: I2S ohne Stream). Sonst: Fallback wie Radio mit Wecklautstärke. */
+void alarm_beep_start(void) {
+#if !defined(ESP32)
+  stopPlaying();
+  if (connected && startUrl(stationlist[actStation].url, true)) radio = true;
+#else
+  stopPlaying();
+  if (!out) return;
+  out->SetChannels(2);
+  out->SetRate(44100);
+  if (!out->begin()) {
+    RADIO_SERIAL(Serial.println(F("alarm_beep_start: I2S begin failed")));
+    return;
+  }
+  setGain((float)alarmGain);
+  alarmBeepActive = true;
+#endif
 }
