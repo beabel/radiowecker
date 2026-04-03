@@ -1,4 +1,4 @@
-#define RADIOVERSION "v5.0.5"
+#define RADIOVERSION "v5.0.6"
 #include "00_librarys.h"      //Lade alle benötigten Bibliotheken
 #include "00_pin_settings.h"  //Einstellungen der genutzten Pins
 #include "00_settings.h"      //einstellungen
