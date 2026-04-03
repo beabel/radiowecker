@@ -256,7 +256,9 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 
 ![Wecker](screenshot/display_alarmpage.jpg)
 
+**Wecker Seite 2**
 
+![Wecker](screenshot/display_alarmpage_2.jpg)
 
 ### Webseite (HTML im Browser)
 
@@ -267,6 +269,7 @@ SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Confi
 **Wecker**
 
 ![Web Wecker](screenshot/webseite_2_alarmpage.png)
+
 
 **Radiosender**
 
