@@ -283,6 +283,8 @@ static uint32_t lvgl_tick_get_cb(void) {
 static void touch_read(lv_indev_t *indev, lv_indev_data_t *data) {
   (void)indev;
   if (touch.touched()) {
+    /* Timeout → Startseite: 10 s ab letztem Touch (nicht nur ab Seitenwechsel). */
+    if (!startpage) start_conf = millis();
     TS_Point p = touch.getPoint();
     lv_coord_t x, y;
     ts_map(p.x, p.y, &x, &y);
