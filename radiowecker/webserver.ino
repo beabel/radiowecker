@@ -12,6 +12,7 @@ void getLang(void);
 void setLang(void);
 void setAlarmGainWeb(void);
 void setAlarmWakeWeb(void);
+void getHeapOnly(void);
 
 WebServer server(80);
 
@@ -59,6 +60,7 @@ void setup_webserver() {
 
   // Info-Tab: Definiert die Route für das Abrufen von Systeminformationen
   server.on("/cmd/getInfo", getInfo);  // Ruft allgemeine Systeminformationen ab
+  server.on("/cmd/getHeap", getHeapOnly);  // Nur Heap — klein, ohne ArduinoJson (weniger Störung bei Radio)
   server.on("/cmd/getlang", getLang);
   server.on("/cmd/setlang", setLang);
   /* Kein Upload-Callback: sonst nimmt WebServer 3.x den RAW-Pfad, arg("plain") bleibt leer (JSON-OTA schlägt fehl). */
@@ -830,6 +832,25 @@ void setLang() {
   }
   i18n_set_lang(l);
   server.send(200, "text/plain", "OK");
+}
+
+/* Kompakte Heap-Antwort (Stack-Buffer): spart Heap/CPU gegenüber getInfo — weniger Audio-Glitch bei Polling. */
+void getHeapOnly() {
+  char buf[160];
+  int n;
+#if defined(ESP32)
+  n = snprintf(buf, sizeof(buf),
+               "{\"getHeapSize\":%u,\"getFreeHeap\":%u,\"getMaxAllocHeap\":%u}",
+               (unsigned)ESP.getHeapSize(), (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
+#else
+  n = snprintf(buf, sizeof(buf),
+               "{\"getHeapSize\":%u,\"getFreeHeap\":%u}",
+               (unsigned)ESP.getHeapSize(), (unsigned)ESP.getFreeHeap());
+#endif
+  if (n > 0 && n < (int)sizeof(buf))
+    server.send(200, "application/json", buf);
+  else
+    server.send(500, "text/plain", "heap");
 }
 
 void getInfo() {

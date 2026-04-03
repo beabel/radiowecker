@@ -112,6 +112,9 @@ $(document).ready(function() {
       var prevWk = ui.oldPanel.data("weckerPollId");
       if (prevWk) clearInterval(prevWk);
       ui.oldPanel.removeData("weckerPollId");
+      var prevHeap = ui.oldPanel.data("heapPollId");
+      if (prevHeap) clearInterval(prevHeap);
+      ui.oldPanel.removeData("heapPollId");
 
       if (href === "#player") {
         var intervalId = setInterval(updateCurrentStatus, 5000);
@@ -127,6 +130,11 @@ $(document).ready(function() {
         ui.newPanel.data("weckerPollId", weckerPollId);
         updateCurrentStatus();
       }
+      if (href === "#info") {
+        refreshHeapStats();
+        var heapPollId = setInterval(refreshHeapStats, HEAP_POLL_INTERVAL_MS);
+        ui.newPanel.data("heapPollId", heapPollId);
+      }
     }
   });
 
@@ -134,6 +142,11 @@ $(document).ready(function() {
     updateCurrentStatus();
     var intervalId = setInterval(updateCurrentStatus, 3000); // Starten des Intervall
     $("#player").data("intervalId", intervalId);
+  }
+  if ($("#tabs").tabs("option", "active") === 5) { // Info-Tab: Heap live
+    refreshHeapStats();
+    var heapPollId0 = setInterval(refreshHeapStats, HEAP_POLL_INTERVAL_MS);
+    $("#info").data("heapPollId", heapPollId0);
   }
          
 });
@@ -648,6 +661,42 @@ function selectStationFromDropdown() {
         }
     });
 }
+
+function applyHeapFromInfoData(data) {
+  var heap = null;
+  if (data && data.ESP_INFO && data.ESP_INFO.HEAP) heap = data.ESP_INFO.HEAP;
+  else if (data && typeof data.getFreeHeap === "number") heap = data;
+  if (!heap) return;
+  var heapSize = heap.getHeapSize;
+  var freeHeap = heap.getFreeHeap;
+  var usedHeap = heapSize - freeHeap;
+  var heapUsedPct = heapSize ? (usedHeap / heapSize) * 100 : 0;
+  var heapFreePct = heapSize ? (freeHeap / heapSize) * 100 : 0;
+  $("#heapprogressbar").progressbar({
+    value: heapUsedPct
+  });
+  var heapTxt = tr("heap_u") + " " + usedHeap + " B (" + heapUsedPct.toFixed(2) + "%) · " + tr("heap_f") + " " + freeHeap + " B (" + heapFreePct.toFixed(2) + "%) · " + tr("heap_t") + " " + heapSize + " B";
+  var maxAlloc = heap.getMaxAllocHeap;
+  if (typeof maxAlloc === "number") {
+    heapTxt += " · " + tr("heap_m") + " " + maxAlloc + " B";
+  }
+  $("#heapBarText").text(heapTxt);
+}
+
+/* /cmd/getHeap: kleine Antwort auf dem Gerät — seltener als früher, weniger I2S/WiFi-Konflikt bei laufendem Radio */
+var HEAP_POLL_INTERVAL_MS = 10000;
+
+function refreshHeapStats() {
+  $.ajax({
+    type: "GET",
+    url: "/cmd/getHeap",
+    dataType: "json",
+    success: function (data) {
+      applyHeapFromInfoData(data);
+    }
+  });
+}
+
 function getInfo() {
   $.ajax({
     type: "GET",
@@ -675,21 +724,7 @@ function getInfo() {
       // Starte die rekursive Iteration mit dem Hauptobjekt
       iterateObject(data);
 
-      // Heap: getFreeHeap = frei, Differenz = belegt (vorher fälschlich „used“ für freeHeap)
-      var heapSize = data.ESP_INFO.HEAP.getHeapSize;
-      var freeHeap = data.ESP_INFO.HEAP.getFreeHeap;
-      var usedHeap = heapSize - freeHeap;
-      var heapUsedPct = heapSize ? (usedHeap / heapSize) * 100 : 0;
-      var heapFreePct = heapSize ? (freeHeap / heapSize) * 100 : 0;
-      $( "#heapprogressbar" ).progressbar({
-        value: heapUsedPct
-      });
-      var heapTxt = tr("heap_u") + " " + usedHeap + " B (" + heapUsedPct.toFixed(2) + "%) · " + tr("heap_f") + " " + freeHeap + " B (" + heapFreePct.toFixed(2) + "%) · " + tr("heap_t") + " " + heapSize + " B";
-      var maxAlloc = data.ESP_INFO.HEAP.getMaxAllocHeap;
-      if (typeof maxAlloc === "number") {
-        heapTxt += " · " + tr("heap_m") + " " + maxAlloc + " B";
-      }
-      $("#heapBarText").text(heapTxt);
+      applyHeapFromInfoData(data);
 
       /* Partition: getSketchSize = aktuelle Firmware, getFreeSketchSpace = noch frei in der Slot-Partition */
       var usedSketch = data.ESP_INFO.SKETCH.getSketchSize;

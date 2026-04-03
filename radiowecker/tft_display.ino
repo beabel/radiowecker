@@ -44,7 +44,7 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 
 /* Partialspeicher: 11 Zeilen statt 14 spart ~2 KiB .bss (ESP32 DRAM-Grenze) */
-static lv_color_t buf1[320 * 11];
+static lv_color_t buf1[320 * 7];
 static lv_display_t *lv_disp_main;
 
 static lv_obj_t *scr_clock;
