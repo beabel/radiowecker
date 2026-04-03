@@ -16,13 +16,15 @@ void showStartPage(void);
 void showFavoritenPage(void);
 void showSettingsPage(void);
 void showAlarmPage(void);
+void showAlarmGainPage(void);
 void changeStation(void);
-void toggleRadio(boolean off, boolean keepAlarmSnoozePending);
+void toggleRadio(boolean off, boolean keepAlarmSnoozePending, boolean useAlarmGainWhenStarting);
 void alarm_action_stop(void);
 void alarm_action_snooze(void);
 void startSnooze(void);
 void safeAlarmTime(void);
 void showAlarms_Day_and_Time(void);
+void updateStation(void);
 
 // --- Alarm-Edit (wie zuvor) ---
 typedef struct {
@@ -42,7 +44,7 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 
 /* Partialspeicher: 11 Zeilen statt 14 spart ~2 KiB .bss (ESP32 DRAM-Grenze) */
-static lv_color_t buf1[320 * 11];
+static lv_color_t buf1[320 * 7];
 static lv_display_t *lv_disp_main;
 
 static lv_obj_t *scr_clock;
@@ -51,6 +53,14 @@ static lv_obj_t *scr_config;
 static lv_obj_t *scr_alarm;
 static lv_obj_t *scr_msg;
 static lv_obj_t *scr_ota;
+static lv_obj_t *scr_alarm_gain;
+static lv_obj_t *sl_alarm_gain;
+static lv_obj_t *lbl_alarm_gain_val;
+static lv_obj_t *lbl_alarm_gain_title;
+static lv_obj_t *btn_wake_radio;
+static lv_obj_t *btn_wake_beep;
+static lv_obj_t *lbl_wake_radio;
+static lv_obj_t *lbl_wake_beep;
 
 static lv_obj_t *lbl_date;
 /* Uhrzeit: vier Ziffern + Doppelpunkt, eigene 1-bpp-Schrift (nur 0–9 und :) — ohne Kachelrahmen */
@@ -156,32 +166,58 @@ static void ui_footer_register_state_row(lv_obj_t *bp, lv_obj_t *lp, lv_obj_t *b
   g_ft_n++;
 }
 
-static void ui_refresh_footer_icons(void) {
-  const bool alarm_on = (alarmday < 8);
-  const bool snooze_active = (snoozeTimeEnd != 0 && millis() < snoozeTimeEnd);
+static void ui_footer_clear_registered(void) {
   for (uint8_t i = 0; i < g_ft_n; i++) {
+    g_ft_pwr_btn[i] = NULL;
+    g_ft_pwr_lbl[i] = NULL;
+    g_ft_snz_btn[i] = NULL;
+    g_ft_snz_lbl[i] = NULL;
+    g_ft_alm_btn[i] = NULL;
+    g_ft_alm_lbl[i] = NULL;
+  }
+  g_ft_n = 0;
+}
+
+/* Footer-Play/Schlummer/Wecker nur auf Unterseiten (radio/config/alarm), nicht auf scr_clock.
+   Ohne Filter: jeder Aufruf (z. B. jede Sekunde in updateTime) setzt LVGL-Text/Stile auf allen
+   registrierten Zeilen — obwohl nur eine sichtbar ist. Nur Zeile(n) zum aktiven Screen aktualisieren.
+   Nach setup_display einmal all_rows: sichtbarer Screen ist oft noch scr_msg — sonst blieben Default-Symbole. */
+static void ui_refresh_footer_icons_impl(bool all_rows) {
+  lv_obj_t *act = lv_screen_active();
+  const bool alarm_on = pref.isKey("alarmon") && pref.getBool("alarmon") && (alarmday < 8);
+  const bool snooze_active = (snoozeTimeEnd != 0 && millis() < snoozeTimeEnd);
+  const bool play_pause_radio = radio || alarmBeepActive;
+  for (uint8_t i = 0; i < g_ft_n; i++) {
+    if (!all_rows) {
+      lv_obj_t *ref = g_ft_pwr_btn[i];
+      if (!ref) ref = g_ft_snz_btn[i];
+      if (!ref) ref = g_ft_alm_btn[i];
+      if (!ref || lv_obj_get_screen(ref) != act) continue;
+    }
+
     if (g_ft_pwr_lbl[i]) {
-      lv_label_set_text(g_ft_pwr_lbl[i], radio ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY);
+      lv_label_set_text(g_ft_pwr_lbl[i], play_pause_radio ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY);
       if (g_ft_pwr_btn[i])
         lv_obj_set_style_bg_color(g_ft_pwr_btn[i],
-                                  radio ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
+                                  play_pause_radio ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
                                   LV_PART_MAIN);
     }
-    if (g_ft_snz_lbl[i]) {
-      lv_label_set_text(g_ft_snz_lbl[i], snooze_active ? LV_SYMBOL_REFRESH : "Zz");
-      if (g_ft_snz_btn[i])
-        lv_obj_set_style_bg_color(g_ft_snz_btn[i],
-                                  snooze_active ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
-                                  LV_PART_MAIN);
+    /* Schlummer / Wecker: Text bleibt „Zz“ / Glocke (wie in add_radio_footer) — nur Hintergrundfarbe dynamisch. */
+    if (g_ft_snz_btn[i]) {
+      lv_obj_set_style_bg_color(g_ft_snz_btn[i],
+                                snooze_active ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
+                                LV_PART_MAIN);
     }
-    if (g_ft_alm_lbl[i]) {
-      lv_label_set_text(g_ft_alm_lbl[i], alarm_on ? LV_SYMBOL_BELL : LV_SYMBOL_CLOSE);
-      if (g_ft_alm_btn[i])
-        lv_obj_set_style_bg_color(g_ft_alm_btn[i],
-                                  alarm_on ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
-                                  LV_PART_MAIN);
+    if (g_ft_alm_btn[i]) {
+      lv_obj_set_style_bg_color(g_ft_alm_btn[i],
+                                alarm_on ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
+                                LV_PART_MAIN);
     }
   }
+}
+
+static void ui_refresh_footer_icons(void) {
+  ui_refresh_footer_icons_impl(false);
 }
 
 /* Touch: bei falscher Zuordnung nacheinander probieren: TS_SWAP_XY, TS_INVERT_X/Y */
@@ -264,9 +300,11 @@ static void touch_read(lv_indev_t *indev, lv_indev_data_t *data) {
 
 void ui_sync_all_gain_sliders(void) {
   ui_slider_internal = true;
-  if (sl_clock_vol) lv_slider_set_value(sl_clock_vol, constrain((int)curGain, 0, 100), LV_ANIM_OFF);
-  if (sl_radio_gain) lv_slider_set_value(sl_radio_gain, constrain((int)curGain, 0, 100), LV_ANIM_OFF);
-  if (sl_cfg_gain) lv_slider_set_value(sl_cfg_gain, constrain((int)curGain, 0, 100), LV_ANIM_OFF);
+  int g = ((radio || alarmBeepActive) && alarmActionsVisible) ? (int)alarmGain : (int)curGain;
+  g = constrain(g, 0, 100);
+  if (sl_clock_vol) lv_slider_set_value(sl_clock_vol, g, LV_ANIM_OFF);
+  if (sl_radio_gain) lv_slider_set_value(sl_radio_gain, g, LV_ANIM_OFF);
+  if (sl_cfg_gain) lv_slider_set_value(sl_cfg_gain, g, LV_ANIM_OFF);
   ui_slider_internal = false;
 }
 
@@ -286,6 +324,18 @@ static void on_gain_slider(lv_event_t *e) {
   if (ui_slider_internal) return;
   lv_obj_t *sl = (lv_obj_t *)lv_event_get_target(e);
   int v = (int)lv_slider_get_value(sl);
+  if ((radio || alarmBeepActive) && alarmActionsVisible) {
+    alarmGain = (uint8_t)constrain(v, 0, 100);
+    pref.putUShort("alm_gain", alarmGain);
+    setGain(alarmGain);
+    if (sl_alarm_gain) lv_slider_set_value(sl_alarm_gain, (int)alarmGain, LV_ANIM_OFF);
+    if (lbl_alarm_gain_val) {
+      char b[16];
+      snprintf(b, sizeof(b), "%u", (unsigned)alarmGain);
+      lv_label_set_text(lbl_alarm_gain_val, b);
+    }
+    return;
+  }
   curGain = (uint8_t)constrain(v, 0, 100);
   pref.putUShort("gain", curGain);
   setGain(curGain);
@@ -409,6 +459,7 @@ bool station_navigate_select(uint8_t idx) {
 }
 
 static void rebuild_favorites(void) {
+  if (!scr_radio) return;
   fav_count = 0;
   for (int i = 0; i < STATIONS && fav_count < 10; i++) {
     if (stationlist[i].enabled) {
@@ -486,7 +537,7 @@ static void station_arrow_btn_style(lv_obj_t *b) {
 
 static void evt_footer_power(lv_event_t *e) {
   (void)e;
-  toggleRadio(radio);
+  toggleRadio(radio || alarmBeepActive, false, false);
 }
 
 static void evt_footer_snooze(lv_event_t *e) {
@@ -520,6 +571,7 @@ static void evt_footer_alarm_from_cfg(lv_event_t *e) {
   favoritenpage = false;
   settingspage = false;
   alarmpage = true;
+  alarmgainpage = false;
   showAlarmPage();
 }
 
@@ -528,12 +580,42 @@ static void evt_footer_save_alarm(lv_event_t *e) {
   safeAlarmTime();
 }
 
+/* arm_after_save: true = Speichern (TFT OK / explizit) → Wecker einschalten und nächsten Termin suchen.
+   false = nur NVS schreiben; bei ausgeschalteter Glocke kein findNextAlarm (alarmday = 8). */
+static void persist_alarm_config_from_editor(bool arm_after_save) {
+  uint16_t alarmtime_1 = (uint16_t)(alarmConfig.h_1 * 60 + alarmConfig.m_1);
+  uint16_t alarmtime_2 = (uint16_t)(alarmConfig.h_2 * 60 + alarmConfig.m_2);
+  alarm1 = alarmtime_1;
+  alarmday1 = alarmConfig.alarmday_1;
+  pref.putUInt("alarm1", alarm1);
+  pref.putUShort("alarmday1", alarmday1);
+  alarm2 = alarmtime_2;
+  alarmday2 = alarmConfig.alarmday_2;
+  pref.putUInt("alarm2", alarm2);
+  pref.putUShort("alarmday2", alarmday2);
+  if (arm_after_save) {
+    pref.putBool("alarmon", true);
+    findNextAlarm();
+  } else if (pref.isKey("alarmon") && pref.getBool("alarmon")) {
+    findNextAlarm();
+  } else {
+    alarmday = 8;
+  }
+}
+
+static void evt_footer_alarm_next(lv_event_t *e) {
+  (void)e;
+  persist_alarm_config_from_editor(false);
+  showAlarmGainPage();
+}
+
 static void evt_footer_home_alarm(lv_event_t *e) {
   (void)e;
   startpage = true;
   favoritenpage = false;
   settingspage = false;
   alarmpage = false;
+  alarmgainpage = false;
   showStartPage();
 }
 
@@ -543,6 +625,7 @@ static void evt_open_radio_page(lv_event_t *e) {
   favoritenpage = false;
   settingspage = true;
   alarmpage = false;
+  alarmgainpage = false;
   showSettingsPage();
 }
 
@@ -926,6 +1009,11 @@ static void build_clock_screen(void) {
   lbl_stream_title = lv_label_create(mid_radio);
   lv_obj_set_width(lbl_stream_title, LV_PCT(100));
   lv_label_set_long_mode(lbl_stream_title, LV_LABEL_LONG_WRAP);
+    /* WRAP + feste Höhe (≠ LV_SIZE_CONTENT): alles über 2 Zeilen wird von LVGL abgeschnitten (s. Label-Doku). */
+  {
+    lv_coord_t lh = lv_font_get_line_height(&font_radio_meta);
+    lv_obj_set_height(lbl_stream_title, lh * 2);
+  }
   lv_obj_set_style_text_align(lbl_stream_title, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN);
   lv_obj_set_style_text_color(lbl_stream_title, rgb565_to_lv(ui_start_cols.station_title), LV_PART_MAIN);
   lv_obj_set_style_text_font(lbl_stream_title, &font_radio_meta, LV_PART_MAIN);
@@ -990,7 +1078,7 @@ static void build_clock_screen(void) {
   footer_style_btn(alarm_btn_stop);
   lv_obj_t *lbl_as = lv_label_create(alarm_btn_stop);
   lv_label_set_text(lbl_as, LV_SYMBOL_STOP);
-  lv_obj_set_style_text_font(lbl_as, &lv_font_montserrat_24, LV_PART_MAIN);
+  lv_obj_set_style_text_font(lbl_as, &lv_font_montserrat_18, LV_PART_MAIN);
   lv_obj_center(lbl_as);
   lv_obj_add_event_cb(alarm_btn_stop, evt_alarm_stop, LV_EVENT_CLICKED, NULL);
 
@@ -1000,7 +1088,7 @@ static void build_clock_screen(void) {
   lv_obj_t *lbl_az = lv_label_create(alarm_btn_snooze);
   /* wie aktiver Sleep-/Schlummer-Hinweis im Footer */
   lv_label_set_text(lbl_az, LV_SYMBOL_REFRESH);
-  lv_obj_set_style_text_font(lbl_az, &lv_font_montserrat_24, LV_PART_MAIN);
+  lv_obj_set_style_text_font(lbl_az, &lv_font_montserrat_18, LV_PART_MAIN);
   lv_obj_center(lbl_az);
   lv_obj_add_event_cb(alarm_btn_snooze, evt_alarm_snooze, LV_EVENT_CLICKED, NULL);
 
@@ -1235,11 +1323,6 @@ static void build_config_screen(void) {
   lv_obj_add_event_cb(sl_cfg_snooze, on_snooze_slider, LV_EVENT_VALUE_CHANGED, NULL);
   lv_obj_add_event_cb(sl_cfg_snooze, on_snooze_slider, LV_EVENT_RELEASED, NULL);
 
-  config_row_slider(scr_config, i18n_str(I18N_CFG_ALARM_SNOOZE), &sl_cfg_alarm_snooze, &lbl_cfg_alarm_snooze_val, 132, 10,
-                    &lbl_cfg_title_alarm_snooze);
-  lv_obj_add_event_cb(sl_cfg_alarm_snooze, on_alarm_snooze_slider, LV_EVENT_VALUE_CHANGED, NULL);
-  lv_obj_add_event_cb(sl_cfg_alarm_snooze, on_alarm_snooze_slider, LV_EVENT_RELEASED, NULL);
-
   lv_obj_t *row = make_footer_nav(scr_config);
   lv_obj_align(row, LV_ALIGN_BOTTOM_MID, 0, 0);
 
@@ -1380,9 +1463,134 @@ static void build_alarm_screen(void) {
   lv_obj_t *b3 = lv_button_create(row);
   footer_style_btn(b3);
   lv_obj_t *x3 = lv_label_create(b3);
-  lv_label_set_text(x3, LV_SYMBOL_OK);
+  lv_label_set_text(x3, LV_SYMBOL_SAVE);
   lv_obj_center(x3);
   lv_obj_add_event_cb(b3, evt_footer_save_alarm, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *b4 = lv_button_create(row);
+  footer_style_btn(b4);
+  lv_obj_t *x4 = lv_label_create(b4);
+  lv_label_set_text(x4, LV_SYMBOL_RIGHT);
+  lv_obj_center(x4);
+  lv_obj_add_event_cb(b4, evt_footer_alarm_next, LV_EVENT_CLICKED, NULL);
+
+  ui_footer_register_state_row(b0, x0, b1, x1, b2, x2);
+}
+
+static void on_alarm_gain_slider(lv_event_t *e) {
+  if (ui_slider_internal) return;
+  (void)e;
+  int v = (int)lv_slider_get_value(sl_alarm_gain);
+  alarmGain = (uint8_t)constrain(v, 0, 100);
+  pref.putUShort("alm_gain", alarmGain);
+  if (lbl_alarm_gain_val) {
+    char b[16];
+    snprintf(b, sizeof(b), "%u", (unsigned)alarmGain);
+    lv_label_set_text(lbl_alarm_gain_val, b);
+  }
+  if ((radio || alarmBeepActive) && alarmActionsVisible) setGain(alarmGain);
+}
+
+static void alarm_wake_refresh_btn_styles(void) {
+  if (!btn_wake_radio || !btn_wake_beep) return;
+  /* Wie Footer Play/Pause: aktiv = Orange, inaktiv = Blau */
+  lv_obj_set_style_bg_color(btn_wake_radio,
+                            alarmWakeMode == 0 ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
+                            LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_wake_beep,
+                            alarmWakeMode == 1 ? lv_palette_main(LV_PALETTE_ORANGE) : lv_palette_main(LV_PALETTE_BLUE),
+                            LV_PART_MAIN);
+}
+
+static void on_alarm_wake_radio(lv_event_t *e) {
+  (void)e;
+  if (ui_slider_internal) return;
+  alarmWakeMode = 0;
+  pref.putUChar("alm_wake", alarmWakeMode);
+  alarm_wake_refresh_btn_styles();
+}
+
+static void on_alarm_wake_beep(lv_event_t *e) {
+  (void)e;
+  if (ui_slider_internal) return;
+  alarmWakeMode = 1;
+  pref.putUChar("alm_wake", alarmWakeMode);
+  alarm_wake_refresh_btn_styles();
+}
+
+static void build_alarm_gain_screen(void) {
+  scr_alarm_gain = lv_obj_create(NULL);
+  lv_obj_set_style_bg_color(scr_alarm_gain, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(scr_alarm_gain, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(scr_alarm_gain, 0, LV_PART_MAIN);
+
+  lv_obj_t *wbox = lv_obj_create(scr_alarm_gain);
+  lv_obj_set_size(wbox, 320, 44);
+  lv_obj_align(wbox, LV_ALIGN_TOP_LEFT, 0, 8);
+  lv_obj_set_style_bg_color(wbox, rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(wbox, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_border_color(wbox, rgb565_to_lv(COLOR_SETTING_BORDER), LV_PART_MAIN);
+  lv_obj_set_style_border_width(wbox, 1, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(wbox, 4, LV_PART_MAIN);
+
+  btn_wake_radio = lv_button_create(wbox);
+  lv_obj_set_size(btn_wake_radio, 148, 30);
+  lv_obj_align(btn_wake_radio, LV_ALIGN_LEFT_MID, 8, 0);
+  station_arrow_btn_style(btn_wake_radio);
+  lbl_wake_radio = lv_label_create(btn_wake_radio);
+  lv_label_set_text(lbl_wake_radio, i18n_str(I18N_WAKE_RADIO));
+  lv_obj_set_style_text_font(lbl_wake_radio, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_wake_radio, lv_color_white(), LV_PART_MAIN);
+  lv_obj_center(lbl_wake_radio);
+  lv_obj_add_event_cb(btn_wake_radio, on_alarm_wake_radio, LV_EVENT_CLICKED, NULL);
+
+  btn_wake_beep = lv_button_create(wbox);
+  lv_obj_set_size(btn_wake_beep, 148, 30);
+  lv_obj_align(btn_wake_beep, LV_ALIGN_RIGHT_MID, -8, 0);
+  station_arrow_btn_style(btn_wake_beep);
+  lbl_wake_beep = lv_label_create(btn_wake_beep);
+  lv_label_set_text(lbl_wake_beep, i18n_str(I18N_WAKE_BEEP));
+  lv_obj_set_style_text_font(lbl_wake_beep, &font_ui_primary, LV_PART_MAIN);
+  lv_obj_set_style_text_color(lbl_wake_beep, lv_color_white(), LV_PART_MAIN);
+  lv_obj_center(lbl_wake_beep);
+  lv_obj_add_event_cb(btn_wake_beep, on_alarm_wake_beep, LV_EVENT_CLICKED, NULL);
+
+  alarm_wake_refresh_btn_styles();
+
+  config_row_slider(scr_alarm_gain, i18n_str(I18N_CFG_ALARM_GAIN), &sl_alarm_gain, &lbl_alarm_gain_val, 56, 100,
+                    &lbl_alarm_gain_title);
+  lv_obj_add_event_cb(sl_alarm_gain, on_alarm_gain_slider, LV_EVENT_VALUE_CHANGED, NULL);
+  lv_obj_add_event_cb(sl_alarm_gain, on_alarm_gain_slider, LV_EVENT_RELEASED, NULL);
+
+  config_row_slider(scr_alarm_gain, i18n_str(I18N_CFG_ALARM_SNOOZE), &sl_cfg_alarm_snooze, &lbl_cfg_alarm_snooze_val, 100, 10,
+                    &lbl_cfg_title_alarm_snooze);
+  lv_obj_add_event_cb(sl_cfg_alarm_snooze, on_alarm_snooze_slider, LV_EVENT_VALUE_CHANGED, NULL);
+  lv_obj_add_event_cb(sl_cfg_alarm_snooze, on_alarm_snooze_slider, LV_EVENT_RELEASED, NULL);
+
+  lv_obj_t *row = make_footer_nav(scr_alarm_gain);
+  lv_obj_align(row, LV_ALIGN_BOTTOM_MID, 0, 0);
+  lv_obj_t *b0 = lv_button_create(row);
+  footer_style_btn(b0);
+  lv_obj_t *x0 = lv_label_create(b0);
+  lv_label_set_text(x0, LV_SYMBOL_POWER);
+  lv_obj_center(x0);
+  lv_obj_add_event_cb(b0, evt_footer_power, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *b1 = lv_button_create(row);
+  footer_style_btn(b1);
+  lv_obj_t *x1 = lv_label_create(b1);
+  lv_label_set_text(x1, "Zz");
+  lv_obj_center(x1);
+  lv_obj_add_event_cb(b1, evt_footer_snooze, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *b2 = lv_button_create(row);
+  footer_style_btn(b2);
+  lv_obj_t *x2 = lv_label_create(b2);
+  lv_label_set_text(x2, LV_SYMBOL_BELL);
+  lv_obj_center(x2);
+  lv_obj_add_event_cb(b2, evt_footer_alarm, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *sp = lv_obj_create(row);
+  lv_obj_remove_style_all(sp);
+  lv_obj_set_size(sp, 62, 58);
+  lv_obj_set_style_bg_opa(sp, LV_OPA_TRANSP, LV_PART_MAIN);
+  lv_obj_clear_flag(sp, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_t *b4 = lv_button_create(row);
   footer_style_btn(b4);
   lv_obj_t *x4 = lv_label_create(b4);
@@ -1391,6 +1599,141 @@ static void build_alarm_screen(void) {
   lv_obj_add_event_cb(b4, evt_footer_home_alarm, LV_EVENT_CLICKED, NULL);
 
   ui_footer_register_state_row(b0, x0, b1, x1, b2, x2);
+}
+
+static void teardown_scr_alarm_gain(void) {
+  if (!scr_alarm_gain) return;
+  if (scr_clock && lv_screen_active() == scr_alarm_gain) lv_screen_load(scr_clock);
+  ui_footer_clear_registered();
+  lv_obj_delete(scr_alarm_gain);
+  scr_alarm_gain = NULL;
+  sl_alarm_gain = NULL;
+  lbl_alarm_gain_val = NULL;
+  lbl_alarm_gain_title = NULL;
+  sl_cfg_alarm_snooze = NULL;
+  lbl_cfg_alarm_snooze_val = NULL;
+  lbl_cfg_title_alarm_snooze = NULL;
+  btn_wake_radio = NULL;
+  btn_wake_beep = NULL;
+  lbl_wake_radio = NULL;
+  lbl_wake_beep = NULL;
+}
+
+static void teardown_scr_radio(void) {
+  if (!scr_radio) return;
+  if (scr_clock && lv_screen_active() == scr_radio) lv_screen_load(scr_clock);
+  ui_footer_clear_registered();
+  lv_obj_delete(scr_radio);
+  scr_radio = NULL;
+  sl_radio_gain = NULL;
+  for (int i = 0; i < 10; i++) {
+    fav_btn[i] = NULL;
+    fav_lbl[i] = NULL;
+  }
+  lbl_station_radio = NULL;
+}
+
+static void teardown_scr_config(void) {
+  if (!scr_config) return;
+  if (scr_clock && lv_screen_active() == scr_config) lv_screen_load(scr_clock);
+  ui_footer_clear_registered();
+  lv_obj_delete(scr_config);
+  scr_config = NULL;
+  sl_cfg_gain = NULL;
+  sl_cfg_bright = NULL;
+  sl_cfg_snooze = NULL;
+  lbl_cfg_gain_val = NULL;
+  lbl_cfg_bright_val = NULL;
+  lbl_cfg_snooze_val = NULL;
+  lbl_cfg_title_gain = NULL;
+  lbl_cfg_title_bright = NULL;
+  lbl_cfg_title_snooze = NULL;
+  btn_cfg_lang = NULL;
+  lbl_cfg_lang = NULL;
+}
+
+static void teardown_scr_alarm(void) {
+  if (!scr_alarm) return;
+  if (scr_clock && lv_screen_active() == scr_alarm) lv_screen_load(scr_clock);
+  ui_footer_clear_registered();
+  lv_obj_delete(scr_alarm);
+  scr_alarm = NULL;
+  for (uint8_t row = 0; row < 2; row++) {
+    for (uint8_t col = 0; col < 7; col++) {
+      al_day_btn[row][col] = NULL;
+    }
+  }
+  lbl_al_t1 = NULL;
+  lbl_al_t2 = NULL;
+}
+
+static void teardown_all_subscreens(void) {
+  teardown_scr_radio();
+  teardown_scr_config();
+  teardown_scr_alarm();
+  teardown_scr_alarm_gain();
+}
+
+static void sync_scr_config_sliders_from_prefs(void) {
+  ui_slider_internal = true;
+  if (sl_cfg_gain) lv_slider_set_value(sl_cfg_gain, constrain((int)curGain, 0, 100), LV_ANIM_OFF);
+  if (sl_cfg_bright) lv_slider_set_value(sl_cfg_bright, bright, LV_ANIM_OFF);
+  if (sl_cfg_snooze) lv_slider_set_value(sl_cfg_snooze, snoozeTime, LV_ANIM_OFF);
+  if (sl_cfg_alarm_snooze) lv_slider_set_value(sl_cfg_alarm_snooze, alarmSnoozeMin, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  cfg_sync_value_labels();
+}
+
+static void ensure_scr_radio(void) {
+  if (scr_radio) return;
+  teardown_scr_config();
+  teardown_scr_alarm();
+  teardown_scr_alarm_gain();
+  build_radio_screen();
+  yield();
+  ui_sync_all_gain_sliders();
+  curStation = actStation;
+  updateStation();
+  rebuild_favorites();
+}
+
+static void ensure_scr_config(void) {
+  if (scr_config) return;
+  teardown_scr_radio();
+  teardown_scr_alarm();
+  teardown_scr_alarm_gain();
+  build_config_screen();
+  yield();
+  sync_scr_config_sliders_from_prefs();
+}
+
+static void ensure_scr_alarm(void) {
+  if (scr_alarm) return;
+  teardown_scr_radio();
+  teardown_scr_config();
+  teardown_scr_alarm_gain();
+  build_alarm_screen();
+  yield();
+}
+
+static void ensure_scr_alarm_gain(void) {
+  if (scr_alarm_gain) return;
+  teardown_scr_radio();
+  teardown_scr_config();
+  teardown_scr_alarm();
+  build_alarm_gain_screen();
+  yield();
+  ui_slider_internal = true;
+  if (sl_alarm_gain) lv_slider_set_value(sl_alarm_gain, constrain((int)alarmGain, 0, 100), LV_ANIM_OFF);
+  if (sl_cfg_alarm_snooze) lv_slider_set_value(sl_cfg_alarm_snooze, alarmSnoozeMin, LV_ANIM_OFF);
+  alarm_wake_refresh_btn_styles();
+  ui_slider_internal = false;
+  if (lbl_alarm_gain_val) {
+    char b[16];
+    snprintf(b, sizeof(b), "%u", (unsigned)constrain((int)alarmGain, 0, 100));
+    lv_label_set_text(lbl_alarm_gain_val, b);
+  }
+  cfg_sync_value_labels();
 }
 
 static void ui_refresh_header(void) {
@@ -1418,7 +1761,7 @@ static void ui_refresh_header(void) {
   if (startpage) {
     char txt[50] = "";
     lv_color_t ac = rgb565_to_lv(ui_start_cols.alarm_sym);
-    if (alarmday < 8) {
+    if (pref.isKey("alarmon") && pref.getBool("alarmon") && alarmday < 8) {
       uint8_t h = alarmtime / 60;
       uint8_t m = alarmtime % 60;
       snprintf(txt, sizeof(txt), "%s %02u:%02u", i18n_day_short((int)alarmday), h, m);
@@ -1591,19 +1934,11 @@ void setup_display(void) {
   ui_start_colors_load_from_prefs();
   build_clock_screen();
   yield();
-  build_radio_screen();
-  yield();
-  build_config_screen();
-  yield();
-  build_alarm_screen();
-  yield();
+  /* scr_radio / scr_config / scr_alarm: bei Bedarf + teardown beim Verlassen → weniger dauerhafter Heap */
 
-  ui_refresh_footer_icons();
   ui_sync_all_gain_sliders();
-  lv_slider_set_value(sl_cfg_bright, bright, LV_ANIM_OFF);
-  lv_slider_set_value(sl_cfg_snooze, snoozeTime, LV_ANIM_OFF);
-  lv_slider_set_value(sl_cfg_alarm_snooze, alarmSnoozeMin, LV_ANIM_OFF);
   cfg_sync_value_labels();
+  ui_refresh_footer_icons_impl(true);
 }
 
 void displayClear(void) {
@@ -1737,7 +2072,11 @@ void setGainValue(uint16_t value, const char *sliderPage) {
   curGain = (uint8_t)constrain((int)v, 0, 100);
   pref.putUShort("gain", curGain);
   ui_sync_all_gain_sliders();
-  setGain(curGain);
+  if ((radio || alarmBeepActive) && alarmActionsVisible) {
+    setGain(alarmGain);
+  } else {
+    setGain(curGain);
+  }
 }
 
 void setBrightness(uint16_t value) {
@@ -1789,6 +2128,27 @@ void web_apply_alarm_snooze_min(uint8_t v) {
   if (sl_cfg_alarm_snooze) lv_slider_set_value(sl_cfg_alarm_snooze, alarmSnoozeMin, LV_ANIM_OFF);
   ui_slider_internal = false;
   cfg_sync_value_labels();
+}
+
+void web_apply_alarm_gain(uint8_t v) {
+  alarmGain = (uint8_t)constrain((int)v, 0, 100);
+  pref.putUShort("alm_gain", alarmGain);
+  ui_slider_internal = true;
+  if (sl_alarm_gain) lv_slider_set_value(sl_alarm_gain, (int)alarmGain, LV_ANIM_OFF);
+  ui_slider_internal = false;
+  if (lbl_alarm_gain_val) {
+    char b[16];
+    snprintf(b, sizeof(b), "%u", (unsigned)alarmGain);
+    lv_label_set_text(lbl_alarm_gain_val, b);
+  }
+  if ((radio || alarmBeepActive) && alarmActionsVisible) setGain(alarmGain);
+  ui_sync_all_gain_sliders();
+}
+
+void web_apply_alarm_wake(uint8_t v) {
+  alarmWakeMode = (uint8_t)(v & 1u);
+  pref.putUChar("alm_wake", alarmWakeMode);
+  alarm_wake_refresh_btn_styles();
 }
 
 /* Zuletzt an TFT_LED geschriebener Wert (nach LED_ON-Invert) → logische Helligkeit 0…255 vor Invert. */
@@ -1849,7 +2209,7 @@ void selectStation(uint16_t x) {
   else if (x > 270) cfg_station_next_action();
 }
 
-void toggleRadio(boolean off, boolean keepAlarmSnoozePending) {
+void toggleRadio(boolean off, boolean keepAlarmSnoozePending, boolean useAlarmGainWhenStarting) {
   if (off) {
     stopPlaying();
     snoozeTimeEnd = 0;
@@ -1858,11 +2218,11 @@ void toggleRadio(boolean off, boolean keepAlarmSnoozePending) {
       alarmActionsVisible = false;
     }
     radio = false;
+    setGain(curGain);
   } else {
     if (connected) {
-      if (startUrl(stationlist[actStation].url)) {
+      if (startUrl(stationlist[actStation].url, useAlarmGainWhenStarting)) {
         radio = true;
-        setGain(curGain);
       } else {
         radio = false;
         RADIO_SERIAL(Serial.println(F("toggleRadio: Stream-Start fehlgeschlagen")));
@@ -1899,12 +2259,12 @@ void toggleAlarm(void) {
 void startSnooze(void) {
   /* Läuft bereits: nur Timer; Ende → toggleRadio(true) im Hauptschleifen-Timer.
      Aus: einschalten, dann Timer; Ende → wieder aus. */
-  if (radio) {
+  if (radio || alarmBeepActive) {
     snoozeTimeEnd = millis() + (uint32_t)snoozeTime * 60000UL;
     ui_refresh_footer_icons();
     ui_refresh_header();
   } else {
-    toggleRadio(false);
+    toggleRadio(false, false, false);
     snoozeTimeEnd = millis() + (uint32_t)snoozeTime * 60000UL;
   }
 }
@@ -1912,7 +2272,7 @@ void startSnooze(void) {
 void changeStation(void) {
   actStation = curStation;
   pref.putUShort("station", curStation);
-  if (startUrl(stationlist[actStation].url)) {
+  if (startUrl(stationlist[actStation].url, alarmActionsVisible && radio)) {
     radio = true;
   } else {
     radio = false;
@@ -1966,10 +2326,8 @@ void showFavoritenPage(void) {
   favoritenpage = true;
   settingspage = false;
   alarmpage = false;
-  showGain();
-  showBrightness();
-  showSnoozeTime();
-  showAlarmSnoozeMin();
+  alarmgainpage = false;
+  ensure_scr_config();
   showStationList();
   lv_screen_load(scr_config);
   ui_refresh_footer_icons();
@@ -1982,19 +2340,20 @@ void showSettingsPage(void) {
   favoritenpage = false;
   settingspage = true;
   alarmpage = false;
-  showGain();
-  rebuild_favorites();
-  showStationList();
+  alarmgainpage = false;
+  ensure_scr_radio();
   lv_screen_load(scr_radio);
   ui_refresh_footer_icons();
   start_conf = millis();
 }
 
 void showAlarms_Day_and_Time(void) {
+  if (!scr_alarm || !lbl_al_t1 || !lbl_al_t2) return;
   char buf[24];
   for (uint8_t row = 0; row < 2; row++) {
     uint8_t maskbyte = (row == 0) ? alarmConfig.alarmday_1 : alarmConfig.alarmday_2;
     for (uint8_t col = 0; col < 7; col++) {
+      if (!al_day_btn[row][col]) continue;
       uint8_t m = day_mask_from_col(col);
       bool on = (maskbyte & m) != 0;
       lv_obj_set_style_bg_color(al_day_btn[row][col], on ? lv_palette_main(LV_PALETTE_GREEN) : rgb565_to_lv(COLOR_SETTING_BG), LV_PART_MAIN);
@@ -2004,6 +2363,19 @@ void showAlarms_Day_and_Time(void) {
   lv_label_set_text(lbl_al_t1, buf);
   snprintf(buf, sizeof(buf), "%02u : %02u", alarmConfig.h_2, alarmConfig.m_2);
   lv_label_set_text(lbl_al_t2, buf);
+}
+
+void showAlarmGainPage(void) {
+  setBGLight(100);
+  startpage = false;
+  favoritenpage = false;
+  settingspage = false;
+  alarmpage = false;
+  alarmgainpage = true;
+  ensure_scr_alarm_gain();
+  lv_screen_load(scr_alarm_gain);
+  ui_refresh_footer_icons();
+  start_conf = millis();
 }
 
 void showAlarmPage(void) {
@@ -2018,6 +2390,8 @@ void showAlarmPage(void) {
   favoritenpage = false;
   settingspage = false;
   alarmpage = true;
+  alarmgainpage = false;
+  ensure_scr_alarm();
   showAlarms_Day_and_Time();
   lv_screen_load(scr_alarm);
   ui_refresh_footer_icons();
@@ -2031,16 +2405,7 @@ static void ok_timer_cb(lv_timer_t *t) {
 
 void safeAlarmTime(void) {
   start_conf -= 9000;
-  uint16_t alarmtime_1 = (uint16_t)(alarmConfig.h_1 * 60 + alarmConfig.m_1);
-  uint16_t alarmtime_2 = (uint16_t)(alarmConfig.h_2 * 60 + alarmConfig.m_2);
-  alarm1 = alarmtime_1;
-  alarmday1 = alarmConfig.alarmday_1;
-  pref.putUInt("alarm1", alarm1);
-  pref.putUShort("alarmday1", alarmday1);
-  alarm2 = alarmtime_2;
-  alarmday2 = alarmConfig.alarmday_2;
-  pref.putUInt("alarm2", alarm2);
-  pref.putUShort("alarmday2", alarmday2);
+  persist_alarm_config_from_editor(true);
   lv_obj_set_style_bg_color(scr_msg, rgb565_to_lv(COLOR_KNOEPFE_BG), LV_PART_MAIN);
   lv_obj_set_style_bg_opa(scr_msg, LV_OPA_COVER, LV_PART_MAIN);
   lv_label_set_text(msg_title, i18n_str(I18N_OK));
@@ -2050,7 +2415,6 @@ void safeAlarmTime(void) {
   lv_label_set_text(msg_line2, "");
   lv_label_set_text(msg_line3, "");
   lv_screen_load(scr_msg);
-  findNextAlarm();
   lv_timer_t *once = lv_timer_create(ok_timer_cb, 1500, NULL);
   lv_timer_set_repeat_count(once, 1);
 }
@@ -2083,6 +2447,8 @@ void showTitle(void) {
 
 void showRadio(void) {
   ui_refresh_mid_clock();
+  /* Piep-Wecker: kein toggleRadio/showStartPage — Overlay sonst unsichtbar bis Seitenwechsel */
+  alarm_ui_sync_overlay();
 }
 
 void showNextAlarm(void) {
@@ -2095,8 +2461,11 @@ void showStartPage(void) {
   favoritenpage = false;
   settingspage = false;
   alarmpage = false;
+  alarmgainpage = false;
   setBGLight(bright);
+  /* Zuerst Uhr laden — sonst lv_obj_delete auf dem noch aktiven Unterscreen */
   lv_screen_load(scr_clock);
+  teardown_all_subscreens();
   lastdate[0] = 0;
   lasttime[0] = 0;
   updateTime(true);
@@ -2181,6 +2550,9 @@ void tft_i18n_refresh_labels(void) {
   if (lbl_cfg_title_bright) lv_label_set_text(lbl_cfg_title_bright, i18n_str(I18N_CFG_BRIGHT));
   if (lbl_cfg_title_snooze) lv_label_set_text(lbl_cfg_title_snooze, i18n_str(I18N_CFG_SNOOZE));
   if (lbl_cfg_title_alarm_snooze) lv_label_set_text(lbl_cfg_title_alarm_snooze, i18n_str(I18N_CFG_ALARM_SNOOZE));
+  if (lbl_alarm_gain_title) lv_label_set_text(lbl_alarm_gain_title, i18n_str(I18N_CFG_ALARM_GAIN));
+  if (lbl_wake_radio) lv_label_set_text(lbl_wake_radio, i18n_str(I18N_WAKE_RADIO));
+  if (lbl_wake_beep) lv_label_set_text(lbl_wake_beep, i18n_str(I18N_WAKE_BEEP));
   ui_cfg_lang_lbl_refresh();
 
   for (uint8_t row = 0; row < 2; row++) {

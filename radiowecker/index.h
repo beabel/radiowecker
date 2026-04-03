@@ -15,12 +15,12 @@ const char MAIN_page[] PROGMEM = R"=====(
 <script>
 var CURRENT_UI_LANG = "de";
 var I18N = {
- de: {lang:"Sprache",title:"Web Radiowecker",w1:"Weckzeit 1:",w2:"Weckzeit 2:",save:"Speichern",cancel:"Rückgängig",list:"Liste:",name:"Name:",url:"URL:",use:"Verwenden:",pos:"Position:",btest:"Testen",bchange:"Ändern",acc_wlan:"Wlan",acc_ntp:"NTP",acc_wx:"Wetter",bsave:"Speichern",brestart:"Neustart",brestore:"Senderliste Reset",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"ChipModel:",fh:"Fehler beim Abrufen der Daten.",fe:"Fehler beim Laden der Daten.",gh_err:"Fehler beim Überprüfen auf Updates.",dow_mo:"Mo",dow_di:"Di",dow_mi:"Mi",dow_do:"Do",dow_fr:"Fr",dow_sa:"Sa",dow_so:"So",testend:"Mit OK beenden Sie den Test",ota_ask:"Firmware auf",ota_rel:"Im GitHub-Release muss die Datei angehängt sein:",ota_free:"Freier OTA-Slot (ungefähr):",ota_stop:"Das Radio wird gestoppt;",ota_iprog:"Der Fortschritt erscheint auf dem Display.",ota_reboot:"Anschließend startet das Gerät neu.",ota_web:"Diese Webseite verliert danach die Verbindung zum Gerät (erwartet) — es erscheint kein weiteres Meldungsfenster.",ota_go:"Fortfahren?",gh_new:"Neue Version:",gh_inst:"Per Web installieren…",gh_rel:"Release-Seite",gh_newer:"Du verwendest eine neuere Version",gh_than:"als die neueste offizielle Version",gh_okv:"Du verwendest bereits die neueste Version",heap_u:"Belegt:",heap_f:"Frei:",heap_t:"Heap gesamt:",heap_m:"max. Block:",fw_l:"Firmware:",fw_v:"von",fw_u:"frei für nächstes Update:",fu:"Letztes Update:",fl:"Created with",sp:"Sponsor this Project:",fgh:"Fehler beim Abrufen der GitHub-Informationen.",tab_disp:"Anzeige",lbl_bright:"Helligkeit (%):",hint_bright:"0 % = automatisch per Umgebungslicht (LDR), wenn am Gerät verbaut.",lbl_sleep:"Einschlafzeit (Min.):",lbl_asnooze:"Wecker-Schlummer (Min.):",hint_asnooze:"0 = Schlummer aus.",colors_title:"Startbildschirm-Farben",colors_hint:"Sofort auf dem Gerät sichtbar. Werksfarben = Standard wie bei Erstinstallation.",colors_save:"Farben speichern",colors_reset:"Werksfarben",c_bg:"Hintergrund",c_ip:"IP-Zeile",c_sleep:"Schlaf-Symbol",c_alarm:"Wecker (aktiv)",c_sFill:"Slider Füllung",c_sBg:"Slider Hintergrund",c_sBd:"Slider Rahmen",c_date:"Datum",c_time:"Uhrzeit",c_boxBg:"Kästen (Wetter/Radio)",c_boxBd:"Kasten-Rahmen",c_stName:"Sendername",c_stTitle:"Titel & Wetter",help_ldr:"Mit Helligkeitssensor (LDR) am Gerät: Weitere Einstellungen stehen in der Datei 00_pin_settings.h im Projektordner radiowecker. Ohne diesen Sensor reicht der Regler hier.",help_snooze_hw:"Die Minuten gelten, wenn du Schlummer auf dem Display oder hier wählst. Zwei optionale Extra-Tasten (Stopp, Schlummer) kannst du in 00_pin_settings.h einrichten (welcher Anschluss, ein oder aus). Ohne solche Tasten brauchst du dort nichts zu ändern.",help_tip_aria:"Hinweis ein- oder ausblenden"},
- en: {lang:"Language",title:"Web clock radio",w1:"Alarm 1:",w2:"Alarm 2:",save:"Save",cancel:"Undo",list:"List:",name:"Name:",url:"URL:",use:"Use:",pos:"Position:",btest:"Test",bchange:"Apply",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weather",bsave:"Save",brestart:"Restart",brestore:"Reset station list",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chip model:",fh:"Failed to fetch data.",fe:"Failed to load data.",gh_err:"Update check failed.",dow_mo:"Mo",dow_di:"Tu",dow_mi:"We",dow_do:"Th",dow_fr:"Fr",dow_sa:"Sa",dow_so:"Su",testend:"Press OK to end the test",ota_ask:"Install firmware",ota_rel:"The GitHub release must include file:",ota_free:"Approx. free OTA slot:",ota_stop:"Playback will stop;",ota_iprog:"progress is shown on the device.",ota_reboot:"Then the device reboots.",ota_web:"This page will lose connection (expected).",ota_go:"Continue?",gh_new:"New version:",gh_inst:"Install via web…",gh_rel:"Release page",gh_newer:"You are running a newer version",gh_than:"than the latest official release",gh_okv:"You are on the latest version",heap_u:"Used:",heap_f:"Free:",heap_t:"Heap total:",heap_m:"max block:",fw_l:"Firmware:",fw_v:"of",fw_u:"free for next update:",fu:"Last update:",fl:"Created with",sp:"Sponsor this project:",fgh:"Failed to fetch GitHub info.",tab_disp:"Display",lbl_bright:"Brightness (%):",hint_bright:"0% = ambient light (LDR) when fitted on the device.",lbl_sleep:"Sleep timer (min):",lbl_asnooze:"Alarm snooze (min):",hint_asnooze:"0 = snooze off.",colors_title:"Home screen colors",colors_hint:"Applied on the device at once. Factory = default theme.",colors_save:"Save colors",colors_reset:"Factory colors",c_bg:"Background",c_ip:"IP line",c_sleep:"Sleep icon",c_alarm:"Alarm (on)",c_sFill:"Volume fill",c_sBg:"Volume track",c_sBd:"Volume border",c_date:"Date",c_time:"Time",c_boxBg:"Weather/radio boxes",c_boxBd:"Box border",c_stName:"Station name",c_stTitle:"Title & weather",help_ldr:"If your clock has a light sensor for the display: extra settings are in the file 00_pin_settings.h in the radiowecker project folder. If you do not have that sensor, this slider is enough.",help_snooze_hw:"These minutes are used when you tap snooze on the device or here. Optional extra buttons (stop, snooze): you can turn them on or off and set the pins in 00_pin_settings.h. If you have no extra buttons, you can ignore that file.",help_tip_aria:"Show or hide this hint"},
- fr: {lang:"Langue",title:"Radio-réveil web",w1:"Alarme 1 :",w2:"Alarme 2 :",save:"Enregistrer",cancel:"Annuler",list:"Liste :",name:"Nom :",url:"URL :",use:"Actif :",pos:"Position :",btest:"Tester",bchange:"Modifier",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Météo",bsave:"Enregistrer",brestart:"Redémarrer",brestore:"Réinit. liste stations",lbl_ver:"Version :",lbl_heap:"TAS :",lbl_sk:"SKETCH :",lbl_chip:"Modèle puce :",fh:"Échec de lecture des données.",fe:"Échec du chargement.",gh_err:"Échec vérif. mises à jour.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Me",dow_do:"Je",dow_fr:"Ve",dow_sa:"Sa",dow_so:"Di",testend:"OK pour terminer le test",ota_ask:"Installer le firmware",ota_rel:"Le release GitHub doit contenir :",ota_free:"Espace OTA libre (approx.) :",ota_stop:"La radio s'arrête ;",ota_iprog:"la progression s'affiche sur l'appareil.",ota_reboot:"Puis redémarrage.",ota_web:"Cette page perdra la connexion (normal).",ota_go:"Continuer ?",gh_new:"Nouvelle version :",gh_inst:"Installer via le web…",gh_rel:"Page release",gh_newer:"Version plus récente que",gh_than:"la dernière version officielle",gh_okv:"Déjà la dernière version",heap_u:"Utilisé :",heap_f:"Libre :",heap_t:"Tas total :",heap_m:"bloc max :",fw_l:"Firmware :",fw_v:"sur",fw_u:"libre pour prochaine MAJ :",fu:"Dernière MAJ :",fl:"Créé avec",sp:"Soutenir le projet :",fgh:"Échec infos GitHub.",tab_disp:"Affichage",lbl_bright:"Luminosité (%) :",hint_bright:"0 % = lumière ambiante (LDR) si présent.",lbl_sleep:"Sommeil (min) :",lbl_asnooze:"Snooze alarme (min) :",hint_asnooze:"0 = snooze désactivé.",colors_title:"Couleurs écran d’accueil",colors_hint:"Appliquées tout de suite. Usine = défaut.",colors_save:"Enregistrer",colors_reset:"Couleurs d’usine",c_bg:"Fond",c_ip:"Ligne IP",c_sleep:"Icône sommeil",c_alarm:"Alarme (actif)",c_sFill:"Curseur (rempl.)",c_sBg:"Curseur (piste)",c_sBd:"Curseur (bord)",c_date:"Date",c_time:"Heure",c_boxBg:"Boîtes météo/radio",c_boxBd:"Bord des boîtes",c_stName:"Nom station",c_stTitle:"Titre & météo",help_ldr:"Avec capteur de lumière (LDR) : réglages supplémentaires dans le fichier 00_pin_settings.h du dossier radiowecker. Sans capteur, ce curseur suffit.",help_snooze_hw:"Ces minutes s’appliquent au snooze sur l’écran ou ici. Boutons supplémentaires (arrêt, snooze) : à configurer dans 00_pin_settings.h. Sans ces boutons, rien à changer dans ce fichier.",help_tip_aria:"Afficher ou masquer l’info"},
- ru: {lang:"Язык",title:"Веб‑радиобудильник",w1:"Будильник 1:",w2:"Будильник 2:",save:"Сохранить",cancel:"Отменить",list:"Список:",name:"Имя:",url:"URL:",use:"Вкл.:",pos:"Позиция:",btest:"Тест",bchange:"Изменить",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Погода",bsave:"Сохранить",brestart:"Перезагрузка",brestore:"Сброс списка станций",lbl_ver:"Версия:",lbl_heap:"КУЧА:",lbl_sk:"ПРОШИВКА:",lbl_chip:"Чип:",fh:"Ошибка получения данных.",fe:"Ошибка загрузки.",gh_err:"Ошибка проверки обновлений.",dow_mo:"Пн",dow_di:"Вт",dow_mi:"Ср",dow_do:"Чт",dow_fr:"Пт",dow_sa:"Сб",dow_so:"Вс",testend:"Нажмите OK, чтобы завершить тест",ota_ask:"Установить прошивку",ota_rel:"В релизе GitHub должен быть файл:",ota_free:"Свободно под OTA (прибл.):",ota_stop:"Радио остановится;",ota_iprog:"прогресс на экране устройства.",ota_reboot:"Затем перезагрузка.",ota_web:"Страница потеряет связь (норма).",ota_go:"Продолжить?",gh_new:"Новая версия:",gh_inst:"Установить через веб…",gh_rel:"Страница релиза",gh_newer:"У вас новее, чем",gh_than:"последний официальный релиз",gh_okv:"Уже последняя версия",heap_u:"Занято:",heap_f:"Свободно:",heap_t:"Куча всего:",heap_m:"макс. блок:",fw_l:"Прошивка:",fw_v:"из",fw_u:"свободно для обновления:",fu:"Последнее обновление:",fl:"Создано с",sp:"Поддержать проект:",fgh:"Ошибка GitHub.",tab_disp:"Экран",lbl_bright:"Яркость (%):",hint_bright:"0 % = по датчику освещённости (LDR), если есть.",lbl_sleep:"Таймер сна (мин):",lbl_asnooze:"Отложить будильник (мин):",hint_asnooze:"0 = выкл.",colors_title:"Цвета главного экрана",colors_hint:"Сразу на устройстве. Завод = по умолчанию.",colors_save:"Сохранить",colors_reset:"Сброс цветов",c_bg:"Фон",c_ip:"Строка IP",c_sleep:"Сон",c_alarm:"Будильник",c_sFill:"Громкость заливка",c_sBg:"Громкость фон",c_sBd:"Громкость рамка",c_date:"Дата",c_time:"Время",c_boxBg:"Блоки погоды/радио",c_boxBd:"Рамка блоков",c_stName:"Станция",c_stTitle:"Текст и погода",help_ldr:"Если есть датчик света (LDR): доп. настройки в файле 00_pin_settings.h в папке radiowecker. Без датчика достаточно ползунка.",help_snooze_hw:"Минуты для отложенного будильника на экране или здесь. Дополнительные кнопки (стоп, сон): включаются в 00_pin_settings.h. Без кнопок файл можно не трогать.",help_tip_aria:"Показать или скрыть подсказку"},
- es: {lang:"Idioma",title:"Radio despertador web",w1:"Alarma 1:",w2:"Alarma 2:",save:"Guardar",cancel:"Deshacer",list:"Lista:",name:"Nombre:",url:"URL:",use:"Usar:",pos:"Posición:",btest:"Probar",bchange:"Aplicar",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Tiempo",bsave:"Guardar",brestart:"Reiniciar",brestore:"Restablecer lista de emisoras",lbl_ver:"Versión:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Modelo de chip:",fh:"Error al obtener los datos.",fe:"Error al cargar los datos.",gh_err:"Error al comprobar actualizaciones.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Mi",dow_do:"Ju",dow_fr:"Vi",dow_sa:"Sá",dow_so:"Do",testend:"Pulse OK para finalizar la prueba",ota_ask:"Instalar firmware",ota_rel:"El release de GitHub debe incluir el archivo:",ota_free:"Espacio OTA libre (aprox.):",ota_stop:"Se detiene la reproducción;",ota_iprog:"el progreso se muestra en el dispositivo.",ota_reboot:"Luego el dispositivo se reinicia.",ota_web:"Esta página perderá la conexión (esperado).",ota_go:"¿Continuar?",gh_new:"Nueva versión:",gh_inst:"Instalar vía web…",gh_rel:"Página del release",gh_newer:"Tiene una versión más reciente",gh_than:"que el último release oficial",gh_okv:"Ya tiene la última versión",heap_u:"Usado:",heap_f:"Libre:",heap_t:"Montón total:",heap_m:"bloque máx.:",fw_l:"Firmware:",fw_v:"de",fw_u:"libre para el próximo update:",fu:"Última actualización:",fl:"Creado con",sp:"Patrocinar el proyecto:",fgh:"Error al obtener GitHub.",tab_disp:"Pantalla",lbl_bright:"Brillo (%):",hint_bright:"0 % = luz ambiente (LDR) si está instalado.",lbl_sleep:"Temporizador sueño (min):",lbl_asnooze:"Snooze alarma (min):",hint_asnooze:"0 = snooze desactivado.",colors_title:"Colores pantalla inicio",colors_hint:"Se aplican al instante. Fábrica = predeterminado.",colors_save:"Guardar",colors_reset:"Colores de fábrica",c_bg:"Fondo",c_ip:"Línea IP",c_sleep:"Icono sueño",c_alarm:"Alarma (on)",c_sFill:"Volumen relleno",c_sBg:"Volumen pista",c_sBd:"Volumen borde",c_date:"Fecha",c_time:"Hora",c_boxBg:"Cajas clima/radio",c_boxBd:"Borde caja",c_stName:"Emisora",c_stTitle:"Título y clima",help_ldr:"Con sensor de luz (LDR): más ajustes en el archivo 00_pin_settings.h de la carpeta radiowecker. Sin sensor, basta este control.",help_snooze_hw:"Los minutos valen para repetir alarma en pantalla o aquí. Botones extra (parar, repetir): configúralos en 00_pin_settings.h. Sin botones extra, no hace falta tocar ese archivo.",help_tip_aria:"Mostrar u ocultar la nota"},
- nl: {lang:"Taal",title:"Webklokradio",w1:"Wekker 1:",w2:"Wekker 2:",save:"Opslaan",cancel:"Ongedaan maken",list:"Lijst:",name:"Naam:",url:"URL:",use:"Gebruik:",pos:"Positie:",btest:"Test",bchange:"Toepassen",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weer",bsave:"Opslaan",brestart:"Herstarten",brestore:"Zenderlijst resetten",lbl_ver:"Versie:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chipmodel:",fh:"Gegevens ophalen mislukt.",fe:"Laden mislukt.",gh_err:"Updatecontrole mislukt.",dow_mo:"Ma",dow_di:"Di",dow_mi:"Wo",dow_do:"Do",dow_fr:"Vr",dow_sa:"Za",dow_so:"Zo",testend:"Druk op OK om de test te beëindigen",ota_ask:"Firmware installeren",ota_rel:"De GitHub-release moet het bestand bevatten:",ota_free:"Vrij OTA-blok (ca.):",ota_stop:"Afspelen stopt;",ota_iprog:"voortgang op het apparaat.",ota_reboot:"Daarna start het apparaat opnieuw.",ota_web:"Deze pagina verliest de verbinding (verwacht).",ota_go:"Doorgaan?",gh_new:"Nieuwe versie:",gh_inst:"Installeren via web…",gh_rel:"Releasepagina",gh_newer:"U heeft een nieuwere versie",gh_than:"dan de laatste officiële release",gh_okv:"U heeft al de nieuwste versie",heap_u:"Bezet:",heap_f:"Vrij:",heap_t:"Heap totaal:",heap_m:"max. blok:",fw_l:"Firmware:",fw_v:"van",fw_u:"vrij voor volgende update:",fu:"Laatste update:",fl:"Gemaakt met",sp:"Project steunen:",fgh:"GitHub-info ophalen mislukt.",tab_disp:"Scherm",lbl_bright:"Helderheid (%):",hint_bright:"0 % = omgevingslicht (LDR) indien aanwezig.",lbl_sleep:"Slaaptimer (min):",lbl_asnooze:"Alarm-snooze (min):",hint_asnooze:"0 = snooze uit.",colors_title:"Kleuren startscherm",colors_hint:"Meteen op het apparaat. Fabriek = standaard.",colors_save:"Opslaan",colors_reset:"Fabriekskleuren",c_bg:"Achtergrond",c_ip:"IP-regel",c_sleep:"Slaap-icoon",c_alarm:"Wekker (aan)",c_sFill:"Volume vulling",c_sBg:"Volume spoor",c_sBd:"Volume rand",c_date:"Datum",c_time:"Tijd",c_boxBg:"Weer/radio-vakken",c_boxBd:"Vakrand",c_stName:"Zendernaam",c_stTitle:"Titel & weer",help_ldr:"Met lichtsensor (LDR): extra instellingen in het bestand 00_pin_settings.h in de map radiowecker. Zonder sensor volstaat deze schuifbalk.",help_snooze_hw:"De minuten gelden voor sluimeren op het scherm of hier. Optionele extra knoppen (stop, sluimeren): in 00_pin_settings.h in- of uitschakelen. Zonder extra knoppen hoef je dat bestand niet aan te passen.",help_tip_aria:"Tip tonen of verbergen"}
+ de: {lang:"Sprache",title:"Web Radiowecker",w1:"Weckzeit 1:",w2:"Weckzeit 2:",save:"Speichern",cancel:"Rückgängig",list:"Liste:",name:"Name:",url:"URL:",use:"Verwenden:",pos:"Position:",btest:"Testen",bchange:"Ändern",acc_wlan:"Wlan",acc_ntp:"NTP",acc_wx:"Wetter",bsave:"Speichern",brestart:"Neustart",brestore:"Senderliste Reset",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"ChipModel:",fh:"Fehler beim Abrufen der Daten.",fe:"Fehler beim Laden der Daten.",gh_err:"Fehler beim Überprüfen auf Updates.",dow_mo:"Mo",dow_di:"Di",dow_mi:"Mi",dow_do:"Do",dow_fr:"Fr",dow_sa:"Sa",dow_so:"So",testend:"Mit OK beenden Sie den Test",ota_ask:"Firmware auf",ota_rel:"Im GitHub-Release muss die Datei angehängt sein:",ota_free:"Freier OTA-Slot (ungefähr):",ota_stop:"Das Radio wird gestoppt;",ota_iprog:"Der Fortschritt erscheint auf dem Display.",ota_reboot:"Anschließend startet das Gerät neu.",ota_web:"Diese Webseite verliert danach die Verbindung zum Gerät (erwartet) — es erscheint kein weiteres Meldungsfenster.",ota_go:"Fortfahren?",gh_new:"Neue Version:",gh_inst:"Per Web installieren…",gh_rel:"Release-Seite",gh_newer:"Du verwendest eine neuere Version",gh_than:"als die neueste offizielle Version",gh_okv:"Du verwendest bereits die neueste Version",heap_u:"Belegt:",heap_f:"Frei:",heap_t:"Heap gesamt:",heap_m:"max. Block:",fw_l:"Firmware:",fw_v:"von",fw_u:"frei für nächstes Update:",fu:"Letztes Update:",fl:"Created with",sp:"Sponsor this Project:",fgh:"Fehler beim Abrufen der GitHub-Informationen.",tab_disp:"Anzeige",lbl_bright:"Helligkeit (%):",hint_bright:"0 % = automatisch per Umgebungslicht (LDR), wenn am Gerät verbaut.",lbl_sleep:"Einschlafzeit (Min.):",lbl_asnooze:"Wecker-Schlummer (Min.):",hint_asnooze:"0 = Schlummer aus.",lbl_alarmgain:"Wecklautstärke (%):",lbl_alarmwake:"Weckton:",wake_radio:"Radio",wake_beep:"Piep",colors_title:"Startbildschirm-Farben",colors_hint:"Sofort auf dem Gerät sichtbar. Werksfarben = Standard wie bei Erstinstallation.",colors_save:"Farben speichern",colors_reset:"Werksfarben",c_bg:"Hintergrund",c_ip:"IP-Zeile",c_sleep:"Schlaf-Symbol",c_alarm:"Wecker (aktiv)",c_sFill:"Slider Füllung",c_sBg:"Slider Hintergrund",c_sBd:"Slider Rahmen",c_date:"Datum",c_time:"Uhrzeit",c_boxBg:"Kästen (Wetter/Radio)",c_boxBd:"Kasten-Rahmen",c_stName:"Sendername",c_stTitle:"Titel & Wetter",help_ldr:"Mit Helligkeitssensor (LDR) am Gerät: Weitere Einstellungen stehen in der Datei 00_pin_settings.h im Projektordner radiowecker. Ohne diesen Sensor reicht der Regler hier.",help_snooze_hw:"Die Minuten gelten, wenn du Schlummer auf dem Display oder hier wählst. Zwei optionale Extra-Tasten (Stopp, Schlummer) kannst du in 00_pin_settings.h einrichten (welcher Anschluss, ein oder aus). Ohne solche Tasten brauchst du dort nichts zu ändern.",help_tip_aria:"Hinweis ein- oder ausblenden"},
+ en: {lang:"Language",title:"Web clock radio",w1:"Alarm 1:",w2:"Alarm 2:",save:"Save",cancel:"Undo",list:"List:",name:"Name:",url:"URL:",use:"Use:",pos:"Position:",btest:"Test",bchange:"Apply",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weather",bsave:"Save",brestart:"Restart",brestore:"Reset station list",lbl_ver:"Version:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chip model:",fh:"Failed to fetch data.",fe:"Failed to load data.",gh_err:"Update check failed.",dow_mo:"Mo",dow_di:"Tu",dow_mi:"We",dow_do:"Th",dow_fr:"Fr",dow_sa:"Sa",dow_so:"Su",testend:"Press OK to end the test",ota_ask:"Install firmware",ota_rel:"The GitHub release must include file:",ota_free:"Approx. free OTA slot:",ota_stop:"Playback will stop;",ota_iprog:"progress is shown on the device.",ota_reboot:"Then the device reboots.",ota_web:"This page will lose connection (expected).",ota_go:"Continue?",gh_new:"New version:",gh_inst:"Install via web…",gh_rel:"Release page",gh_newer:"You are running a newer version",gh_than:"than the latest official release",gh_okv:"You are on the latest version",heap_u:"Used:",heap_f:"Free:",heap_t:"Heap total:",heap_m:"max block:",fw_l:"Firmware:",fw_v:"of",fw_u:"free for next update:",fu:"Last update:",fl:"Created with",sp:"Sponsor this project:",fgh:"Failed to fetch GitHub info.",tab_disp:"Display",lbl_bright:"Brightness (%):",hint_bright:"0% = ambient light (LDR) when fitted on the device.",lbl_sleep:"Sleep timer (min):",lbl_asnooze:"Alarm snooze (min):",hint_asnooze:"0 = snooze off.",lbl_alarmgain:"Alarm volume (%):",lbl_alarmwake:"Wake sound:",wake_radio:"Radio",wake_beep:"Beep",colors_title:"Home screen colors",colors_hint:"Applied on the device at once. Factory = default theme.",colors_save:"Save colors",colors_reset:"Factory colors",c_bg:"Background",c_ip:"IP line",c_sleep:"Sleep icon",c_alarm:"Alarm (on)",c_sFill:"Volume fill",c_sBg:"Volume track",c_sBd:"Volume border",c_date:"Date",c_time:"Time",c_boxBg:"Weather/radio boxes",c_boxBd:"Box border",c_stName:"Station name",c_stTitle:"Title & weather",help_ldr:"If your clock has a light sensor for the display: extra settings are in the file 00_pin_settings.h in the radiowecker project folder. If you do not have that sensor, this slider is enough.",help_snooze_hw:"These minutes are used when you tap snooze on the device or here. Optional extra buttons (stop, snooze): you can turn them on or off and set the pins in 00_pin_settings.h. If you have no extra buttons, you can ignore that file.",help_tip_aria:"Show or hide this hint"},
+ fr: {lang:"Langue",title:"Radio-réveil web",w1:"Alarme 1 :",w2:"Alarme 2 :",save:"Enregistrer",cancel:"Annuler",list:"Liste :",name:"Nom :",url:"URL :",use:"Actif :",pos:"Position :",btest:"Tester",bchange:"Modifier",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Météo",bsave:"Enregistrer",brestart:"Redémarrer",brestore:"Réinit. liste stations",lbl_ver:"Version :",lbl_heap:"TAS :",lbl_sk:"SKETCH :",lbl_chip:"Modèle puce :",fh:"Échec de lecture des données.",fe:"Échec du chargement.",gh_err:"Échec vérif. mises à jour.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Me",dow_do:"Je",dow_fr:"Ve",dow_sa:"Sa",dow_so:"Di",testend:"OK pour terminer le test",ota_ask:"Installer le firmware",ota_rel:"Le release GitHub doit contenir :",ota_free:"Espace OTA libre (approx.) :",ota_stop:"La radio s'arrête ;",ota_iprog:"la progression s'affiche sur l'appareil.",ota_reboot:"Puis redémarrage.",ota_web:"Cette page perdra la connexion (normal).",ota_go:"Continuer ?",gh_new:"Nouvelle version :",gh_inst:"Installer via le web…",gh_rel:"Page release",gh_newer:"Version plus récente que",gh_than:"la dernière version officielle",gh_okv:"Déjà la dernière version",heap_u:"Utilisé :",heap_f:"Libre :",heap_t:"Tas total :",heap_m:"bloc max :",fw_l:"Firmware :",fw_v:"sur",fw_u:"libre pour prochaine MAJ :",fu:"Dernière MAJ :",fl:"Créé avec",sp:"Soutenir le projet :",fgh:"Échec infos GitHub.",tab_disp:"Affichage",lbl_bright:"Luminosité (%) :",hint_bright:"0 % = lumière ambiante (LDR) si présent.",lbl_sleep:"Sommeil (min) :",lbl_asnooze:"Snooze alarme (min) :",hint_asnooze:"0 = snooze désactivé.",lbl_alarmgain:"Volume réveil (%) :",lbl_alarmwake:"Son réveil :",wake_radio:"Radio",wake_beep:"Bip",colors_title:"Couleurs écran d’accueil",colors_hint:"Appliquées tout de suite. Usine = défaut.",colors_save:"Enregistrer",colors_reset:"Couleurs d’usine",c_bg:"Fond",c_ip:"Ligne IP",c_sleep:"Icône sommeil",c_alarm:"Alarme (actif)",c_sFill:"Curseur (rempl.)",c_sBg:"Curseur (piste)",c_sBd:"Curseur (bord)",c_date:"Date",c_time:"Heure",c_boxBg:"Boîtes météo/radio",c_boxBd:"Bord des boîtes",c_stName:"Nom station",c_stTitle:"Titre & météo",help_ldr:"Avec capteur de lumière (LDR) : réglages supplémentaires dans le fichier 00_pin_settings.h du dossier radiowecker. Sans capteur, ce curseur suffit.",help_snooze_hw:"Ces minutes s’appliquent au snooze sur l’écran ou ici. Boutons supplémentaires (arrêt, snooze) : à configurer dans 00_pin_settings.h. Sans ces boutons, rien à changer dans ce fichier.",help_tip_aria:"Afficher ou masquer l’info"},
+ ru: {lang:"Язык",title:"Веб‑радиобудильник",w1:"Будильник 1:",w2:"Будильник 2:",save:"Сохранить",cancel:"Отменить",list:"Список:",name:"Имя:",url:"URL:",use:"Вкл.:",pos:"Позиция:",btest:"Тест",bchange:"Изменить",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Погода",bsave:"Сохранить",brestart:"Перезагрузка",brestore:"Сброс списка станций",lbl_ver:"Версия:",lbl_heap:"КУЧА:",lbl_sk:"ПРОШИВКА:",lbl_chip:"Чип:",fh:"Ошибка получения данных.",fe:"Ошибка загрузки.",gh_err:"Ошибка проверки обновлений.",dow_mo:"Пн",dow_di:"Вт",dow_mi:"Ср",dow_do:"Чт",dow_fr:"Пт",dow_sa:"Сб",dow_so:"Вс",testend:"Нажмите OK, чтобы завершить тест",ota_ask:"Установить прошивку",ota_rel:"В релизе GitHub должен быть файл:",ota_free:"Свободно под OTA (прибл.):",ota_stop:"Радио остановится;",ota_iprog:"прогресс на экране устройства.",ota_reboot:"Затем перезагрузка.",ota_web:"Страница потеряет связь (норма).",ota_go:"Продолжить?",gh_new:"Новая версия:",gh_inst:"Установить через веб…",gh_rel:"Страница релиза",gh_newer:"У вас новее, чем",gh_than:"последний официальный релиз",gh_okv:"Уже последняя версия",heap_u:"Занято:",heap_f:"Свободно:",heap_t:"Куча всего:",heap_m:"макс. блок:",fw_l:"Прошивка:",fw_v:"из",fw_u:"свободно для обновления:",fu:"Последнее обновление:",fl:"Создано с",sp:"Поддержать проект:",fgh:"Ошибка GitHub.",tab_disp:"Экран",lbl_bright:"Яркость (%):",hint_bright:"0 % = по датчику освещённости (LDR), если есть.",lbl_sleep:"Таймер сна (мин):",lbl_asnooze:"Отложить будильник (мин):",hint_asnooze:"0 = выкл.",lbl_alarmgain:"Громкость будильника (%):",lbl_alarmwake:"Звук будильника:",wake_radio:"Радио",wake_beep:"Пищалка",colors_title:"Цвета главного экрана",colors_hint:"Сразу на устройстве. Завод = по умолчанию.",colors_save:"Сохранить",colors_reset:"Сброс цветов",c_bg:"Фон",c_ip:"Строка IP",c_sleep:"Сон",c_alarm:"Будильник",c_sFill:"Громкость заливка",c_sBg:"Громкость фон",c_sBd:"Громкость рамка",c_date:"Дата",c_time:"Время",c_boxBg:"Блоки погоды/радио",c_boxBd:"Рамка блоков",c_stName:"Станция",c_stTitle:"Текст и погода",help_ldr:"Если есть датчик света (LDR): доп. настройки в файле 00_pin_settings.h в папке radiowecker. Без датчика достаточно ползунка.",help_snooze_hw:"Минуты для отложенного будильника на экране или здесь. Дополнительные кнопки (стоп, сон): включаются в 00_pin_settings.h. Без кнопок файл можно не трогать.",help_tip_aria:"Показать или скрыть подсказку"},
+ es: {lang:"Idioma",title:"Radio despertador web",w1:"Alarma 1:",w2:"Alarma 2:",save:"Guardar",cancel:"Deshacer",list:"Lista:",name:"Nombre:",url:"URL:",use:"Usar:",pos:"Posición:",btest:"Probar",bchange:"Aplicar",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Tiempo",bsave:"Guardar",brestart:"Reiniciar",brestore:"Restablecer lista de emisoras",lbl_ver:"Versión:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Modelo de chip:",fh:"Error al obtener los datos.",fe:"Error al cargar los datos.",gh_err:"Error al comprobar actualizaciones.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Mi",dow_do:"Ju",dow_fr:"Vi",dow_sa:"Sá",dow_so:"Do",testend:"Pulse OK para finalizar la prueba",ota_ask:"Instalar firmware",ota_rel:"El release de GitHub debe incluir el archivo:",ota_free:"Espacio OTA libre (aprox.):",ota_stop:"Se detiene la reproducción;",ota_iprog:"el progreso se muestra en el dispositivo.",ota_reboot:"Luego el dispositivo se reinicia.",ota_web:"Esta página perderá la conexión (esperado).",ota_go:"¿Continuar?",gh_new:"Nueva versión:",gh_inst:"Instalar vía web…",gh_rel:"Página del release",gh_newer:"Tiene una versión más reciente",gh_than:"que el último release oficial",gh_okv:"Ya tiene la última versión",heap_u:"Usado:",heap_f:"Libre:",heap_t:"Montón total:",heap_m:"bloque máx.:",fw_l:"Firmware:",fw_v:"de",fw_u:"libre para el próximo update:",fu:"Última actualización:",fl:"Creado con",sp:"Patrocinar el proyecto:",fgh:"Error al obtener GitHub.",tab_disp:"Pantalla",lbl_bright:"Brillo (%):",hint_bright:"0 % = luz ambiente (LDR) si está instalado.",lbl_sleep:"Temporizador sueño (min):",lbl_asnooze:"Snooze alarma (min):",hint_asnooze:"0 = snooze desactivado.",lbl_alarmgain:"Volumen alarma (%):",lbl_alarmwake:"Tono alarma:",wake_radio:"Radio",wake_beep:"Pitido",colors_title:"Colores pantalla inicio",colors_hint:"Se aplican al instante. Fábrica = predeterminado.",colors_save:"Guardar",colors_reset:"Colores de fábrica",c_bg:"Fondo",c_ip:"Línea IP",c_sleep:"Icono sueño",c_alarm:"Alarma (on)",c_sFill:"Volumen relleno",c_sBg:"Volumen pista",c_sBd:"Volumen borde",c_date:"Fecha",c_time:"Hora",c_boxBg:"Cajas clima/radio",c_boxBd:"Borde caja",c_stName:"Emisora",c_stTitle:"Título y clima",help_ldr:"Con sensor de luz (LDR): más ajustes en el archivo 00_pin_settings.h de la carpeta radiowecker. Sin sensor, basta este control.",help_snooze_hw:"Los minutos valen para repetir alarma en pantalla o aquí. Botones extra (parar, repetir): configúralos en 00_pin_settings.h. Sin botones extra, no hace falta tocar ese archivo.",help_tip_aria:"Mostrar u ocultar la nota"},
+ nl: {lang:"Taal",title:"Webklokradio",w1:"Wekker 1:",w2:"Wekker 2:",save:"Opslaan",cancel:"Ongedaan maken",list:"Lijst:",name:"Naam:",url:"URL:",use:"Gebruik:",pos:"Positie:",btest:"Test",bchange:"Toepassen",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weer",bsave:"Opslaan",brestart:"Herstarten",brestore:"Zenderlijst resetten",lbl_ver:"Versie:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chipmodel:",fh:"Gegevens ophalen mislukt.",fe:"Laden mislukt.",gh_err:"Updatecontrole mislukt.",dow_mo:"Ma",dow_di:"Di",dow_mi:"Wo",dow_do:"Do",dow_fr:"Vr",dow_sa:"Za",dow_so:"Zo",testend:"Druk op OK om de test te beëindigen",ota_ask:"Firmware installeren",ota_rel:"De GitHub-release moet het bestand bevatten:",ota_free:"Vrij OTA-blok (ca.):",ota_stop:"Afspelen stopt;",ota_iprog:"voortgang op het apparaat.",ota_reboot:"Daarna start het apparaat opnieuw.",ota_web:"Deze pagina verliest de verbinding (verwacht).",ota_go:"Doorgaan?",gh_new:"Nieuwe versie:",gh_inst:"Installeren via web…",gh_rel:"Releasepagina",gh_newer:"U heeft een nieuwere versie",gh_than:"dan de laatste officiële release",gh_okv:"U heeft al de nieuwste versie",heap_u:"Bezet:",heap_f:"Vrij:",heap_t:"Heap totaal:",heap_m:"max. blok:",fw_l:"Firmware:",fw_v:"van",fw_u:"vrij voor volgende update:",fu:"Laatste update:",fl:"Gemaakt met",sp:"Project steunen:",fgh:"GitHub-info ophalen mislukt.",tab_disp:"Scherm",lbl_bright:"Helderheid (%):",hint_bright:"0 % = omgevingslicht (LDR) indien aanwezig.",lbl_sleep:"Slaaptimer (min):",lbl_asnooze:"Alarm-snooze (min):",hint_asnooze:"0 = snooze uit.",lbl_alarmgain:"Wekkervolume (%) :",lbl_alarmwake:"Wekgeluid:",wake_radio:"Radio",wake_beep:"Piep",colors_title:"Kleuren startscherm",colors_hint:"Meteen op het apparaat. Fabriek = standaard.",colors_save:"Opslaan",colors_reset:"Fabriekskleuren",c_bg:"Achtergrond",c_ip:"IP-regel",c_sleep:"Slaap-icoon",c_alarm:"Wekker (aan)",c_sFill:"Volume vulling",c_sBg:"Volume spoor",c_sBd:"Volume rand",c_date:"Datum",c_time:"Tijd",c_boxBg:"Weer/radio-vakken",c_boxBd:"Vakrand",c_stName:"Zendernaam",c_stTitle:"Titel & weer",help_ldr:"Met lichtsensor (LDR): extra instellingen in het bestand 00_pin_settings.h in de map radiowecker. Zonder sensor volstaat deze schuifbalk.",help_snooze_hw:"De minuten gelden voor sluimeren op het scherm of hier. Optionele extra knoppen (stop, sluimeren): in 00_pin_settings.h in- of uitschakelen. Zonder extra knoppen hoef je dat bestand niet aan te passen.",help_tip_aria:"Tip tonen of verbergen"}
 };
 function tr(k) { var o = I18N[CURRENT_UI_LANG] || I18N.de; if (o[k] !== undefined) return o[k]; return (I18N.de[k] !== undefined) ? I18N.de[k] : k; }
 function applyWebLang(code) {
@@ -72,12 +72,12 @@ $(document).ready(function() {
   GainSlider();// senden des Sliders zum ESP
   setupDisplaySliders();
   function closeAllHelpTips() {
-    $("#display .help-tip-wrap.is-open").removeClass("is-open");
-    $("#display .help-tip").attr("aria-expanded", "false");
-    $("#display .help-tip-panel").attr("aria-hidden", "true");
+    $("#display .help-tip-wrap.is-open, #wecker .help-tip-wrap.is-open").removeClass("is-open");
+    $("#display .help-tip, #wecker .help-tip").attr("aria-expanded", "false");
+    $("#display .help-tip-panel, #wecker .help-tip-panel").attr("aria-hidden", "true");
   }
-  $(document).on("click", "#display .help-tip-panel", function(e) { e.stopPropagation(); });
-  $(document).on("click", "#display .help-tip", function(e) {
+  $(document).on("click", "#display .help-tip-panel, #wecker .help-tip-panel", function(e) { e.stopPropagation(); });
+  $(document).on("click", "#display .help-tip, #wecker .help-tip", function(e) {
     e.preventDefault();
     e.stopPropagation();
     var $w = $(this).closest(".help-tip-wrap");
@@ -98,21 +98,42 @@ $(document).ready(function() {
   $("#switchStation").on("change", selectStationFromDropdown);
   $("#btn_colors_save").click(saveStartColors);
   $("#btn_colors_reset").click(resetStartColors);
+  $("input[name='alm_wake']").on("change", function () {
+    $.get("/cmd/setAlarmWake", { value: $(this).val() });
+  });
 
   // Zeugs um die aktuellen Daten des ESP regelmäßig zu erhalten um halbwegs sinvolle Anzeigen zu sehen
   $("#tabs").tabs({
     activate: function(event, ui) {
       var href = ui.newTab.find("a").attr("href");
+      var prevPl = ui.oldPanel.data("intervalId");
+      if (prevPl) clearInterval(prevPl);
+      ui.oldPanel.removeData("intervalId");
+      var prevWk = ui.oldPanel.data("weckerPollId");
+      if (prevWk) clearInterval(prevWk);
+      ui.oldPanel.removeData("weckerPollId");
+      var prevHeap = ui.oldPanel.data("heapPollId");
+      if (prevHeap) clearInterval(prevHeap);
+      ui.oldPanel.removeData("heapPollId");
+
       if (href === "#player") {
         var intervalId = setInterval(updateCurrentStatus, 5000);
         ui.newPanel.data("intervalId", intervalId);
-      } else {
-        var prevId = ui.oldPanel.data("intervalId");
-        if (prevId) clearInterval(prevId);
       }
       if (href === "#display") {
         loadDisplaySettings();
         loadStartColors();
+      }
+      if (href === "#wecker") {
+        loadDisplaySettings();
+        var weckerPollId = setInterval(updateCurrentStatus, 3000);
+        ui.newPanel.data("weckerPollId", weckerPollId);
+        updateCurrentStatus();
+      }
+      if (href === "#info") {
+        refreshHeapStats();
+        var heapPollId = setInterval(refreshHeapStats, HEAP_POLL_INTERVAL_MS);
+        ui.newPanel.data("heapPollId", heapPollId);
       }
     }
   });
@@ -121,6 +142,11 @@ $(document).ready(function() {
     updateCurrentStatus();
     var intervalId = setInterval(updateCurrentStatus, 3000); // Starten des Intervall
     $("#player").data("intervalId", intervalId);
+  }
+  if ($("#tabs").tabs("option", "active") === 5) { // Info-Tab: Heap live
+    refreshHeapStats();
+    var heapPollId0 = setInterval(refreshHeapStats, HEAP_POLL_INTERVAL_MS);
+    $("#info").data("heapPollId", heapPollId0);
   }
          
 });
@@ -359,6 +385,16 @@ function setupDisplaySliders() {
       $.get("/cmd/setAlarmSnooze", { min: ui.value });
     }
   });
+  $("#slider_alarmgain").slider({
+    min: 0,
+    max: 100,
+    slide: function (event, ui) {
+      $("#disp_alarmgain_val").text(ui.value + "%");
+    },
+    stop: function (event, ui) {
+      $.get("/cmd/setAlarmGain", { value: ui.value });
+    }
+  });
 }
 function loadDisplaySettings() {
   $.getJSON("/cmd/getDisplaySettings", function (d) {
@@ -374,6 +410,14 @@ function loadDisplaySettings() {
     if (d.alarmSnoozeMin !== undefined) {
       $("#slider_asnooze").slider("option", "value", d.alarmSnoozeMin);
       $("#disp_asnooze_val").text(d.alarmSnoozeMin);
+    }
+    if (d.alarmGain !== undefined) {
+      $("#slider_alarmgain").slider("option", "value", d.alarmGain);
+      $("#disp_alarmgain_val").text(d.alarmGain + "%");
+    }
+    if (d.alarmWakeMode !== undefined) {
+      var wm = parseInt(d.alarmWakeMode, 10) ? 1 : 0;
+      $("#alm_wake" + wm).prop("checked", true);
     }
   });
 }
@@ -411,8 +455,9 @@ function saveStartColors() {
     url: "/cmd/setStartColors",
     contentType: "application/json; charset=UTF-8",
     data: JSON.stringify(o),
-    success: function () {
+    success: function (data) {
       loadStartColors();
+      alert(data);
     },
     error: function () {
       alert(tr("fe"));
@@ -475,6 +520,17 @@ function updateCurrentStatus() {
     success: function (data) {
       // Lautstärke
       updateCurrentStatusVolume(data.gain);
+      if (data.alarmGain !== undefined && data.alarmGain !== null) {
+        var ag = parseInt(data.alarmGain, 10);
+        if (!isNaN(ag)) {
+          $("#slider_alarmgain").slider("option", "value", ag);
+          $("#disp_alarmgain_val").text(ag + "%");
+        }
+      }
+      if (data.alarmWakeMode !== undefined && data.alarmWakeMode !== null) {
+        var wm = parseInt(data.alarmWakeMode, 10) ? 1 : 0;
+        $("#alm_wake" + wm).prop("checked", true);
+      }
       // Alarm 
       updateCurrentStatusAlarm(data.alarm, data.alarmtime);
       // Radio
@@ -605,6 +661,42 @@ function selectStationFromDropdown() {
         }
     });
 }
+
+function applyHeapFromInfoData(data) {
+  var heap = null;
+  if (data && data.ESP_INFO && data.ESP_INFO.HEAP) heap = data.ESP_INFO.HEAP;
+  else if (data && typeof data.getFreeHeap === "number") heap = data;
+  if (!heap) return;
+  var heapSize = heap.getHeapSize;
+  var freeHeap = heap.getFreeHeap;
+  var usedHeap = heapSize - freeHeap;
+  var heapUsedPct = heapSize ? (usedHeap / heapSize) * 100 : 0;
+  var heapFreePct = heapSize ? (freeHeap / heapSize) * 100 : 0;
+  $("#heapprogressbar").progressbar({
+    value: heapUsedPct
+  });
+  var heapTxt = tr("heap_u") + " " + usedHeap + " B (" + heapUsedPct.toFixed(2) + "%) · " + tr("heap_f") + " " + freeHeap + " B (" + heapFreePct.toFixed(2) + "%) · " + tr("heap_t") + " " + heapSize + " B";
+  var maxAlloc = heap.getMaxAllocHeap;
+  if (typeof maxAlloc === "number") {
+    heapTxt += " · " + tr("heap_m") + " " + maxAlloc + " B";
+  }
+  $("#heapBarText").text(heapTxt);
+}
+
+/* /cmd/getHeap: kleine Antwort auf dem Gerät — seltener als früher, weniger I2S/WiFi-Konflikt bei laufendem Radio */
+var HEAP_POLL_INTERVAL_MS = 10000;
+
+function refreshHeapStats() {
+  $.ajax({
+    type: "GET",
+    url: "/cmd/getHeap",
+    dataType: "json",
+    success: function (data) {
+      applyHeapFromInfoData(data);
+    }
+  });
+}
+
 function getInfo() {
   $.ajax({
     type: "GET",
@@ -632,21 +724,7 @@ function getInfo() {
       // Starte die rekursive Iteration mit dem Hauptobjekt
       iterateObject(data);
 
-      // Heap: getFreeHeap = frei, Differenz = belegt (vorher fälschlich „used“ für freeHeap)
-      var heapSize = data.ESP_INFO.HEAP.getHeapSize;
-      var freeHeap = data.ESP_INFO.HEAP.getFreeHeap;
-      var usedHeap = heapSize - freeHeap;
-      var heapUsedPct = heapSize ? (usedHeap / heapSize) * 100 : 0;
-      var heapFreePct = heapSize ? (freeHeap / heapSize) * 100 : 0;
-      $( "#heapprogressbar" ).progressbar({
-        value: heapUsedPct
-      });
-      var heapTxt = tr("heap_u") + " " + usedHeap + " B (" + heapUsedPct.toFixed(2) + "%) · " + tr("heap_f") + " " + freeHeap + " B (" + heapFreePct.toFixed(2) + "%) · " + tr("heap_t") + " " + heapSize + " B";
-      var maxAlloc = data.ESP_INFO.HEAP.getMaxAllocHeap;
-      if (typeof maxAlloc === "number") {
-        heapTxt += " · " + tr("heap_m") + " " + maxAlloc + " B";
-      }
-      $("#heapBarText").text(heapTxt);
+      applyHeapFromInfoData(data);
 
       /* Partition: getSketchSize = aktuelle Firmware, getFreeSketchSpace = noch frei in der Slot-Partition */
       var usedSketch = data.ESP_INFO.SKETCH.getSketchSize;
@@ -920,11 +998,87 @@ input {
   position: relative;
   z-index: 0;
 }
+/* Tab Wecker: Floats (.categorie) + letztes Element ggf. float → ohne BFC ragt Inhalt aus dem Tab */
+#wecker {
+  display: flow-root;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+/* Tab Wecker: Wecklautstärke — sonst global label{float:left} + kollabierende <p> → Slider über dem Text */
+#wecker > p {
+  margin: 0;
+  clear: both;
+}
+#wecker > p label {
+  float: none;
+  display: block;
+  width: 100%;
+  margin-top: 0.5em;
+  margin-bottom: 0.15em;
+}
+#wecker .display-slider {
+  clear: both;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.35em 0 0.85em 0;
+  position: relative;
+  z-index: 0;
+}
+#wecker .wecker-wake {
+  margin: 0.5em 0 0.15em 0;
+  clear: both;
+}
+/* Weckton Radio/Piep: kein float am Container (sonst Höhe des Tabs endet „zu früh“) */
+#wecker .categorie.wecker-wake-opts {
+  clear: both;
+  float: none;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.15em 0 0.5em 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: stretch;
+  box-sizing: border-box;
+}
+#wecker .categorie.wecker-wake-opts label {
+  float: none;
+  flex: 1 1 calc(50% - 4px);
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+  height: 2.0em;
+  line-height: 2.0em;
+  margin: 0;
+  box-sizing: border-box;
+}
+#wecker .categorie.wecker-wake-opts label span {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 2em;
+  padding: 0 0.35em;
+  line-height: 2.0em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 #display .hint {
   font-size: 0.88em;
   opacity: 0.88;
   margin: 0 0 0.35em 0;
   max-width: 320px;
+  clear: both;
+}
+#wecker .hint {
+  font-size: 0.88em;
+  opacity: 0.88;
+  margin: 0 0 0.35em 0;
+  max-width: 100%;
   clear: both;
 }
 #display .color-row {
@@ -952,13 +1106,15 @@ input {
   cursor: pointer;
 }
 #display hr.disp-sep { margin: 0.85em 0; border: 0; border-top: 1px solid #999; }
-#display .help-tip-wrap {
+#display .help-tip-wrap,
+#wecker .help-tip-wrap {
   display: inline-block;
   vertical-align: middle;
   max-width: 100%;
   margin-left: 0.2em;
 }
-#display .help-tip {
+#display .help-tip,
+#wecker .help-tip {
   cursor: pointer;
   margin: 0;
   padding: 0.12em;
@@ -973,12 +1129,15 @@ input {
   font-family: inherit;
   -webkit-tap-highlight-color: rgba(0,0,0,0.08);
 }
-#display .help-tip-wrap.is-open .help-tip { opacity: 1; }
-#display .help-tip:focus {
+#display .help-tip-wrap.is-open .help-tip,
+#wecker .help-tip-wrap.is-open .help-tip { opacity: 1; }
+#display .help-tip:focus,
+#wecker .help-tip:focus {
   outline: 1px dotted #666;
   outline-offset: 2px;
 }
-#display .help-tip-panel {
+#display .help-tip-panel,
+#wecker .help-tip-panel {
   display: none;
   margin: 0.35em 0 0 0;
   padding: 0.45em 0.55em;
@@ -993,7 +1152,8 @@ input {
   max-width: min(100%, 340px);
   text-align: left;
 }
-#display .help-tip-wrap.is-open .help-tip-panel { display: block; }
+#display .help-tip-wrap.is-open .help-tip-panel,
+#wecker .help-tip-wrap.is-open .help-tip-panel { display: block; }
 </style>
 </head>
 <body>
@@ -1152,7 +1312,24 @@ input {
       <div align="center">
         <button id="btn_savealarm" type="button" data-i18n="save">Speichern</button>
         <button id="btn_cancelalarm" type="button" data-i18n="cancel">Rückgängig</button>
-      </div>      
+      </div>
+      <br />
+      <p><label><span data-i18n="lbl_alarmgain">Wecklautstärke (%):</span> <strong id="disp_alarmgain_val">0%</strong></label></p>
+      <div id="slider_alarmgain" class="display-slider"></div>
+      <p><label><span data-i18n="lbl_asnooze">Wecker-Schlummer (Min.):</span><span class="help-tip-wrap"><button type="button" class="help-tip" data-i18n-title="help_snooze_hw" aria-expanded="false" aria-controls="help_panel_snooze" id="help_btn_snooze"><i class="fas fa-circle-question" aria-hidden="true"></i></button><span class="help-tip-panel" id="help_panel_snooze" role="tooltip" aria-hidden="true"></span></span> <strong id="disp_asnooze_val">0</strong></label></p>
+      <p class="hint"><span data-i18n="hint_asnooze"></span></p>
+      <div id="slider_asnooze" class="display-slider"></div>
+      <p class="wecker-wake"><span data-i18n="lbl_alarmwake">Weckton:</span></p>
+      <div class="categorie wecker-wake-opts" align="center">
+        <label>
+          <input type="radio" name="alm_wake" id="alm_wake0" value="0" checked="checked" />
+          <span data-i18n="wake_radio">Radio</span>
+        </label>
+        <label>
+          <input type="radio" name="alm_wake" id="alm_wake1" value="1" />
+          <span data-i18n="wake_beep">Piep</span>
+        </label>
+      </div>
     </div>
     <div id="radio">
       <label><span data-i18n="list">Liste:</span>
@@ -1186,9 +1363,6 @@ input {
       <div id="slider_bright" class="display-slider"></div>
       <p><label><span data-i18n="lbl_sleep">Einschlafzeit (Min.):</span> <strong id="disp_sleep_val">0</strong></label></p>
       <div id="slider_sleep" class="display-slider"></div>
-      <p><label><span data-i18n="lbl_asnooze">Wecker-Schlummer (Min.):</span><span class="help-tip-wrap"><button type="button" class="help-tip" data-i18n-title="help_snooze_hw" aria-expanded="false" aria-controls="help_panel_snooze" id="help_btn_snooze"><i class="fas fa-circle-question" aria-hidden="true"></i></button><span class="help-tip-panel" id="help_panel_snooze" role="tooltip" aria-hidden="true"></span></span> <strong id="disp_asnooze_val">0</strong></label></p>
-      <p class="hint"><span data-i18n="hint_asnooze"></span></p>
-      <div id="slider_asnooze" class="display-slider"></div>
       <hr class="disp-sep" />
       <p><strong data-i18n="colors_title">Startbildschirm-Farben</strong></p>
       <p class="hint"><span data-i18n="colors_hint"></span></p>

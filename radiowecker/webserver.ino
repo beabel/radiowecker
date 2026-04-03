@@ -10,6 +10,9 @@
 void handleStartHttpUpdate(void);
 void getLang(void);
 void setLang(void);
+void setAlarmGainWeb(void);
+void setAlarmWakeWeb(void);
+void getHeapOnly(void);
 
 WebServer server(80);
 
@@ -49,12 +52,15 @@ void setup_webserver() {
   server.on("/cmd/setBright", setBrightWeb);
   server.on("/cmd/setSleepTimer", setSleepTimerWeb);
   server.on("/cmd/setAlarmSnooze", setAlarmSnoozeWeb);
+  server.on("/cmd/setAlarmGain", setAlarmGainWeb);
+  server.on("/cmd/setAlarmWake", setAlarmWakeWeb);
   server.on("/cmd/getStartColors", getStartColors);
   server.on("/cmd/setStartColors", HTTP_POST, setStartColorsWeb, nullptr);
   server.on("/cmd/resetStartColors", HTTP_POST, resetStartColorsWeb, nullptr);
 
   // Info-Tab: Definiert die Route für das Abrufen von Systeminformationen
   server.on("/cmd/getInfo", getInfo);  // Ruft allgemeine Systeminformationen ab
+  server.on("/cmd/getHeap", getHeapOnly);  // Nur Heap — klein, ohne ArduinoJson (weniger Störung bei Radio)
   server.on("/cmd/getlang", getLang);
   server.on("/cmd/setlang", setLang);
   /* Kein Upload-Callback: sonst nimmt WebServer 3.x den RAW-Pfad, arg("plain") bleibt leer (JSON-OTA schlägt fehl). */
@@ -296,7 +302,8 @@ void setAlarms() {
   // Debug-Ausgabe der Wochentags-Flags
   RADIO_SERIAL(Serial.printf("days1 %x days2 %x\n", alarmday1, alarmday2));
 
-  // Nächster Alarm berechnen; Kopfzeile nur aktualisieren, wenn Startseite sichtbar ist
+  /* Speichern im Web-Tab Wecker: Wecker sicher einschalten und nächsten Termin suchen */
+  pref.putBool("alarmon", true);
   findNextAlarm();
   if (startpage) showNextAlarm();
 
@@ -519,14 +526,17 @@ void getCurrentStatus() {
 
   // Lautstärke des Radios
   jsonDoc["gain"] = curGain;
+  jsonDoc["alarmGain"] = alarmGain;
+  jsonDoc["alarmWakeMode"] = alarmWakeMode;
 
-  // Status des Alarms
-  if (alarmday < 8) {  // Alarm ist aktiv
+  // Status des Alarms (wie Gerät: nur „an“, wenn NVS alarmon und nächster Termin bekannt)
+  const bool alarm_sched_on = pref.isKey("alarmon") && pref.getBool("alarmon");
+  if (alarm_sched_on && alarmday < 8) {
     h = alarmtime / 60;
     m = alarmtime % 60;
     sprintf(txt, "%s %02i:%02i", i18n_day_short((int)alarmday), h, m);
     jsonDoc["alarm"] = "1";
-  } else {  // Alarm ist ausgeschaltet
+  } else {
     snprintf(txt, sizeof(txt), "%s", i18n_str(I18N_ALARM_OFF));
     jsonDoc["alarm"] = "0";
   }
@@ -534,7 +544,7 @@ void getCurrentStatus() {
 
   // Radio-Status
   jsonDoc["actStation"] = actStation;
-  jsonDoc["radioPlaying"] = radio ? 1 : 0;
+  jsonDoc["radioPlaying"] = (radio || alarmBeepActive) ? 1 : 0;
   if (radio) {
     jsonDoc["radioStation"] = stationlist[actStation].name;
     jsonDoc["radioTitle"] = title;
@@ -565,10 +575,12 @@ void getCurrentStatus() {
 }
 
 void getDisplaySettings() {
-  StaticJsonDocument<128> doc;
+  StaticJsonDocument<224> doc;
   doc["bright"] = bright;
   doc["sleepTimerMin"] = snoozeTime;
   doc["alarmSnoozeMin"] = alarmSnoozeMin;
+  doc["alarmGain"] = alarmGain;
+  doc["alarmWakeMode"] = alarmWakeMode;
   String out;
   serializeJson(doc, out);
   server.send(200, "application/json; charset=utf-8", out);
@@ -613,6 +625,34 @@ void setAlarmSnoozeWeb() {
     return;
   }
   web_apply_alarm_snooze_min((uint8_t)v);
+  server.send(200, "text/plain", "OK");
+}
+
+void setAlarmGainWeb() {
+  if (!server.hasArg("value")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("value").toInt();
+  if (v < 0 || v > 100) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  web_apply_alarm_gain((uint8_t)v);
+  server.send(200, "text/plain", "OK");
+}
+
+void setAlarmWakeWeb() {
+  if (!server.hasArg("value")) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  int v = server.arg("value").toInt();
+  if (v != 0 && v != 1) {
+    server.send(400, "text/plain", "ERROR");
+    return;
+  }
+  web_apply_alarm_wake((uint8_t)v);
   server.send(200, "text/plain", "OK");
 }
 
@@ -792,6 +832,25 @@ void setLang() {
   }
   i18n_set_lang(l);
   server.send(200, "text/plain", "OK");
+}
+
+/* Kompakte Heap-Antwort (Stack-Buffer): spart Heap/CPU gegenüber getInfo — weniger Audio-Glitch bei Polling. */
+void getHeapOnly() {
+  char buf[160];
+  int n;
+#if defined(ESP32)
+  n = snprintf(buf, sizeof(buf),
+               "{\"getHeapSize\":%u,\"getFreeHeap\":%u,\"getMaxAllocHeap\":%u}",
+               (unsigned)ESP.getHeapSize(), (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
+#else
+  n = snprintf(buf, sizeof(buf),
+               "{\"getHeapSize\":%u,\"getFreeHeap\":%u}",
+               (unsigned)ESP.getHeapSize(), (unsigned)ESP.getFreeHeap());
+#endif
+  if (n > 0 && n < (int)sizeof(buf))
+    server.send(200, "application/json", buf);
+  else
+    server.send(500, "text/plain", "heap");
 }
 
 void getInfo() {
