@@ -8,9 +8,9 @@ const char MAIN_page[] PROGMEM = R"=====(
 <head>
 <meta http-equiv='content-type' content='text/html; charset=UTF-8'>
 <meta name='viewport' content='width=320' />
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.min.css">
-<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script src="https://code.jquery.com/jquery-4.0.0.min.js"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.14.2/themes/base/jquery-ui.min.css">
+<script src="https://code.jquery.com/ui/1.14.2/jquery-ui.min.js"></script>
 <link rel="stylesheet" href="//use.fontawesome.com/releases/v6.6.0/css/all.css">
 <script>
 var CURRENT_UI_LANG = "de";
