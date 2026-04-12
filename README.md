@@ -68,7 +68,7 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 |Radio Version|Boardverwalter|Partition|
 | ------------- | ------------- | ------------- |
 |<= 4.0.3|2.0.17|default|
-|>= 5.x|3.3.7|No FS 4MB|
+|>= 5.x|3.3.8|No FS 4MB|
 
 ### Bibliotheken (Referenzstände für v5.0.6)
 
@@ -82,7 +82,7 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 | Bibliothek |Radio Version <= v4.0.3 |Radio Version >= v5.x |
 |------------|-----------|--------|
 | Adafruit_ILI9341 | 1.6.2 | 1.6.3 |
-| Adafruit_GFX | 1.12.1 | 1.12.5 |
+| Adafruit_GFX | 1.12.1 | 1.12.6 |
 | XPT2046_Touchscreen | 1.4 | 1.4 |
 | ESP8266Audio by Earle F. Philhower | 2.0.0 | 2.4.1 |
 | Touchevent by Gerald-Lechner | 1.3.0 | :x: |
@@ -169,7 +169,6 @@ Die **Uhrzeit-Schrift** (`lv_font_clock_digits.c`) liegt im Sketch-Ordner;
 4. **Web-Oberfläche**  
    - Im Heimnetz über die im Display angezeigte **IP-Adresse** erreichbar: Stationen, Wecker, WLAN u. a. konfigurieren.
 
-SVG-Übersichten zu den Masken: **`DOKU/Main_Screen_Raster.svg`**, **`DOKU/Config_Screen_Raster.svg`**, **`DOKU/Alarm_Screen_Raster.svg`**.
 
 ### Firmware-Updates (Live Webupdate über die Web-UI)
 
