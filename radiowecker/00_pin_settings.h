@@ -32,8 +32,8 @@
 #endif
 
 /* Optionale Hardware-Tasten (nach GND, INPUT_PULLUP): Pin < 0 = aus / nicht angeschlossen (Default).
-   Stop: Radio/Wecker wie Software-Stop abschalten; wenn nichts läuft (kein Schlummer) → Radio einschalten.
-   Schlummer: nur ausgewertet, wenn alarmActionsVisible (Wecker-Overlay). */
+   Stop: Radio/Wecker aus bzw. im Ruhezustand → Radio einschalten (wie Touch).
+   Snooze-Taste: Wecker-Overlay → Schlummer (alarmSnoozeMin); sonst Einschlaftimer (snoozeTime), Radio ggf. an. */
 #ifndef ALARM_HW_BTN_STOP_PIN
 #define ALARM_HW_BTN_STOP_PIN -1
 #endif

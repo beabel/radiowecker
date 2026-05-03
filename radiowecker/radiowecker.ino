@@ -18,6 +18,7 @@ void toggleRadio(boolean off, boolean keepAlarmSnoozePending = false, boolean us
 void alarm_beep_start(void);
 void alarm_action_stop(void);
 void alarm_action_snooze(void);
+void startSnooze(void);
 
 static void setup_alarm_hw_buttons(void);
 static void poll_alarm_hw_buttons(void);
@@ -322,9 +323,9 @@ void loop() {
   if ((millis() - lastUpdate) > 1000) {
     lastUpdate = millis();  // Aktualisiere den Zeitstempel
 
-    // Einschlafzeit (Sleep-Timer): Ende → Radio aus
+    // Einschlaftimer (snoozeTime / snoozeTimeEnd), nicht Wecker-Schlummer: Ende → Radio aus
     if (millis() > snoozeTimeEnd && snoozeTimeEnd > 0) {
-      snoozeTimeEnd = 0;  // Setze den Schlummermodus zurück
+      snoozeTimeEnd = 0;  // Einschlaftimer beenden
       toggleRadio(true);  // Schalte das Radio aus
       showRadio();        // Zeige Radio-Status an
     }
@@ -416,11 +417,13 @@ static void poll_alarm_hw_buttons(void) {
     if (snooze_wait_release == 0) {
       if (lv == LOW) {
         if (alarmActionsVisible) {
+          /* Wecker-Schlummer: alarmSnoozeMin → alarmSnoozeUntil (nicht Einschlaftimer) */
           alarm_action_snooze();
-          snooze_wait_release = 1;
         } else {
-          snooze_wait_release = 2;
+          /* Einschlaftimer: snoozeTime → snoozeTimeEnd (wie Web /cmd/startSleep; Radio ggf. an) */
+          startSnooze();
         }
+        snooze_wait_release = 1;
       }
     } else if (lv != LOW) {
       snooze_wait_release = 0;

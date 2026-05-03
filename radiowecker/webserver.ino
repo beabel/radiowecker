@@ -467,9 +467,8 @@ void btnAlarm() {
   server.send(200, "text/plain", "OK");
 }
 
-// Verarbeitet den AJAX-Befehl /cmd/startSleep, um die Schlummerfunktion zu starten
+// Verarbeitet /cmd/startSleep: Einschlaftimer (snoozeTime/snoozeTimeEnd), nicht Wecker-Schlummer
 void startSleep() {
-  // Startet die Schlummerfunktion
   startSnooze();
   // Antwortet mit "OK"
   server.send(200, "text/plain", "OK");
