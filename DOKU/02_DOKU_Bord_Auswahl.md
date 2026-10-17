@@ -10,7 +10,7 @@ Nachdem alle Vorbereitungen abgeschlossen sind, folgt die Anleitung zur Auswahl 
 
    Dies ist das Standard-Board, das für die meisten ESP32-Entwicklungsboards verwendet wird.
 
-### 1.1 Wichtige Board-Optionen (Firmware v5.0.2)
+### 1.1 Wichtige Board-Optionen (Firmware v5.0.7)
 
 Unter **Werkzeuge** zusätzlich prüfen (siehe auch [`README.md`](../README.md)):
 

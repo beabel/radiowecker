@@ -1,6 +1,6 @@
-# Internet-Radiowecker mit Touchscreen · **Version 5.0.6**
+# Internet-Radiowecker mit Touchscreen · **Version 5.0.7**
 
-ESP32-Webradio mit 2,8"-TFT (ILI9341), Touch (XPT2046), Wecker, Wetter, Web-Konfiguration und grafischer Oberfläche auf Basis von **LVGL 9**. Die Firmware meldet sich als **`v5.0.6`** (siehe `RADIOVERSION` in `radiowecker.ino`).
+ESP32-Webradio mit 2,8"-TFT (ILI9341), Touch (XPT2046), Wecker, Wetter, Web-Konfiguration und grafischer Oberfläche auf Basis von **LVGL 9**. Die Firmware meldet sich als **`v5.0.7`** (siehe `RADIOVERSION` in `radiowecker.ino`).
 
 | [:skull: Issues](https://github.com/beabel/radiowecker/issues) | [:speech_balloon: Diskussionen](https://github.com/beabel/radiowecker/discussions) | [:grey_question: Wiki](https://github.com/beabel/radiowecker/wiki) |
 |----------------------------------------------------------------|-----------------------------------------------------------------------------------|----------------------------------------------------------------------|
@@ -15,13 +15,22 @@ Was sich gegenüber den **älteren Releases** (z. B. der **4.x-Linie** wie [v4.0
 
 ---
 
+## Neu in 5.0.7
+
+- **WLAN in Mesh-/Repeater-Netzen:** Beim Verbinden werden alle Kanäle gescannt und der Access Point mit dem stärksten Signal gewählt (statt des ersten gefundenen). BSSID, Kanal und RSSI erscheinen in der seriellen Konsole.
+- **Wecker:** Schlummer und Sleep-Timer sind getrennt.
+- Standard-Senderliste aufgefrischt, jQuery/jQuery UI aktualisiert.
+- Referenzstände: ESP32-Core 3.3.12, LVGL 9.6.0, Adafruit_ILI9341 1.6.4. `lv_conf.h` wieder nach `libraries/lvgl/src/` kopieren (nur Kommentare geändert).
+
+---
+
 ## Änderungen gegenüber der Version 4.x
 
-Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafruit GFX** auf dem ILI9341 sowie die Bibliothek **TouchEvent** zur Touch-Auswertung. **Ab der 5.x-Linie** (aktueller Stand **v5.0.6**) ersetzt **LVGL 9** die **Hauptoberfläche** (Widgets, Themes, Animationen). Darunter liegt weiterhin derselbe **ILI9341**-Treiber: LVGL schreibt in einen Puffer, der auf das TFT gezeichnet wird; für wenige Zustände (z. B. WLAN-Verbindungsdialog vor dem Start von LVGL) werden weiterhin **Adafruit_ILI9341**-Aufrufe genutzt.
+Die Vorgängerversionen nutzten überwiegend **direktes Zeichnen** mit **Adafruit GFX** auf dem ILI9341 sowie die Bibliothek **TouchEvent** zur Touch-Auswertung. **Ab der 5.x-Linie** (aktueller Stand **v5.0.7**) ersetzt **LVGL 9** die **Hauptoberfläche** (Widgets, Themes, Animationen). Darunter liegt weiterhin derselbe **ILI9341**-Treiber: LVGL schreibt in einen Puffer, der auf das TFT gezeichnet wird; für wenige Zustände (z. B. WLAN-Verbindungsdialog vor dem Start von LVGL) werden weiterhin **Adafruit_ILI9341**-Aufrufe genutzt.
 
 ### Flash, Partition und neue Dateien
 
-- **Partition Scheme:** Früher reichte oft das **Default-Layout mit SPIFFS** nicht mehr, sobald Core und Sketch wuchsen. **Ab 5.x** (Stand **5.0.6**) wird **„No FS 4MB“** empfohlen: möglichst **große App-Partition**, kein großes Dateisystem — ausreichend Platz für LVGL, Web- und Audio-Code.  
+- **Partition Scheme:** Früher reichte oft das **Default-Layout mit SPIFFS** nicht mehr, sobald Core und Sketch wuchsen. **Ab 5.x** (Stand **5.0.7**) wird **„No FS 4MB“** empfohlen: möglichst **große App-Partition**, kein großes Dateisystem — ausreichend Platz für LVGL, Web- und Audio-Code.  
 - **LVGL-Konfiguration:** Zusätzlich zum Sketch ist **`lv_conf.h`** identisch nach **`libraries/lvgl/src/lv_conf.h`** zu kopieren (siehe Abschnitt unten). Ohne diese Kopie fehlen oft Fonts/Features beim Bau der Library.  
 
 ### Sonstiges im Code
@@ -68,9 +77,9 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 |Radio Version|Boardverwalter|Partition|
 | ------------- | ------------- | ------------- |
 |<= 4.0.3|2.0.17|default|
-|>= 5.x|3.3.11|No FS 4MB|
+|>= 5.x|3.3.12|No FS 4MB|
 
-### Bibliotheken (Referenzstände für v5.0.6)
+### Bibliotheken (Referenzstände für v5.0.7)
 
 1. Gehe zu `Sketch` > `Include Library` > `Library Manager`.
 2. Suche nach **Bibliothek Name**.
@@ -81,12 +90,12 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 
 | Bibliothek |Radio Version <= v4.0.3 |Radio Version >= v5.x |
 |------------|-----------|--------|
-| Adafruit_ILI9341 | 1.6.2 | 1.6.3 |
+| Adafruit_ILI9341 | 1.6.2 | 1.6.4 |
 | Adafruit_GFX | 1.12.1 | 1.12.6 |
 | XPT2046_Touchscreen | 1.4 | 1.4 |
 | ESP8266Audio by Earle F. Philhower | 2.0.0 | 2.4.1 |
 | Touchevent by Gerald-Lechner | 1.3.0 | :x: |
-| lvgl | :x: | 9.5.0 |
+| lvgl | :x: | 9.6.0 |
 
 ---
 
@@ -143,6 +152,8 @@ Die **Uhrzeit-Schrift** (`lv_font_clock_digits.c`) liegt im Sketch-Ordner;
 3. Browser öffnen: **`http://192.168.4.1`**  
 4. Heim-WLAN auswählen, Passwort eintragen, speichern. Das Gerät startet neu und verbindet sich mit dem gewählten Netz.
 
+**Mesh-/Repeater-Netze:** Bei mehreren Access Points mit gleicher SSID scannt das Radio beim Verbinden alle Kanäle und wählt den AP mit dem **stärksten Signal**. Ein Wechsel im laufenden Betrieb (Roaming) findet nicht statt, erst beim nächsten Verbindungsaufbau.
+
 **Fehlerbehebung:** Keine Verbindung nach dem Speichern → erneut Konfigurationsmodus (wie in früheren Releases: ggf. Reset/Anleitung im Wiki oder in `DOKU/05_Bedienungsanleitung.md`).
 
 ---
@@ -189,7 +200,7 @@ Die **Uhrzeit-Schrift** (`lv_font_clock_digits.c`) liegt im Sketch-Ordner;
 |-----------------|---------------|
 | `radiowecker.ino` | Setup, Loop, Zeit, Alarmlogik |
 | `tft_display.ino` | LVGL-UI, Seiten, Uhr |
-| `lv_font_clock_digits.c` | Minimale Bitmap-Schrift für die Uhrzeit (generierbar mit `tools/gen_clock_font.ps1` / `.py`) |
+| `lv_font_clock_digits.c` | Minimale Bitmap-Schrift für die Uhrzeit |
 | `audio.ino` | Stream, Decoder, I2S |
 | `wlan.ino` | WiFi, Verbindung |
 | `webserver.ino` | HTTP, API, `index.h` |
@@ -199,9 +210,9 @@ Die **Uhrzeit-Schrift** (`lv_font_clock_digits.c`) liegt im Sketch-Ordner;
 
 ---
 
-## English summary (v5.0.6)
+## English summary (v5.0.7)
 
-- **ESP32** internet clock radio with **ILI9341** + **XPT2046** (library **XPT2046_Touchscreen** required for touch input to LVGL), **LVGL 9.5**, MP3 streams via **ESP8266Audio**, alarms, weather, and a built-in **web UI**. The old **TouchEvent** library is not used.  
+- **ESP32** internet clock radio with **ILI9341** + **XPT2046** (library **XPT2046_Touchscreen** required for touch input to LVGL), **LVGL 9.6**, MP3 streams via **ESP8266Audio**, alarms, weather, and a built-in **web UI**. The old **TouchEvent** library is not used.  
 - **Arduino IDE 2.x**; install libraries listed above.  
 - Set **Partition Scheme** to **No FS 4MB** (large app partition).  
 - Copy **`radiowecker/lv_conf.h`** to **`Arduino/libraries/lvgl/src/lv_conf.h`** (must stay in sync). Keep **`build_opt.h`** and **`lv_font_latin_supp_14.c`** in the sketch folder.  
@@ -294,5 +305,5 @@ Die **Uhrzeit-Schrift** (`lv_font_clock_digits.c`) liegt im Sketch-Ordner;
 
 ---
 
-**Radiowecker · Version 5.0.6**
+**Radiowecker · Version 5.0.7**
 
