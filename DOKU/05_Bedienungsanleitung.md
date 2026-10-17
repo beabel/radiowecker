@@ -5,7 +5,7 @@
 1. **Gerät einschalten**  
    Nach dem ersten Start des DIY-Webradios oder wenn das Gerät kein bekanntes WLAN-Netzwerk findet, zeigt das Display die Meldung:
 
-![Display: Startseite (Beispiel, Radio aus, Wetter sichtbar)](../screenshot/display_startseite_radio_off_weather_on.jpg)
+![Display: Startseite (Beispiel, Radio aus, Wetter sichtbar)](../screenshot/display_startseite_radio_off_weather_on.png)
 
 2. **Verbindung mit dem Konfigurations-WLAN herstellen**  
    Auf deinem Smartphone, Tablet oder Computer öffnest du die WLAN-Einstellungen und suchst nach verfügbaren Netzwerken. Wähle das Netzwerk mit der SSID (Netzwerkname) `radioweckerconf` aus, um dich mit dem Radiowecker zu verbinden. Dies ist ein temporäres Netzwerk, das das Radio erstellt, um die Konfiguration zu ermöglichen.
@@ -46,7 +46,7 @@ Weitere Bereiche derselben Webseite (Navigation je nach Aufbau der HTML-Oberflä
 5. **Neustart des Geräts**  
    Nach der erfolgreichen Konfiguration wird der Radiowecker das temporäre Netzwerk `radioweckerconf` beenden und sich mit dem neu konfigurierten WLAN-Netzwerk verbinden. Das Radio sollte nun betriebsbereit sein und du kannst Sender auswählen und abspielen.
 
-![Display: Startseite mit laufendem Radio (Beispiel nach Einrichtung)](../screenshot/display_startseite_radio_on.jpg)
+![Display: Startseite mit laufendem Radio (Beispiel nach Einrichtung)](../screenshot/display_startseite_radio_on.png)
 
 ## Firmware-Update über die Web-Oberfläche
 
@@ -84,7 +84,7 @@ Schematische Raster-Übersichten (ohne Fotos): [`Main_Screen_Raster.svg`](Main_S
    - **Aktuelle Uhrzeit**: Die aktuelle Uhrzeit wird prominent angezeigt, damit sie leicht ablesbar ist.
    - **Aktuelles Datum**: Unter der Uhrzeit wird das aktuelle Datum angezeigt, damit du sowohl die Zeit als auch das Datum im Blick hast.
 
-![Display: Startseite, Radio eingeschaltet](../screenshot/display_startseite_radio_on.jpg)
+![Display: Startseite, Radio eingeschaltet](../screenshot/display_startseite_radio_on.png)
 
 3. **Lautstärkeregler (unten im Display):**
    - Ein Schieberegler für die Lautstärke befindet sich am unteren Rand des Displays. Du kannst den Regler nach links oder rechts schieben, um die Lautstärke des Webradios anzupassen.
@@ -93,13 +93,13 @@ Schematische Raster-Übersichten (ohne Fotos): [`Main_Screen_Raster.svg`](Main_S
    - **Sendername und Titel**: Wenn ein Sender gerade läuft, werden hier die Informationen des Senders und des Titels angezeigt.
    - **Senderwechsel (ab Firmware v5.0.2, LVGL):** Vor/Zurück erfolgt über **Buttons im Datumsbereich** unter der Uhr (nicht mehr über schmale seitliche Touch-Streifen wie in älteren Versionen).
 
-![Display: Startseite, Radio aus, Wetter sichtbar](../screenshot/display_startseite_radio_off_weather_on.jpg)
+![Display: Startseite, Radio aus, Wetter sichtbar](../screenshot/display_startseite_radio_off_weather_on.png)
 
 5. **Einstellungs-, Wecker- und Favoriten-Seiten:**
    - **Unterseiten:** Wechsel über die **LVGL-Oberfläche** (Touch im mittleren Bereich / Fußzeilen-Navigation; Details in [`README.md`](../README.md) Abschnitt „Bedienung: Touch-Display“).
 
-![Display: Einstellungsseite](../screenshot/display_settingspage.jpg)
+![Display: Einstellungsseite](../screenshot/display_settingspage.png)
 
-![Display: Wecker-Seite](../screenshot/display_alarmpage.jpg)
+![Display: Wecker-Seite](../screenshot/display_alarmpage.png)
 
-![Display: Favoritenseite](../screenshot/display_favoritenseite.jpg)
+![Display: Favoritenseite](../screenshot/display_favoritenseite.png)

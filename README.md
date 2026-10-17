@@ -238,39 +238,35 @@ Die **Uhrzeit-Schrift** (`lv_font_clock_digits.c`) liegt im Sketch-Ordner;
 
 **Startseite, Radio an**
 
-![Startseite Radio an](screenshot/display_startseite_radio_on.jpg)
+![Startseite Radio an](screenshot/display_startseite_radio_on.png)
 
-**Startseite, Farben angepasst**
+**Einstellungen, russische Sprache (Kyrillisch)**
 
-![Startseite, Farben angepasst](screenshot/display_color_changed.jpg)
-
-**Startseite, Kyrilic **
-
-![Startseite, Kyrilic](screenshot/display_cyrilic.jpg)
+![Einstellungen, Kyrillisch](screenshot/display_cyrilic.png)
 
 **Startseite, Radio aus, Wetter**
 
-![Startseite Radio aus, Wetter](screenshot/display_startseite_radio_off_weather_on.jpg)
+![Startseite Radio aus, Wetter](screenshot/display_startseite_radio_off_weather_on.png)
 
-**Startseite, Wecker/Alarm aktiv**
+**Wecker klingelt (Stopp / Schlummer)**
 
-![Startseite, Wecker/Alarm aktiv](screenshot/display_alarm_schlummer.jpg)
+![Startseite, Wecker/Alarm aktiv](screenshot/display_alarm_schlummer.png)
 
 **Favoriten**
 
-![Favoriten](screenshot/display_favoritenseite.jpg)
+![Favoriten](screenshot/display_favoritenseite.png)
 
 **Einstellungen**
 
-![Einstellungen](screenshot/display_settingspage.jpg)
+![Einstellungen](screenshot/display_settingspage.png)
 
 **Wecker**
 
-![Wecker](screenshot/display_alarmpage.jpg)
+![Wecker](screenshot/display_alarmpage.png)
 
 **Wecker Seite 2**
 
-![Wecker](screenshot/display_alarmpage_2.jpg)
+![Wecker](screenshot/display_alarmpage_2.png)
 
 ### Webseite (HTML im Browser)
 
