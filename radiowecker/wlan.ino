@@ -24,6 +24,10 @@ boolean initWiFi(const char *wifiSsid, const char *wifiPkey) {
 
   // Wenn eine SSID angegeben wurde, versuche eine Verbindung herzustellen
   if (wifiSsid && wifiSsid[0] != '\0') {
+    // Mesh/Repeater: Standard ist FAST_SCAN (erster gefundener AP gewinnt). Stattdessen alle Kanäle
+    // scannen und den AP mit dem stärksten Signal wählen (greift auch bei Auto-Reconnect).
+    WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
+    WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
     WiFi.begin(wifiSsid, wifiPkey ? wifiPkey : "");
     uint8_t cnt = 0;                         // Zähler für die Anzahl der Versuche
     // Versuche bis zu 20 Mal, sich zu verbinden
@@ -37,6 +41,7 @@ boolean initWiFi(const char *wifiSsid, const char *wifiPkey) {
     if (WiFi.status() == WL_CONNECTED) {
       RADIO_SERIAL(Serial.print(i18n_str(I18N_IP_ADDRESS)));    // Debug-Ausgabe der IP-Adresse
       RADIO_SERIAL(Serial.println(WiFi.localIP()));  // Gibt die lokale IP-Adresse auf der Konsole aus
+      RADIO_SERIAL(Serial.printf("BSSID %s, channel %d, RSSI %d dBm\n", WiFi.BSSIDstr().c_str(), WiFi.channel(), WiFi.RSSI()));
       connected = true;                // Setzt den Verbindungsstatus auf true
       // WiFi-Stromsparen kann I2S-/Stream-Timing stören (stille oder ruckelige Wiedergabe).
       WiFi.setSleep(false);

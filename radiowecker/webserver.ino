@@ -93,7 +93,8 @@ void handleRoot() {
     });
 
     // Speichern der SSID in den Einstellungen, falls vorhanden
-    if (server.hasArg("conf_ssid")) {
+    // Leere SSID ignorieren, damit ein bloßes "Neustart" die gespeicherte SSID nicht löscht
+    if (server.hasArg("conf_ssid") && server.arg("conf_ssid").length() > 0) {
       strlcpy(ssid, server.arg("conf_ssid").c_str(), sizeof(ssid));
       pref.putString("ssid", ssid);
       RADIO_SERIAL(Serial.println(ssid));
@@ -467,9 +468,8 @@ void btnAlarm() {
   server.send(200, "text/plain", "OK");
 }
 
-// Verarbeitet den AJAX-Befehl /cmd/startSleep, um die Schlummerfunktion zu starten
+// Verarbeitet /cmd/startSleep: Einschlaftimer (snoozeTime/snoozeTimeEnd), nicht Wecker-Schlummer
 void startSleep() {
-  // Startet die Schlummerfunktion
   startSnooze();
   // Antwortet mit "OK"
   server.send(200, "text/plain", "OK");

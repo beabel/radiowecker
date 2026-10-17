@@ -283,6 +283,8 @@ static uint32_t lvgl_tick_get_cb(void) {
 static void touch_read(lv_indev_t *indev, lv_indev_data_t *data) {
   (void)indev;
   if (touch.touched()) {
+    /* Timeout → Startseite: 10 s ab letztem Touch (nicht nur ab Seitenwechsel). */
+    if (!startpage) start_conf = millis();
     TS_Point p = touch.getPoint();
     lv_coord_t x, y;
     ts_map(p.x, p.y, &x, &y);
@@ -2237,6 +2239,7 @@ void alarm_action_stop(void) {
   toggleRadio(true, false);
 }
 
+/* Wecker-Schlummer (nach Wecken): Dauer alarmSnoozeMin, Ende alarmSnoozeUntil — unabhängig vom Einschlaftimer. */
 void alarm_action_snooze(void) {
   if (alarmSnoozeMin == 0) return;
   alarmSnoozeUntil = millis() + (uint32_t)alarmSnoozeMin * 60000UL;
@@ -2256,9 +2259,10 @@ void toggleAlarm(void) {
   showStartPage();
 }
 
+/* Einschlaftimer (Sleep): Dauer snoozeTime, Ende snoozeTimeEnd — nicht Wecker-Schlummer (alarmSnooze*). */
 void startSnooze(void) {
-  /* Läuft bereits: nur Timer; Ende → toggleRadio(true) im Hauptschleifen-Timer.
-     Aus: einschalten, dann Timer; Ende → wieder aus. */
+  /* Läuft bereits: nur Endzeit; Ablauf → toggleRadio(true) in radiowecker.ino.
+     Radio aus: einschalten, dann Timer; Ablauf → wieder aus. */
   if (radio || alarmBeepActive) {
     snoozeTimeEnd = millis() + (uint32_t)snoozeTime * 60000UL;
     ui_refresh_footer_icons();

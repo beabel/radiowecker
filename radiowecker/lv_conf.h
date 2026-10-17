@@ -1,8 +1,8 @@
 /**
  * @file lv_conf.h
- * LVGL 9.5.x — Radiowecker (ESP32 + ILI9341)
+ * LVGL 9.6.x — Radiowecker (ESP32 + ILI9341)
  *
- * Arduino IDE: lvgl-Bibliothek 9.5.x installieren; lv_conf.h liegt im Sketch-Ordner,
+ * Arduino IDE: lvgl-Bibliothek 9.6.x installieren; lv_conf.h liegt im Sketch-Ordner,
  * LV_CONF_INCLUDE_SIMPLE ist in der Library üblich gesetzt.
  *
  * App-Partition groß genug wählen (LVGL 9 + Radio): z. B. „Minimal SPIFFS (1.9MB APP…)“
@@ -25,7 +25,7 @@
  */
 
 /* clang-format off */
-#if 1 /* Radiowecker: LVGL 9.5.x aktiv */
+#if 1 /* Radiowecker: LVGL 9.6.x aktiv */
 
 #ifndef LV_CONF_H
 #define LV_CONF_H
