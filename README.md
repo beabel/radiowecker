@@ -18,8 +18,10 @@ Was sich gegenüber den **älteren Releases** (z. B. der **4.x-Linie** wie [v4.0
 ## Neu in 5.0.7
 
 - **WLAN in Mesh-/Repeater-Netzen:** Beim Verbinden werden alle Kanäle gescannt und der Access Point mit dem stärksten Signal gewählt (statt des ersten gefundenen). BSSID, Kanal und RSSI erscheinen in der seriellen Konsole.
-- **Wecker:** Schlummer und Sleep-Timer sind getrennt.
-- Standard-Senderliste aufgefrischt, jQuery/jQuery UI aktualisiert.
+- **Wecker:** Alarm-Schlummer und Sleep-Timer sind sauber getrennt. Die Hardware-Taste löst den Alarm-Schlummer aus, solange das Alarm-Overlay sichtbar ist, sonst den Sleep-Timer.
+- **Bedienung:** Die 10-s-Rückkehr zur Startseite zählt ab der letzten Berührung, nicht nur ab dem Seitenwechsel (kein vorzeitiges Zurückspringen mehr).
+- **Senderliste:** Zwei neue Standardsender (Idobi Radio, DLF Kultur), jetzt 28 statt 26.
+- **Web-Oberfläche:** neues responsives Design (auch die WLAN-Konfigurationsseite im Access-Point-Modus, komplett ohne externe Dateien, da dort kein Internet vorhanden ist; eine leere SSID überschreibt die gespeicherte nicht mehr) (Handy bis Desktop, automatisch heller/dunkler Modus, größere Bedienelemente), Meldungen als Toast statt Pop-up, Status-Abfrage pausiert bei verstecktem Tab bzw. anderer Seite. jQuery 4.0.0 und jQuery UI 1.14.2 (vorher 3.7.1 / 1.13.2).
 - Referenzstände: ESP32-Core 3.3.12, LVGL 9.6.0, Adafruit_ILI9341 1.6.4. `lv_conf.h` wieder nach `libraries/lvgl/src/` kopieren (nur Kommentare geändert).
 
 ---
@@ -272,30 +274,56 @@ Die **Uhrzeit-Schrift** (`lv_font_clock_digits.c`) liegt im Sketch-Ordner;
 
 ### Webseite (HTML im Browser)
 
-**Startseite**
+Die Oberfläche folgt automatisch dem hellen oder dunklen Modus des Geräts (links hell, rechts dunkel).
 
-![Web Startseite](screenshot/webseite_1_startseite.png)
+**Startseite (Player)**
+
+<p>
+<img src="screenshot/web_1_player_light.png" alt="Web Player (hell)" width="260">
+<img src="screenshot/web_1_player_dark.png" alt="Web Player (dunkel)" width="260">
+</p>
 
 **Wecker**
 
-![Web Wecker](screenshot/webseite_2_alarmpage.png)
-
+<p>
+<img src="screenshot/web_2_wecker_light.png" alt="Web Wecker (hell)" width="260">
+<img src="screenshot/web_2_wecker_dark.png" alt="Web Wecker (dunkel)" width="260">
+</p>
 
 **Radiosender**
 
-![Web Radiosender](screenshot/webseite_3_radiestations.png)
+<p>
+<img src="screenshot/web_3_sender_light.png" alt="Web Radiosender (hell)" width="260">
+<img src="screenshot/web_3_sender_dark.png" alt="Web Radiosender (dunkel)" width="260">
+</p>
 
-**Slider + Color**
+**Anzeige (Helligkeit, Farben)**
 
-![Slider + Color](screenshot/webseite_6_slider_color.png)
+<p>
+<img src="screenshot/web_4_anzeige_light.png" alt="Web Anzeige (hell)" width="260">
+<img src="screenshot/web_4_anzeige_dark.png" alt="Web Anzeige (dunkel)" width="260">
+</p>
 
 **Einstellungen**
 
-![Web Einstellungen](screenshot/webseite_4_settings.png)
+<p>
+<img src="screenshot/web_5_einstellungen_light.png" alt="Web Einstellungen (hell)" width="260">
+<img src="screenshot/web_5_einstellungen_dark.png" alt="Web Einstellungen (dunkel)" width="260">
+</p>
 
 **Info**
 
-![Web Info](screenshot/webseite_5_info.png)
+<p>
+<img src="screenshot/web_6_info_light.png" alt="Web Info (hell)" width="260">
+<img src="screenshot/web_6_info_dark.png" alt="Web Info (dunkel)" width="260">
+</p>
+
+**WLAN-Konfiguration im Access-Point-Modus (`http://192.168.4.1`)**
+
+<p>
+<img src="screenshot/web_7_ap_config_light.png" alt="Web WLAN-Konfiguration (hell)" width="240">
+<img src="screenshot/web_7_ap_config_dark.png" alt="Web WLAN-Konfiguration (dunkel)" width="240">
+</p>
 
 ---
 

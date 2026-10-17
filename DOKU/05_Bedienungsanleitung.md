@@ -13,20 +13,35 @@
 3. **Zugriff auf das Einstellungsmenü**  
    Sobald die Verbindung hergestellt ist, öffne einen Webbrowser (z. B. Chrome, Firefox, Safari) und gib in der Adressleiste die IP-Adresse `192.168.4.1` ein. Diese IP-Adresse führt dich zur Einstellungsseite des Radios.
 
-![Webseite (HTML): Startseite](../screenshot/webseite_1_startseite.png)
+<p>
+<img src="../screenshot/web_7_ap_config_light.png" alt="WLAN-Konfiguration (hell)" width="240">
+<img src="../screenshot/web_7_ap_config_dark.png" alt="WLAN-Konfiguration (dunkel)" width="240">
+</p>
 
 4. **WLAN-Konfiguration**  
    Auf der Einstellungsseite wirst du aufgefordert, das WLAN-Netzwerk auszuwählen, mit dem das Radio dauerhaft verbunden werden soll. Wähle dein gewünschtes WLAN-Netzwerk aus und gib das entsprechende Passwort ein. Speichere die Einstellungen.
 
 Weitere Bereiche derselben Webseite (Navigation je nach Aufbau der HTML-Oberfläche):
 
-![Webseite (HTML): Wecker](../screenshot/webseite_2_alarmpage.png)
+<p>
+<img src="../screenshot/web_2_wecker_light.png" alt="Webseite: Wecker (hell)" width="260">
+<img src="../screenshot/web_2_wecker_dark.png" alt="Webseite: Wecker (dunkel)" width="260">
+</p>
 
-![Webseite (HTML): Radiosender](../screenshot/webseite_3_radiestations.png)
+<p>
+<img src="../screenshot/web_3_sender_light.png" alt="Webseite: Radiosender (hell)" width="260">
+<img src="../screenshot/web_3_sender_dark.png" alt="Webseite: Radiosender (dunkel)" width="260">
+</p>
 
-![Webseite (HTML): Einstellungen](../screenshot/webseite_4_settings.png)
+<p>
+<img src="../screenshot/web_5_einstellungen_light.png" alt="Webseite: Einstellungen (hell)" width="260">
+<img src="../screenshot/web_5_einstellungen_dark.png" alt="Webseite: Einstellungen (dunkel)" width="260">
+</p>
 
-![Webseite (HTML): Info](../screenshot/webseite_5_info.png)
+<p>
+<img src="../screenshot/web_6_info_light.png" alt="Webseite: Info (hell)" width="260">
+<img src="../screenshot/web_6_info_dark.png" alt="Webseite: Info (dunkel)" width="260">
+</p>
 
 5. **Neustart des Geräts**  
    Nach der erfolgreichen Konfiguration wird der Radiowecker das temporäre Netzwerk `radioweckerconf` beenden und sich mit dem neu konfigurierten WLAN-Netzwerk verbinden. Das Radio sollte nun betriebsbereit sein und du kannst Sender auswählen und abspielen.
