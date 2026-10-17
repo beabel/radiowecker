@@ -50,7 +50,7 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 
 ### Arduino IDE
 
-- **Arduino IDE 2.3.8** (oder kompatible 2.x-Version)
+- **Arduino IDE 2.3.10** (oder kompatible 2.x-Version)
 
 ### ESP32-Boardsupport
 
@@ -68,7 +68,7 @@ Wenn du von einem **älteren Stand** migrierst: Sketch komplett ersetzen, Biblio
 |Radio Version|Boardverwalter|Partition|
 | ------------- | ------------- | ------------- |
 |<= 4.0.3|2.0.17|default|
-|>= 5.x|3.3.8|No FS 4MB|
+|>= 5.x|3.3.11|No FS 4MB|
 
 ### Bibliotheken (Referenzstände für v5.0.6)
 
