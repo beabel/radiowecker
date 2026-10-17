@@ -7,7 +7,8 @@ const char MAIN_page[] PROGMEM = R"=====(
 <html>
 <head>
 <meta http-equiv='content-type' content='text/html; charset=UTF-8'>
-<meta name='viewport' content='width=320' />
+<meta name='viewport' content='width=device-width, initial-scale=1' />
+<meta name='color-scheme' content='light dark' />
 <script src="https://code.jquery.com/jquery-4.0.0.min.js"></script>
 <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.2/themes/base/jquery-ui.min.css">
 <script src="https://code.jquery.com/ui/1.14.2/jquery-ui.min.js"></script>
@@ -22,6 +23,37 @@ var I18N = {
  es: {lang:"Idioma",title:"Radio despertador web",w1:"Alarma 1:",w2:"Alarma 2:",save:"Guardar",cancel:"Deshacer",list:"Lista:",name:"Nombre:",url:"URL:",use:"Usar:",pos:"Posición:",btest:"Probar",bchange:"Aplicar",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Tiempo",bsave:"Guardar",brestart:"Reiniciar",brestore:"Restablecer lista de emisoras",lbl_ver:"Versión:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Modelo de chip:",fh:"Error al obtener los datos.",fe:"Error al cargar los datos.",gh_err:"Error al comprobar actualizaciones.",dow_mo:"Lu",dow_di:"Ma",dow_mi:"Mi",dow_do:"Ju",dow_fr:"Vi",dow_sa:"Sá",dow_so:"Do",testend:"Pulse OK para finalizar la prueba",ota_ask:"Instalar firmware",ota_rel:"El release de GitHub debe incluir el archivo:",ota_free:"Espacio OTA libre (aprox.):",ota_stop:"Se detiene la reproducción;",ota_iprog:"el progreso se muestra en el dispositivo.",ota_reboot:"Luego el dispositivo se reinicia.",ota_web:"Esta página perderá la conexión (esperado).",ota_go:"¿Continuar?",gh_new:"Nueva versión:",gh_inst:"Instalar vía web…",gh_rel:"Página del release",gh_newer:"Tiene una versión más reciente",gh_than:"que el último release oficial",gh_okv:"Ya tiene la última versión",heap_u:"Usado:",heap_f:"Libre:",heap_t:"Montón total:",heap_m:"bloque máx.:",fw_l:"Firmware:",fw_v:"de",fw_u:"libre para el próximo update:",fu:"Última actualización:",fl:"Creado con",sp:"Patrocinar el proyecto:",fgh:"Error al obtener GitHub.",tab_disp:"Pantalla",lbl_bright:"Brillo (%):",hint_bright:"0 % = luz ambiente (LDR) si está instalado.",lbl_sleep:"Temporizador sueño (min):",lbl_asnooze:"Snooze alarma (min):",hint_asnooze:"0 = snooze desactivado.",lbl_alarmgain:"Volumen alarma (%):",lbl_alarmwake:"Tono alarma:",wake_radio:"Radio",wake_beep:"Pitido",colors_title:"Colores pantalla inicio",colors_hint:"Se aplican al instante. Fábrica = predeterminado.",colors_save:"Guardar",colors_reset:"Colores de fábrica",c_bg:"Fondo",c_ip:"Línea IP",c_sleep:"Icono sueño",c_alarm:"Alarma (on)",c_sFill:"Volumen relleno",c_sBg:"Volumen pista",c_sBd:"Volumen borde",c_date:"Fecha",c_time:"Hora",c_boxBg:"Cajas clima/radio",c_boxBd:"Borde caja",c_stName:"Emisora",c_stTitle:"Título y clima",help_ldr:"Con sensor de luz (LDR): más ajustes en el archivo 00_pin_settings.h de la carpeta radiowecker. Sin sensor, basta este control.",help_snooze_hw:"Los minutos valen para repetir alarma en pantalla o aquí. Botones extra (parar, repetir): configúralos en 00_pin_settings.h. Sin botones extra, no hace falta tocar ese archivo.",help_tip_aria:"Mostrar u ocultar la nota"},
  nl: {lang:"Taal",title:"Webklokradio",w1:"Wekker 1:",w2:"Wekker 2:",save:"Opslaan",cancel:"Ongedaan maken",list:"Lijst:",name:"Naam:",url:"URL:",use:"Gebruik:",pos:"Positie:",btest:"Test",bchange:"Toepassen",acc_wlan:"Wi‑Fi",acc_ntp:"NTP",acc_wx:"Weer",bsave:"Opslaan",brestart:"Herstarten",brestore:"Zenderlijst resetten",lbl_ver:"Versie:",lbl_heap:"HEAP:",lbl_sk:"SKETCH:",lbl_chip:"Chipmodel:",fh:"Gegevens ophalen mislukt.",fe:"Laden mislukt.",gh_err:"Updatecontrole mislukt.",dow_mo:"Ma",dow_di:"Di",dow_mi:"Wo",dow_do:"Do",dow_fr:"Vr",dow_sa:"Za",dow_so:"Zo",testend:"Druk op OK om de test te beëindigen",ota_ask:"Firmware installeren",ota_rel:"De GitHub-release moet het bestand bevatten:",ota_free:"Vrij OTA-blok (ca.):",ota_stop:"Afspelen stopt;",ota_iprog:"voortgang op het apparaat.",ota_reboot:"Daarna start het apparaat opnieuw.",ota_web:"Deze pagina verliest de verbinding (verwacht).",ota_go:"Doorgaan?",gh_new:"Nieuwe versie:",gh_inst:"Installeren via web…",gh_rel:"Releasepagina",gh_newer:"U heeft een nieuwere versie",gh_than:"dan de laatste officiële release",gh_okv:"U heeft al de nieuwste versie",heap_u:"Bezet:",heap_f:"Vrij:",heap_t:"Heap totaal:",heap_m:"max. blok:",fw_l:"Firmware:",fw_v:"van",fw_u:"vrij voor volgende update:",fu:"Laatste update:",fl:"Gemaakt met",sp:"Project steunen:",fgh:"GitHub-info ophalen mislukt.",tab_disp:"Scherm",lbl_bright:"Helderheid (%):",hint_bright:"0 % = omgevingslicht (LDR) indien aanwezig.",lbl_sleep:"Slaaptimer (min):",lbl_asnooze:"Alarm-snooze (min):",hint_asnooze:"0 = snooze uit.",lbl_alarmgain:"Wekkervolume (%) :",lbl_alarmwake:"Wekgeluid:",wake_radio:"Radio",wake_beep:"Piep",colors_title:"Kleuren startscherm",colors_hint:"Meteen op het apparaat. Fabriek = standaard.",colors_save:"Opslaan",colors_reset:"Fabriekskleuren",c_bg:"Achtergrond",c_ip:"IP-regel",c_sleep:"Slaap-icoon",c_alarm:"Wekker (aan)",c_sFill:"Volume vulling",c_sBg:"Volume spoor",c_sBd:"Volume rand",c_date:"Datum",c_time:"Tijd",c_boxBg:"Weer/radio-vakken",c_boxBd:"Vakrand",c_stName:"Zendernaam",c_stTitle:"Titel & weer",help_ldr:"Met lichtsensor (LDR): extra instellingen in het bestand 00_pin_settings.h in de map radiowecker. Zonder sensor volstaat deze schuifbalk.",help_snooze_hw:"De minuten gelden voor sluimeren op het scherm of hier. Optionele extra knoppen (stop, sluimeren): in 00_pin_settings.h in- of uitschakelen. Zonder extra knoppen hoef je dat bestand niet aan te passen.",help_tip_aria:"Tip tonen of verbergen"}
 };
+var toastTimer = null;
+function toast(msg, isErr) {
+  var $t = $("#toast");
+  $t.text((isErr ? "⚠ " : "✓ ") + msg).toggleClass("err", !!isErr).addClass("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { $t.removeClass("show"); }, isErr ? 6000 : 3500);
+}
+/* Polling: selbstverkettendes setTimeout (kein Aufstauen), pausiert bei verstecktem Tab */
+var pollers = {};
+function stopPoll(name) {
+  var p = pollers[name];
+  if (p) { p.on = false; clearTimeout(p.t); delete pollers[name]; }
+}
+function startPoll(name, fn, ms) {
+  stopPoll(name);
+  var p = { on: true, t: null };
+  pollers[name] = p;
+  (function tick() {
+    if (!p.on) return;
+    var next = function() { if (p.on) p.t = setTimeout(tick, ms); };
+    if (document.hidden) { next(); return; }
+    var r = fn();
+    if (r && r.always) r.always(next); else next();
+  })();
+}
+function syncPolling(href) {
+  stopPoll("status");
+  stopPoll("heap");
+  if (href === "#player" || href === "#wecker") startPoll("status", updateCurrentStatus, 3000);
+  if (href === "#info") startPoll("heap", refreshHeapStats, HEAP_POLL_INTERVAL_MS);
+}
 function tr(k) { var o = I18N[CURRENT_UI_LANG] || I18N.de; if (o[k] !== undefined) return o[k]; return (I18N.de[k] !== undefined) ? I18N.de[k] : k; }
 function applyWebLang(code) {
   if (!I18N[code]) code = "de";
@@ -46,7 +78,19 @@ function applyWebLang(code) {
   updateGitHubInfo();
 }
 $(document).ready(function() {
-  $("#tabs").tabs();
+  $("#tabs").tabs({
+    activate: function(event, ui) {
+      var href = ui.newTab.find("a").attr("href");
+      syncPolling(href);
+      if (href === "#display") {
+        loadDisplaySettings();
+        loadStartColors();
+      }
+      if (href === "#wecker") {
+        loadDisplaySettings();
+      }
+    }
+  });
   $( "#accordion" ).accordion({
     heightStyle: "content"
   });
@@ -102,53 +146,9 @@ $(document).ready(function() {
     $.get("/cmd/setAlarmWake", { value: $(this).val() });
   });
 
-  // Zeugs um die aktuellen Daten des ESP regelmäßig zu erhalten um halbwegs sinvolle Anzeigen zu sehen
-  $("#tabs").tabs({
-    activate: function(event, ui) {
-      var href = ui.newTab.find("a").attr("href");
-      var prevPl = ui.oldPanel.data("intervalId");
-      if (prevPl) clearInterval(prevPl);
-      ui.oldPanel.removeData("intervalId");
-      var prevWk = ui.oldPanel.data("weckerPollId");
-      if (prevWk) clearInterval(prevWk);
-      ui.oldPanel.removeData("weckerPollId");
-      var prevHeap = ui.oldPanel.data("heapPollId");
-      if (prevHeap) clearInterval(prevHeap);
-      ui.oldPanel.removeData("heapPollId");
-
-      if (href === "#player") {
-        var intervalId = setInterval(updateCurrentStatus, 5000);
-        ui.newPanel.data("intervalId", intervalId);
-      }
-      if (href === "#display") {
-        loadDisplaySettings();
-        loadStartColors();
-      }
-      if (href === "#wecker") {
-        loadDisplaySettings();
-        var weckerPollId = setInterval(updateCurrentStatus, 3000);
-        ui.newPanel.data("weckerPollId", weckerPollId);
-        updateCurrentStatus();
-      }
-      if (href === "#info") {
-        refreshHeapStats();
-        var heapPollId = setInterval(refreshHeapStats, HEAP_POLL_INTERVAL_MS);
-        ui.newPanel.data("heapPollId", heapPollId);
-      }
-    }
-  });
-
-  if ($("#tabs").tabs("option", "active") === 0) { // 0 entspricht dem Index von "#player"
-    updateCurrentStatus();
-    var intervalId = setInterval(updateCurrentStatus, 3000); // Starten des Intervall
-    $("#player").data("intervalId", intervalId);
-  }
-  if ($("#tabs").tabs("option", "active") === 5) { // Info-Tab: Heap live
-    refreshHeapStats();
-    var heapPollId0 = setInterval(refreshHeapStats, HEAP_POLL_INTERVAL_MS);
-    $("#info").data("heapPollId", heapPollId0);
-  }
-         
+  // Aktuelle Daten des ESP regelmäßig holen (nur für den sichtbaren Tab)
+  var $activeLink = $("#tabs > ul > li").eq($("#tabs").tabs("option", "active")).find("a");
+  syncPolling($activeLink.attr("href"));
 });
 
 function getAll() {
@@ -209,7 +209,7 @@ function updateStation() {
         success: function(data){
             const n = ( $("#enable_input").prop("checked"))?"&#x25cf; ":"&#x2002; "
             $( "#stationlist option:selected" ).html(n + $("#name_input").val());
-            alert(data);
+            toast(data);
             getStationList();
         }
     });
@@ -237,7 +237,7 @@ function testStation() {
             endTest();
         },
         error: function() {
-            alert("ERROR");
+            toast("ERROR", true);
         }
     });
 }
@@ -305,7 +305,7 @@ function saveSSID() {
           "LONGITUDE": $("#LONGITUDE_input").val()   // Longitude hinzufügen
         },
         success: function(data){
-            alert(data);
+            toast(data);
         }
     });
 }
@@ -325,7 +325,7 @@ function setAlarms() {
         url:"/cmd/setalarms",
         data:vals,
         success: function(data){
-            alert(data);
+            toast(data);
         }
     });
 }
@@ -356,6 +356,7 @@ function stopPlay() {
 }
 function setupDisplaySliders() {
   $("#slider_bright").slider({
+    range: "min",
     min: 0,
     max: 100,
     slide: function (event, ui) {
@@ -366,6 +367,7 @@ function setupDisplaySliders() {
     }
   });
   $("#slider_sleep").slider({
+    range: "min",
     min: 0,
     max: 60,
     slide: function (event, ui) {
@@ -376,6 +378,7 @@ function setupDisplaySliders() {
     }
   });
   $("#slider_asnooze").slider({
+    range: "min",
     min: 0,
     max: 10,
     slide: function (event, ui) {
@@ -386,6 +389,7 @@ function setupDisplaySliders() {
     }
   });
   $("#slider_alarmgain").slider({
+    range: "min",
     min: 0,
     max: 100,
     slide: function (event, ui) {
@@ -457,10 +461,10 @@ function saveStartColors() {
     data: JSON.stringify(o),
     success: function (data) {
       loadStartColors();
-      alert(data);
+      toast(data);
     },
     error: function () {
-      alert(tr("fe"));
+      toast(tr("fe"), true);
     }
   });
 }
@@ -472,12 +476,13 @@ function resetStartColors() {
       loadStartColors();
     },
     error: function () {
-      alert(tr("fe"));
+      toast(tr("fe"), true);
     }
   });
 }
 function GainSlider() {
   $("#GainSlider").slider({
+    range: "min",
     min: 0,
     max: 100,    
     stop: function(event, ui) {
@@ -492,7 +497,7 @@ function GainSlider() {
 
           },
           error: function() {
-              alert("ERROR");
+              toast("ERROR", true);
           }
       });
     }   
@@ -513,11 +518,13 @@ function startSleep() {
         data:{},
     });
 }
+var statusFailed = false;
 function updateCurrentStatus() {
-  $.ajax({
+  return $.ajax({
     type: "GET",
     url: "/cmd/getCurrentStatus",
     success: function (data) {
+      statusFailed = false;
       // Lautstärke
       updateCurrentStatusVolume(data.gain);
       if (data.alarmGain !== undefined && data.alarmGain !== null) {
@@ -549,7 +556,9 @@ function updateCurrentStatus() {
       //console.log(data);
     },
     error: function () {
-      alert(tr("fe"));
+      /* Nur einmal melden, nicht alle 3 s erneut */
+      if (!statusFailed) toast(tr("fe"), true);
+      statusFailed = true;
     },
   });
 }
@@ -655,7 +664,7 @@ function selectStationFromDropdown() {
                 updateCurrentStatus();
                 getStationList();
             } else {
-                alert(response);
+                toast(response, true);
                 getStationList();
             }
         }
@@ -687,7 +696,7 @@ function applyHeapFromInfoData(data) {
 var HEAP_POLL_INTERVAL_MS = 10000;
 
 function refreshHeapStats() {
-  $.ajax({
+  return $.ajax({
     type: "GET",
     url: "/cmd/getHeap",
     dataType: "json",
@@ -744,7 +753,7 @@ function getInfo() {
       checkForUpdate(data.radioversion);                
     },
     error: function () {
-      alert(tr("fh"));
+      toast(tr("fh"), true);
     },
   });
 }
@@ -871,295 +880,181 @@ function updateGitHubInfo() {
 
 </script>
 <style>
-body {
-    width:300px;
-    background-color: silver;
+:root {
+  --bg: #eef1f5; --card: #ffffff; --field: #f5f7fa; --text: #1d2530; --muted: #66717f;
+  --border: #d3d9e1; --accent: #2f7de1; --on-accent: #ffffff; --ok: #2e9e5b; --danger: #c93b3b;
+  --shadow: 0 1px 3px rgba(20,30,50,.10);
 }
-/* Eine Zeile Tab-Icons in ~300px: kein Float, wenig Padding, gleichmäßige Aufteilung */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #11151b; --card: #1b212a; --field: #131820; --text: #e6eaf0; --muted: #9aa5b3;
+    --border: #2f3947; --accent: #4d95f0; --on-accent: #0b1220; --ok: #3fb577; --danger: #ef6b6b;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; padding: 12px;
+  background: var(--bg); color: var(--text);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.wrap { max-width: 520px; margin: 0 auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.app-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 0 10px; }
+h1 { font-size: 1.3rem; font-weight: 650; margin: 0; }
+.lang-bar select { width: auto; min-height: 36px; padding: 4px 8px; }
+a, .ui-widget-content a { color: var(--accent); }
+hr { border: 0; border-top: 1px solid var(--border); margin: 14px 0; }
+p { margin: .4em 0; }
+
+/* ---- jQuery-UI-Theme überschreiben ---- */
+.ui-widget, .ui-widget input, .ui-widget select, .ui-widget button { font-family: inherit; font-size: 1rem; color: var(--text); }
+.ui-widget-content { background: transparent; color: inherit; border: 0; }
+#tabs.ui-tabs { padding: 0; border: 0; background: transparent; }
 #tabs.ui-tabs .ui-tabs-nav {
-  display: flex;
-  flex-wrap: nowrap;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 2px 0 0;
-  margin: 0;
+  display: flex; gap: 4px; padding: 4px; margin: 0;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow);
 }
 #tabs.ui-tabs .ui-tabs-nav li {
-  flex: 1 1 0;
-  min-width: 0;
-  float: none;
-  list-style: none;
-  margin: 0 1px 0 0;
-  top: auto;
-  padding: 0;
-}
-#tabs.ui-tabs .ui-tabs-nav li:last-child {
-  margin-right: 0;
+  flex: 1 1 0; float: none; list-style: none; margin: 0; padding: 0; top: auto;
+  border: 0; background: transparent; border-radius: 10px;
 }
 #tabs.ui-tabs .ui-tabs-nav li a {
-  float: none;
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.22em 0.05em;
-  text-align: center;
-  font-size: 1em;
-  line-height: 1.15;
+  float: none; display: flex; align-items: center; justify-content: center;
+  width: 100%; min-height: 44px; padding: 0; color: var(--muted); border-radius: 10px; font-size: 1.05rem;
 }
-#tabs.ui-tabs .ui-tabs-nav li a i {
-  font-size: 0.88em;
-  vertical-align: middle;
-}
-#tabs.ui-tabs .ui-tabs-nav li.ui-tabs-active {
-  margin-bottom: -1px;
-  padding-bottom: 1px;
-}
-label { 
-  display: inline-block;
-  margin-top: 5px;
-  width: 100%;
-  float: left;  
-}
-button {
-    margin: 3px;
-    height: 2.0em;    
-}
-input {
-  width:100%;
+#tabs.ui-tabs .ui-tabs-nav li.ui-tabs-active { margin: 0; padding: 0; background: var(--accent); }
+#tabs.ui-tabs .ui-tabs-nav li.ui-tabs-active a { color: var(--on-accent); }
+#tabs.ui-tabs .ui-tabs-panel {
+  padding: 14px; margin-top: 10px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow);
 }
 
-/* checkboxen Wochentage als "Button" */
-.categorie{
-  background-color: white;
-  overflow: hidden;
-  float: left;
+/* ---- Formulare ---- */
+label { display: block; margin-top: .75em; font-weight: 600; font-size: .9rem; }
+input:not([type=checkbox]):not([type=radio]):not([type=color]), select {
+  display: block; width: 100%; min-height: 44px; margin-top: .25em; padding: 8px 10px;
+  background: var(--field); color: var(--text); font: inherit;
+  border: 1px solid var(--border); border-radius: 10px;
 }
-.categorie label {
-  float: left;
-  line-height: 2.0em;
-  width: 2.0em; 
-  height: 2.0em;
-  margin: 1px;
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.check-row { display: flex; align-items: center; justify-content: space-between; }
+.check-row input { width: 24px; height: 24px; accent-color: var(--accent); }
+button {
+  min-height: 44px; padding: 0 14px; margin: 0;
+  background: var(--card); color: var(--text); font: inherit; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 10px;
 }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+button.danger { color: var(--danger); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.btn-row button { flex: 1 1 120px; }
+
+/* ---- Player ---- */
+#player select { margin: 0 0 10px; }
+.transport { display: flex; gap: 6px; margin-bottom: 12px; }
+.transport button { flex: 1 1 0; min-width: 0; padding: 0; font-size: 1.05rem; }
+.screen {
+  background: #000; border-radius: 12px; padding: 10px 12px 14px; color: #fff; text-align: center;
+}
+.s-top { display: flex; justify-content: space-between; align-items: center; color: orange; font-weight: 600; }
+.s-right { display: flex; gap: 6px; align-items: center; }
+.s-time { color: orange; font-weight: 700; font-size: clamp(56px, 20vw, 100px); line-height: 1.05; font-variant-numeric: tabular-nums; }
+.s-date { color: orange; font-weight: 700; }
+.s-station { color: yellow; font-weight: 700; margin-top: 8px; min-height: 1.4em; }
+.s-title { color: #fff; min-height: 2.8em; overflow-wrap: anywhere; }
+.screen #GainSlider { margin: 10px 6px 4px; }
+
+/* ---- Slider / Fortschritt ---- */
+.ui-slider { position: relative; height: 8px; border: 0; border-radius: 4px; background: var(--border); }
+.ui-slider .ui-slider-range { background: var(--accent); border-radius: 4px; border: 0; }
+.ui-slider .ui-slider-handle {
+  top: -9px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%;
+  background: var(--accent); border: 3px solid var(--card); box-shadow: 0 1px 4px rgba(0,0,0,.35); outline: none; cursor: pointer;
+}
+.screen .ui-slider { background: #444; }
+.screen .ui-slider .ui-slider-range { background: orange; }
+.screen .ui-slider .ui-slider-handle { background: orange; border-color: #000; }
+.display-slider { margin: .9em 6px 1.1em; }
+.ui-progressbar { height: 10px; border: 0; border-radius: 5px; background: var(--border); overflow: hidden; margin-top: .3em; }
+.ui-progressbar .ui-progressbar-value { margin: 0; height: 100%; border: 0; background: var(--accent); }
+#heapBarText, #sketchBarText { font-size: .82rem; color: var(--muted); margin-top: .3em; }
+
+/* ---- Wecker: Wochentage ---- */
+.categorie { display: flex; gap: 6px; margin: .4em 0 0; }
+.categorie label { flex: 1 1 0; min-width: 0; margin: 0; font-weight: 500; }
 .categorie label span {
-  text-align: center;
-  padding: 2px 0;
-  display: block;
-  cursor: pointer;
-  border: 1px solid silver;
+  display: flex; align-items: center; justify-content: center; min-height: 44px;
+  background: var(--field); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; user-select: none;
 }
-.categorie label input {
-  position: absolute;
-  display: none;
-}
-.categorie input:checked + span {
-    color: white; 
-}
-.categorie input:checked + span{background-color: #82D44E;}
-/* Sprachzeile: globales label{float:left} + leeres Parent-div → Höhe 0, Tabs überdecken die Zeile */
-.lang-bar {
-  margin: 6px 0;
-  clear: both;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  box-sizing: border-box;
-}
-.lang-bar label {
-  float: none;
-  display: inline-block;
-  width: auto;
-  margin-top: 0;
-  flex: 0 0 auto;
-}
-.lang-bar select {
-  flex: 0 1 auto;
-  min-width: 4.5em;
-  max-width: 100%;
-}
-/* Kein float:left wie global bei label — sonst kollabiert die <p>-Höhe und der Slider liegt über dem Text */
-#display label {
-  float: none;
-  display: block;
-  width: 100%;
-  margin-top: 0.5em;
-  margin-bottom: 0.15em;
-}
-#display > p {
-  margin: 0;
-  clear: both;
-}
-#display .display-slider {
-  clear: both;
-  width: 100%;
-  max-width: 320px;
-  margin: 0.35em 0 0.85em 0;
-  position: relative;
-  z-index: 0;
-}
-/* Tab Wecker: Floats (.categorie) + letztes Element ggf. float → ohne BFC ragt Inhalt aus dem Tab */
-#wecker {
-  display: flow-root;
-  box-sizing: border-box;
-  max-width: 100%;
-}
-/* Tab Wecker: Wecklautstärke — sonst global label{float:left} + kollabierende <p> → Slider über dem Text */
-#wecker > p {
-  margin: 0;
-  clear: both;
-}
-#wecker > p label {
-  float: none;
-  display: block;
-  width: 100%;
-  margin-top: 0.5em;
-  margin-bottom: 0.15em;
-}
-#wecker .display-slider {
-  clear: both;
-  width: 100%;
-  max-width: 100%;
-  margin: 0.35em 0 0.85em 0;
-  position: relative;
-  z-index: 0;
-}
-#wecker .wecker-wake {
-  margin: 0.5em 0 0.15em 0;
-  clear: both;
-}
-/* Weckton Radio/Piep: kein float am Container (sonst Höhe des Tabs endet „zu früh“) */
-#wecker .categorie.wecker-wake-opts {
-  clear: both;
-  float: none;
-  width: 100%;
-  max-width: 100%;
-  margin: 0.15em 0 0.5em 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: stretch;
-  box-sizing: border-box;
-}
-#wecker .categorie.wecker-wake-opts label {
-  float: none;
-  flex: 1 1 calc(50% - 4px);
-  min-width: 0;
-  width: auto;
-  max-width: 100%;
-  height: 2.0em;
-  line-height: 2.0em;
-  margin: 0;
-  box-sizing: border-box;
-}
-#wecker .categorie.wecker-wake-opts label span {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  min-height: 2em;
-  padding: 0 0.35em;
-  line-height: 2.0em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-#display .hint {
-  font-size: 0.88em;
-  opacity: 0.88;
-  margin: 0 0 0.35em 0;
-  max-width: 320px;
-  clear: both;
-}
-#wecker .hint {
-  font-size: 0.88em;
-  opacity: 0.88;
-  margin: 0 0 0.35em 0;
-  max-width: 100%;
-  clear: both;
-}
+.categorie label input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.categorie input:checked + span { background: var(--ok); border-color: var(--ok); color: #fff; font-weight: 700; }
+.categorie input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+#wecker > br, #radio > br, #wlan p br { display: none; }
+#wecker .wecker-wake { margin: .9em 0 0; font-weight: 600; font-size: .9rem; }
+#wecker > p, #display > p { margin: 0; }
+#wecker > p label, #display > p label { margin-top: .6em; }
+.hint { font-size: .85rem; color: var(--muted); margin: .1em 0 0; }
+
+/* ---- Anzeige: Farben ---- */
 #display .color-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin: 0.15em 0;
-  max-width: 300px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 4px 0; border-bottom: 1px solid var(--border);
 }
-#display .color-row label {
-  float: none;
-  width: auto;
-  flex: 1;
-  margin: 0;
-  font-size: 0.78em;
-  line-height: 1.2;
+#display .color-row label { flex: 1; margin: 0; font-weight: 500; }
+#display input[type="color"] { width: 48px; height: 32px; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: none; cursor: pointer; flex-shrink: 0; }
+#display hr.disp-sep { margin: 16px 0; }
+
+/* ---- Einstellungen: Akkordeon ---- */
+#accordion .ui-accordion-header {
+  margin: 6px 0 0; padding: .7em 1em .7em 2.2em; color: var(--text);
+  background: var(--field); border: 1px solid var(--border); border-radius: 10px; font-size: 1rem; font-weight: 600;
 }
-#display input[type="color"] {
-  width: 34px;
-  height: 26px;
-  padding: 0;
-  border: 0;
-  flex-shrink: 0;
-  cursor: pointer;
+#accordion .ui-accordion-header.ui-state-active { border-color: var(--accent); }
+#accordion .ui-accordion-content { padding: 4px 4px 8px; border: 0; background: transparent; }
+
+/* ---- Hilfe-Tooltips ---- */
+.help-tip-wrap { display: inline-block; vertical-align: middle; max-width: 100%; margin-left: .3em; }
+.help-tip {
+  min-height: 0; padding: .15em .3em; border: 0; background: transparent; color: var(--muted);
+  font-size: .9rem; line-height: 1; -webkit-tap-highlight-color: transparent;
 }
-#display hr.disp-sep { margin: 0.85em 0; border: 0; border-top: 1px solid #999; }
-#display .help-tip-wrap,
-#wecker .help-tip-wrap {
-  display: inline-block;
-  vertical-align: middle;
-  max-width: 100%;
-  margin-left: 0.2em;
+.help-tip-wrap.is-open .help-tip { color: var(--accent); }
+.help-tip-panel {
+  display: none; margin: .4em 0 0; padding: .55em .7em;
+  background: var(--field); border: 1px solid var(--border); border-radius: 8px;
+  font-size: .85rem; line-height: 1.4; font-weight: 400; color: var(--text);
 }
-#display .help-tip,
-#wecker .help-tip {
-  cursor: pointer;
-  margin: 0;
-  padding: 0.12em;
-  opacity: 0.85;
-  font-size: 0.82em;
-  vertical-align: middle;
-  display: inline-block;
-  line-height: 1;
-  color: #333;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  -webkit-tap-highlight-color: rgba(0,0,0,0.08);
+.help-tip-wrap.is-open .help-tip-panel { display: block; }
+
+/* ---- Info ---- */
+#sponsor .ui-state-error, #footer .ui-state-highlight {
+  background: var(--field); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: .6em .8em;
 }
-#display .help-tip-wrap.is-open .help-tip,
-#wecker .help-tip-wrap.is-open .help-tip { opacity: 1; }
-#display .help-tip:focus,
-#wecker .help-tip:focus {
-  outline: 1px dotted #666;
-  outline-offset: 2px;
+#footer p { margin: .25em 0; }
+#footer a, #footer .ui-state-highlight a { color: var(--accent); }
+#sponsor a { margin-left: .4em; }
+
+/* ---- Toast: oben, groß, farbig ---- */
+#toast {
+  position: fixed; left: 50%; top: 14px; transform: translate(-50%, -140%); opacity: 0; pointer-events: none;
+  width: max-content; max-width: calc(100% - 24px); padding: 14px 20px; border-radius: 12px;
+  background: var(--ok); color: #fff; font-size: 1.1rem; font-weight: 700; text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4); transition: opacity .25s, transform .25s; z-index: 1000;
 }
-#display .help-tip-panel,
-#wecker .help-tip-panel {
-  display: none;
-  margin: 0.35em 0 0 0;
-  padding: 0.45em 0.55em;
-  background: #f2f2f2;
-  border: 1px solid #bbb;
-  border-radius: 4px;
-  font-size: 0.88em;
-  line-height: 1.38;
-  font-weight: normal;
-  color: #222;
-  box-sizing: border-box;
-  max-width: min(100%, 340px);
-  text-align: left;
-}
-#display .help-tip-wrap.is-open .help-tip-panel,
-#wecker .help-tip-wrap.is-open .help-tip-panel { display: block; }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast.err { background: #c62828; }
 </style>
 </head>
 <body>
+<div class="wrap">
+<header class="app-head">
 <h1 data-i18n="title">Web Radiowecker</h1>
 <div class="lang-bar">
-<label for="ui_lang_sel"><span data-i18n="lang">Sprache</span></label>
+<label for="ui_lang_sel" class="sr-only"><span data-i18n="lang">Sprache</span></label>
 <select id="ui_lang_sel" aria-label="UI language">
 <option value="de">DE</option>
 <option value="en">EN</option>
@@ -1169,81 +1064,45 @@ input {
 <option value="nl">NL</option>
 </select>
 </div>
+</header>
 
 <div id="tabs">
     <ul>
-        <li><a href="#player"><i class="fa fa-music"></i></a></li>    
-        <li><a href="#wecker"><i class="fa fa-clock"></i></a></li>
-        <li><a href="#radio"><i class="fas fa-list-ol"></i></a></li>   
-        <li><a href="#display"><i class="fas fa-sun"></i></a></li>
-        <li><a href="#wlan"><i class="fa fa-gears"></i></a></li>
-        <li><a href="#info"><i class="fas fa-question"></i></a></li>        
+        <li><a href="#player" aria-label="Player"><i class="fa fa-music"></i></a></li>    
+        <li><a href="#wecker" aria-label="Alarm"><i class="fa fa-clock"></i></a></li>
+        <li><a href="#radio" aria-label="Stations"><i class="fas fa-list-ol"></i></a></li>   
+        <li><a href="#display" aria-label="Display"><i class="fas fa-sun"></i></a></li>
+        <li><a href="#wlan" aria-label="Settings"><i class="fa fa-gears"></i></a></li>
+        <li><a href="#info" aria-label="Info"><i class="fas fa-question"></i></a></li>        
     </ul>
     <div id="player">
-      <div align="center">
-        <select id="switchStation" aria-label="Sender"></select>
-        <br />
-        <button id="btn_alarm" type="button"></button>
-        <button id="btn_bwd" type="button"><i class="fa fa-step-backward"></i></button>
-        <button id="btn_play" type="button"><i class="fas fa-play"></i></button>
-        <button id="btn_fwd" type="button"><i class="fa fa-step-forward"></i></button>
-        <button id="btn_stop" type="button" disabled><i class="fas fa-stop"></i></button>
-        <button id="btn_sleep" type="button"><i class="fas fa-bed"></i></button>
-        <br />
-        
+      <select id="switchStation" aria-label="Sender"></select>
+      <div class="transport">
+        <button id="btn_alarm" type="button" aria-label="Alarm on/off"></button>
+        <button id="btn_bwd" type="button" aria-label="Previous"><i class="fa fa-step-backward"></i></button>
+        <button id="btn_play" type="button" class="primary" aria-label="Play"><i class="fas fa-play"></i></button>
+        <button id="btn_fwd" type="button" aria-label="Next"><i class="fa fa-step-forward"></i></button>
+        <button id="btn_stop" type="button" aria-label="Stop" disabled><i class="fas fa-stop"></i></button>
+        <button id="btn_sleep" type="button" aria-label="Sleep timer"><i class="fas fa-bed"></i></button>
       </div>
-      <table width="100%" style="background-color: black;">
-        <tr>
-          <td>
-            <!-- Symbol Alarm ON/OFF -->
-            <span id="alarmIcon"></span>
-            <!-- AlarmText -->
-            <span id="alarmTime"></span>
-          </td>
-          <td align="right" style="color: orange;">
-            <!-- Sleep ON/OFF -->
-            <span id="sleepIcon" style="color: orange;"></span>          
-            <!-- WlanRssi -->
-            <span id="WlanRSSI"></span>          
-            <!-- WLAN Symbol -->
-            <i class="fas fa-wifi" id="WlanSym"></i>          
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2" align="center" style="color: orange; font-size: 80px; font-weight: bold;">
-            <!-- Uhrzeit -->
-            <span id="Time"></span>          
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2" align="center" style="color: orange; font-weight: bold;">
-            <!-- Datum -->
-            <span id="Date"></span>            
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2" align="center" style="color: yellow; font-weight: bold;">
-            <!-- Radio Name -->
-            <span id="radioStation"></span>         
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2" align="center" style="color: white;">
-            <!-- Radio Title -->
-            <span id="radioTitle"></span>          
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2" align="center"><div id="GainSlider"></div></td>
-        </tr>
-      </table>      
-    </div>    
+      <div class="screen">
+        <div class="s-top">
+          <div><span id="alarmIcon"></span> <span id="alarmTime"></span></div>
+          <div class="s-right"><span id="sleepIcon"></span> <span id="WlanRSSI"></span> <i class="fas fa-wifi" id="WlanSym"></i></div>
+        </div>
+        <div class="s-time"><span id="Time"></span></div>
+        <div class="s-date"><span id="Date"></span></div>
+        <div class="s-station"><span id="radioStation"></span></div>
+        <div class="s-title"><span id="radioTitle"></span></div>
+        <div id="GainSlider"></div>
+      </div>
+    </div>
     <div id="wecker">
       <label><span data-i18n="w1">Weckzeit 1:</span>
           <input id="al0" type="time" />
       </label>
       <br />
-      <div class="categorie days" align="center">
+      <div class="categorie days">
         <label>
             <input type="checkbox" id="al2"/>
             <span data-i18n="dow_mo">Mo</span>
@@ -1278,7 +1137,7 @@ input {
           <input id="al8" type="time"/>
       </label>
       <br />
-      <div class="categorie days"  align="center">
+      <div class="categorie days">
         <label>
             <input type="checkbox" id="al10"/>
             <span data-i18n="dow_mo">Mo</span>
@@ -1308,9 +1167,8 @@ input {
             <span data-i18n="dow_so">So</span>
         </label>
       </div>
-      <br />
-      <div align="center">
-        <button id="btn_savealarm" type="button" data-i18n="save">Speichern</button>
+      <div class="btn-row">
+        <button id="btn_savealarm" type="button" class="primary" data-i18n="save">Speichern</button>
         <button id="btn_cancelalarm" type="button" data-i18n="cancel">Rückgängig</button>
       </div>
       <br />
@@ -1320,7 +1178,7 @@ input {
       <p class="hint"><span data-i18n="hint_asnooze"></span></p>
       <div id="slider_asnooze" class="display-slider"></div>
       <p class="wecker-wake"><span data-i18n="lbl_alarmwake">Weckton:</span></p>
-      <div class="categorie wecker-wake-opts" align="center">
+      <div class="categorie wecker-wake-opts">
         <label>
           <input type="radio" name="alm_wake" id="alm_wake0" value="0" checked="checked" />
           <span data-i18n="wake_radio">Radio</span>
@@ -1344,7 +1202,7 @@ input {
           <input id="url_input"/>
       </label>
       <br />
-      <label><span data-i18n="use">Verwenden:</span>
+      <label class="check-row"><span data-i18n="use">Verwenden:</span>
           <input id="enable_input" type="checkbox">
       </label>
       <br />
@@ -1352,9 +1210,9 @@ input {
           <input id="pos_input" type="number" step="1" min="1" max="99" size="2"/>
       </label>
       <br />
-      <div align="center">
+      <div class="btn-row">
         <button id="btn_test" type="button" data-i18n="btest">Testen</button>
-        <button id="btn_updt" type="button" data-i18n="bchange">Ändern</button>
+        <button id="btn_updt" type="button" class="primary" data-i18n="bchange">Ändern</button>
       </div>
     </div>
     <div id="display">
@@ -1381,8 +1239,8 @@ input {
         <div class="color-row"><label for="col_stName" data-i18n="c_stName">Sender</label><input type="color" id="col_stName" /></div>
         <div class="color-row"><label for="col_stTitle" data-i18n="c_stTitle">Titel</label><input type="color" id="col_stTitle" /></div>
       </div>
-      <div align="center" style="margin-top:8px">
-        <button type="button" id="btn_colors_save" data-i18n="colors_save">Speichern</button>
+      <div class="btn-row">
+        <button type="button" id="btn_colors_save" class="primary" data-i18n="colors_save">Speichern</button>
         <button type="button" id="btn_colors_reset" data-i18n="colors_reset">Werksfarben</button>
       </div>
     </div>
@@ -1430,11 +1288,10 @@ input {
         </div>
       </div>
       <hr />      
-      <div align="center">
-        <button id="btn_save" type="button" data-i18n="bsave">Speichern</button>
-        <button id="btn_reset" type="button" data-i18n="brestart">Neustart</button>
-        <br />
-        <button id="btn_restore" type="button" data-i18n="brestore">Senderliste Reset</button>
+      <div class="btn-row">
+        <button id="btn_save" type="button" class="primary" data-i18n="bsave">Speichern</button>
+        <button id="btn_reset" type="button" class="danger" data-i18n="brestart">Neustart</button>
+        <button id="btn_restore" type="button" class="danger" data-i18n="brestore">Senderliste Reset</button>
       </div>
     </div>
     <div id="info">
@@ -1474,6 +1331,8 @@ input {
       </div>
     </div>    
 </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
 )=====";
@@ -1484,55 +1343,43 @@ const char CONFIG_page[] PROGMEM = R"=====(
 <html>
 <head>
 <meta http-equiv='content-type' content='text/html; charset=UTF-8'>
-<meta name='viewport' content='width=320' />
+<meta name='viewport' content='width=device-width, initial-scale=1' />
+<meta name='color-scheme' content='light dark' />
+<title>Internet Radio</title>
 <style>
-body {
-  width:300px;
-  font-family:arial;
+/* Konfigurationsseite im AP-Modus: kein Internet -> alles inline, keine externen Dateien */
+:root { --bg:#eef1f5; --card:#fff; --field:#f5f7fa; --text:#1d2530; --muted:#66717f; --border:#d3d9e1; --accent:#2f7de1; --on-accent:#fff; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#11151b; --card:#1b212a; --field:#131820; --text:#e6eaf0; --muted:#9aa5b3; --border:#2f3947; --accent:#4d95f0; --on-accent:#0b1220; }
 }
-button {
-  width:110px;
-  background-color:silver;
-  border-radius:10px;
-}
-.theme {
-  background-color:cadetblue;
-  padding:10px;
-  border-radius: 10px;
-  border: 2px solid silver;
-}
-.confpane {
-  width:280px;
-  height:75px;
-}
-.txtinput {
-  position:absolute;
-  left:90px;
-  width:200px;
-}
-.label {
-  color:white;
-  font-family:arial;
-}
+* { box-sizing: border-box; }
+body { margin:0; padding:12px; background:var(--bg); color:var(--text); font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+.wrap { max-width:420px; margin:0 auto; }
+h1 { font-size:1.3rem; font-weight:650; margin:4px 0 12px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; }
+label { display:block; margin-top:.75em; font-weight:600; font-size:.9rem; }
+label:first-of-type { margin-top:0; }
+input[type=text], input[type=password] { display:block; width:100%; min-height:44px; margin-top:.25em; padding:8px 10px; background:var(--field); color:var(--text); font:inherit; border:1px solid var(--border); border-radius:10px; }
+input:focus-visible, button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.show { display:flex; align-items:center; gap:8px; margin-top:.6em; font-weight:400; }
+.show input { width:20px; height:20px; accent-color:var(--accent); }
+button { width:100%; min-height:46px; margin-top:16px; background:var(--accent); color:var(--on-accent); font:inherit; font-weight:600; border:0; border-radius:10px; cursor:pointer; }
+.hint { margin:12px 2px 0; font-size:.85rem; color:var(--muted); }
 </style>
 </head>
 <body>
-<h1 style="text-align:center;">Internet Radio</h1>
-<form>
-    <div class="confpane theme">
-        <div>
-            <span class="label">SSID:</span>
-            <input name="conf_ssid" class="txtinput"/>
-        </div>
-        <div style="padding-top:10px;">
-            <span class="label">PKEY:</span>
-            <input name="conf_pkey" class="txtinput" type="password"/>
-        </div>
-        <div style="padding-top:10px;text-align:center">
-            <button type="submit" name="reset">Neustart</button>
-        </div>
-    </div>
+<div class="wrap">
+<h1>Internet Radio</h1>
+<form class="card" autocomplete="off">
+    <label for="conf_ssid">SSID (WLAN)</label>
+    <input id="conf_ssid" name="conf_ssid" type="text" autocapitalize="off" autocorrect="off" spellcheck="false"/>
+    <label for="conf_pkey">PKEY (Passwort / Password)</label>
+    <input id="conf_pkey" name="conf_pkey" type="password" autocapitalize="off" autocorrect="off"/>
+    <label class="show"><input type="checkbox" onclick="document.getElementById('conf_pkey').type=this.checked?'text':'password'"/> Passwort anzeigen / Show password</label>
+    <button type="submit" name="reset">Speichern &amp; Neustart / Save &amp; restart</button>
 </form>
+<p class="hint">Nach dem Neustart verbindet sich das Radio mit diesem WLAN. / After the restart the radio connects to this Wi-Fi.</p>
+</div>
 </body>
 </html>
 )=====";
